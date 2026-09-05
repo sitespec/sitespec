@@ -12,9 +12,10 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@sitespec/core": "0.1.0",
     "@sitespec/astro": "0.1.0",
+    "@sitespec/core": "0.1.0",
     "@sitespec/template": "0.1.0",
+    "chokidar": "5.0.0",
     "commander": "15.0.0"
   },
   "engines": {
