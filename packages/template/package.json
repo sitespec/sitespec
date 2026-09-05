@@ -30,5 +30,9 @@
     "static-site",
     "ai",
     "cms"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sitespec/sitespec"
+  }
 }
