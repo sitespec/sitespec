@@ -1,5 +1,6 @@
+import { watch } from "node:fs";
 import { realpath } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import { loadProject, validateLoadedProject, type Diagnostic, type ResolvedSite } from "@sitespec/core";
 import { startAstroDevServer, validateAstroComponentContracts } from "@sitespec/astro";
 
@@ -73,10 +74,10 @@ function isWatchedSourcePath(path: string): boolean {
 }
 
 export async function startDev(options: DevProjectOptions): Promise<DevProjectServer> {
-  // Keep the CLI watcher and Astro/Vite in the same physical path namespace.
-  // On macOS, /var/... resolves to /private/var/...; if only the renderer
-  // canonicalizes the root, chokidar reports /private/var/... while this
-  // layer compares events against /var/... and silently drops source changes.
+  // Keep validation, SiteSpec source watching and Astro/Vite in the same
+  // physical path namespace. On macOS, /var/... resolves to /private/var/...;
+  // canonicalizing once prevents the CLI and renderer from comparing two
+  // spellings of the same project path.
   const root = await realpath(resolve(options.root));
   const initial = await validateForDev(root);
   const dev = await startAstroDevServer({
@@ -88,26 +89,6 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     logLevel: options.rendererLogLevel
   });
   const initialValid = initial.valid && !hasErrors(initial.diagnostics);
-
-  const watched = [
-    join(root, "site.yaml"),
-    join(root, "pages"),
-    join(root, "content"),
-    join(root, "components"),
-    join(root, "shell"),
-    join(root, "design"),
-    join(root, "public")
-  ];
-  dev.watcher.add(watched);
-
-  options.onEvent?.({
-    event: "ready",
-    url: dev.url,
-    host: dev.host,
-    port: dev.port,
-    valid: initialValid,
-    diagnostics: initial.diagnostics
-  });
 
   let timer: NodeJS.Timeout | undefined;
   let processing = false;
@@ -158,9 +139,9 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     }
   };
 
-  const onWatcherEvent = (_event: string, changedPath: string): void => {
-    if (closed) return;
-    const path = sourcePath(root, changedPath);
+  const onSourceChange = (_event: string, changedPath: string | Buffer | null): void => {
+    if (closed || changedPath === null) return;
+    const path = sourcePath(root, changedPath.toString());
     if (!isWatchedSourcePath(path)) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
@@ -169,7 +150,23 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     }, debounceMs);
   };
 
-  dev.watcher.on("all", onWatcherEvent);
+  // Keep SiteSpec source watching separate from Astro/Vite's generated-source
+  // watcher. Adding project paths to an already-running Vite watcher is racy:
+  // startDev() can return before chokidar has finished subscribing to those
+  // newly-added paths, so the first edit after startup may be missed. Node 22+
+  // supports recursive fs.watch on our supported desktop/server platforms, and
+  // watch() is active before it returns, so the ready signal below means source
+  // changes are actually observable.
+  const sourceWatcher = watch(root, { recursive: true }, onSourceChange);
+
+  options.onEvent?.({
+    event: "ready",
+    url: dev.url,
+    host: dev.host,
+    port: dev.port,
+    valid: initialValid,
+    diagnostics: initial.diagnostics
+  });
 
   return {
     root,
@@ -180,7 +177,7 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
       if (closed) return;
       closed = true;
       if (timer) clearTimeout(timer);
-      dev.watcher.off("all", onWatcherEvent);
+      sourceWatcher.close();
       await dev.stop();
     }
   };

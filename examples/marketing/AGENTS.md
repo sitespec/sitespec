@@ -104,6 +104,17 @@ Persistent UI belongs to the user-owned Site Shell:
 - `shell/Footer.astro` renders `navigation.footer` when present and otherwise reuses `navigation.primary`.
 - The shell receives all collections as `navigation`; the renderer must not own header/footer design.
 
+### Shell layout convention
+
+Keep persistent shell content aligned with page sections by following the same two-layer layout rule:
+
+- The outer shell element owns the responsive page gutter with `padding-inline: var(--space-page)`.
+- Its inner wrapper owns the content width with `max-width: var(--size-content)` and `margin-inline: auto`.
+- Do not put the horizontal page gutter on the inner wrapper, because it reduces the usable content width relative to page sections.
+- The starter header is sticky by default (`position: sticky; top: 0`) and should remain sticky unless the user explicitly asks for different behavior.
+
+Use semantic tokens for all reusable spacing and sizing decisions; do not replace this convention with hardcoded widths or padding values.
+
 To reuse the same collection inside any page section, use a navigation reference in a component prop:
 
 ```yaml

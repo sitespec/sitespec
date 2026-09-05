@@ -16,8 +16,8 @@ sections:
       title: A website that stays coherent as it evolves
       text: Pages are composed from typed, validated sections instead of arbitrary markup.
       primaryAction:
-        label: Explore the system
-        href: "#features"
+        label: View on GitHub
+        href: https://github.com/sitespec/sitespec
 
   - id: features
     use: feature-grid

@@ -34,8 +34,21 @@ const items = navigation.footer ?? navigation.primary ?? [];
 </footer>
 
 <style>
-  .site-footer { border-top: 1px solid var(--color-border-default); background: var(--color-surface-muted); color: var(--color-text-muted); }
-  .inner { max-width: var(--size-content); margin: 0 auto; padding: var(--space-stack-xl) var(--space-page); display: flex; align-items: center; justify-content: space-between; gap: var(--space-stack-lg); }
+  .site-footer {
+    border-top: 1px solid var(--color-border-default);
+    background: var(--color-surface-muted);
+    color: var(--color-text-muted);
+    padding-inline: var(--space-page);
+  }
+  .inner {
+    max-width: var(--size-content);
+    margin-inline: auto;
+    padding-block: var(--space-stack-xl);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-stack-lg);
+  }
   p { margin: 0; }
   ul { display: flex; flex-wrap: wrap; gap: var(--space-stack-md); margin: 0; padding: 0; list-style: none; }
 </style>

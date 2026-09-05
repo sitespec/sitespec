@@ -22,6 +22,26 @@ test("sitespec init creates a valid starter project", async () => {
     assert.ok(initialized.files.includes("design/fonts.yaml"));
     assert.ok(initialized.files.includes("public/fonts/.gitkeep"));
 
+    const header = await readFile(join(root, "shell", "Header.astro"), "utf8");
+    assert.match(header, /position: sticky;/);
+    assert.match(header, /top: 0;/);
+    assert.match(header, /padding-inline: var\(--space-page\);/);
+    assert.match(header, /max-width: var\(--size-content\);/);
+    assert.match(header, /padding-block: var\(--space-stack-md\);/);
+
+    const footer = await readFile(join(root, "shell", "Footer.astro"), "utf8");
+    assert.match(footer, /padding-inline: var\(--space-page\);/);
+    assert.match(footer, /max-width: var\(--size-content\);/);
+    assert.match(footer, /padding-block: var\(--space-stack-xl\);/);
+
+    const home = await readFile(join(root, "pages", "home.yaml"), "utf8");
+    assert.match(home, /label: View on GitHub/);
+    assert.match(home, /href: https:\/\/github\.com\/sitespec\/sitespec/);
+
+    const agents = await readFile(join(root, "AGENTS.md"), "utf8");
+    assert.match(agents, /Shell layout convention/);
+    assert.match(agents, /starter header is sticky by default/);
+
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
     assert.equal(validation.site?.pages.length, 1);
@@ -58,6 +78,8 @@ test("npm run build renders a static Astro site", async () => {
     assert.match(html, /data-section="features"/);
     assert.match(html, /data-site-shell="header"/);
     assert.match(html, /data-site-shell="footer"/);
+    assert.match(html, /href="https:\/\/github\.com\/sitespec\/sitespec"/);
+    assert.match(html, />View on GitHub<\/a>/);
     assert.match(html, /<nav\b[^>]*\baria-label="Primary"[^>]*>/);
     assert.match(html, /<nav\b[^>]*\baria-label="Footer"[^>]*>/);
     assert.match(html, /<link rel="icon" href="\/brand\/favicon\.svg"\s*\/?>/);

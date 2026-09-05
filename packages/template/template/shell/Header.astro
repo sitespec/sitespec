@@ -39,8 +39,23 @@ const items = navigation.primary ?? [];
 </header>
 
 <style>
-  .site-header { border-bottom: 1px solid var(--color-border-default); background: var(--color-surface-default); }
-  .inner { max-width: var(--size-content); margin: 0 auto; padding: var(--space-stack-md) var(--space-page); display: flex; align-items: center; justify-content: space-between; gap: var(--space-stack-lg); }
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--color-border-default);
+    background: var(--color-surface-default);
+    padding-inline: var(--space-page);
+  }
+  .inner {
+    max-width: var(--size-content);
+    margin-inline: auto;
+    padding-block: var(--space-stack-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-stack-lg);
+  }
   .brand { font-weight: 800; text-decoration: none; }
   ul { display: flex; flex-wrap: wrap; gap: var(--space-stack-md); margin: 0; padding: 0; list-style: none; }
   nav a { text-decoration: none; }

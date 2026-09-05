@@ -49,7 +49,7 @@ test("npm run site -- deploy github-pages creates an idempotent workflow and bui
     await writeFile(join(root, "site.yaml"), site, "utf8");
 
     const home = (await readFile(join(root, "pages", "home.yaml"), "utf8"))
-      .replace('href: "#features"', 'href: "/"');
+      .replace('href: https://github.com/sitespec/sitespec', 'href: /');
     await writeFile(join(root, "pages", "home.yaml"), home, "utf8");
     await writeFile(join(root, "package-lock.json"), JSON.stringify({ name: "acme", lockfileVersion: 3, requires: true, packages: {} }, null, 2) + "\n", "utf8");
 
