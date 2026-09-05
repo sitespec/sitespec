@@ -1,0 +1,26 @@
+specVersion: "0.1"
+component:
+  id: navigation-list
+  role: utility
+
+description: Render a named Site navigation collection inside page content.
+
+variants:
+  - default
+  - inline
+
+themes:
+  - default
+  - muted
+
+props:
+  type: object
+  additionalProperties: false
+  required:
+    - items
+  properties:
+    title:
+      type: string
+      maxLength: 80
+    items:
+      $ref: urn:site-spec:0.1:type:navigation

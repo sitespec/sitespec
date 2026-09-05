@@ -1,0 +1,19 @@
+specVersion: "0.1"
+site:
+  id: marketing
+  name: "Marketing Example"
+  url: https://marketing.test
+  locale: en
+
+assets:
+  favicon: /brand/favicon.svg
+
+navigation:
+  primary:
+    - id: home
+      label: Home
+      href: /
+
+seo:
+  titleTemplate: "%s — Marketing Example"
+  defaultDescription: "Marketing Example website."

@@ -1,0 +1,44 @@
+specVersion: "0.1"
+component:
+  id: feature-grid
+  role: content
+
+variants:
+  - default
+
+themes:
+  - default
+  - muted
+
+props:
+  type: object
+  additionalProperties: false
+  required:
+    - title
+    - items
+  properties:
+    title:
+      type: string
+      maxLength: 90
+    items:
+      type: array
+      minItems: 1
+      maxItems: 6
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - title
+          - text
+        properties:
+          title:
+            type: string
+            maxLength: 60
+          text:
+            type: string
+            maxLength: 180
+
+rules:
+  allowedArchetypes:
+    - marketing
+    - detail

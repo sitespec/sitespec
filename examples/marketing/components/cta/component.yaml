@@ -1,0 +1,30 @@
+specVersion: "0.1"
+component:
+  id: cta
+  role: conversion
+
+variants:
+  - default
+  - centered
+
+themes:
+  - default
+  - inverted
+
+props:
+  type: object
+  additionalProperties: false
+  required:
+    - title
+  properties:
+    title:
+      type: string
+      maxLength: 90
+    primaryAction:
+      $ref: urn:site-spec:0.1:type:action
+
+rules:
+  allowedArchetypes:
+    - marketing
+    - detail
+  placement: last

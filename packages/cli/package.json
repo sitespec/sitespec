@@ -1,0 +1,34 @@
+{
+  "name": "@sitespec/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "sitespec": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sitespec/core": "0.1.0",
+    "@sitespec/astro": "0.1.0",
+    "@sitespec/template": "0.1.0",
+    "commander": "15.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Project-local SiteSpec CLI.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sitespec",
+    "static-site",
+    "ai",
+    "cms"
+  ]
+}

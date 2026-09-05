@@ -1,0 +1,18 @@
+{
+  "name": "@sitespec/example-marketing",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "sitespec dev",
+    "build": "sitespec build",
+    "validate": "sitespec validate",
+    "preview": "sitespec preview",
+    "site": "sitespec"
+  },
+  "devDependencies": {
+    "@sitespec/cli": "0.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

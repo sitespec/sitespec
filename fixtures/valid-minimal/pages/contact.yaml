@@ -1,0 +1,14 @@
+specVersion: "0.1"
+page:
+  id: contact
+  route: /contact
+  archetype: marketing
+seo:
+  title: Contact
+sections:
+  - id: intro
+    use: hero
+    variant: centered
+    props:
+      title: Contact Acme
+      text: Tell us what you want to build.

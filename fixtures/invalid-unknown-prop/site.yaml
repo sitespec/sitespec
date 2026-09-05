@@ -1,0 +1,11 @@
+specVersion: "0.1"
+site:
+  id: acme
+  name: Acme
+  url: https://acme.test
+  locale: en
+assets:
+  favicon: /brand/favicon.svg
+seo:
+  titleTemplate: "%s — Acme"
+  defaultDescription: Acme helps teams ship better products.

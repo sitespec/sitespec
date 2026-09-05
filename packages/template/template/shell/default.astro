@@ -1,0 +1,19 @@
+---
+import Header from "./Header.astro";
+import Footer from "./Footer.astro";
+const { site, brand, page, navigation } = Astro.props;
+---
+<Header site={site} brand={brand} page={page} navigation={navigation} />
+<main id="main-content">
+  <slot />
+</main>
+<Footer site={site} brand={brand} page={page} navigation={navigation} />
+
+<style is:global>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-family: var(--font-family-body); }
+  body { margin: 0; background: var(--color-surface-default); color: var(--color-text-default); }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-family-heading); }
+  a { color: inherit; }
+  img { max-width: 100%; height: auto; }
+</style>

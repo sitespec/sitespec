@@ -1,0 +1,31 @@
+specVersion: "0.1"
+page:
+  id: home
+  route: /
+  archetype: marketing
+seo:
+  title: Home
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      title: Build better products
+      potato: 123
+      text: A deterministic website system for people and AI agents.
+      primaryAction:
+        label: Contact us
+        href: /contact
+  - id: features
+    use: feature-grid
+    props:
+      title: Why Acme
+      items:
+        $ref: content:features/home
+  - id: final-cta
+    use: cta
+    props:
+      title: Ready to start?
+      primaryAction:
+        label: Contact us
+        href: /contact

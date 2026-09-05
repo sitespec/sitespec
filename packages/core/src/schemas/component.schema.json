@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.1:component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "component", "props"],
+  "properties": {
+    "specVersion": { "const": "0.1" },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "role": { "enum": ["intro", "content", "proof", "conversion", "utility"] }
+      }
+    },
+    "description": { "type": "string", "maxLength": 500 },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "themes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "props": { "type": "object" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "javascript": { "type": "boolean" }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxPerPage": { "type": "integer", "minimum": 1 },
+        "allowedArchetypes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["marketing", "article", "listing", "detail", "legal", "blank"] }
+        },
+        "placement": { "enum": ["any", "first", "last"] }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pageHeading": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+  }
+}

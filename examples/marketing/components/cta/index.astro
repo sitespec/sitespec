@@ -1,0 +1,22 @@
+---
+interface Action { label: string; href: string; target?: "self" | "blank" }
+interface CtaProps { title: string; primaryAction?: Action }
+interface Props { sectionId: string; variant: string; theme: string; props: CtaProps }
+const { sectionId, variant, theme, props } = Astro.props;
+---
+<section id={sectionId} data-section={sectionId} data-component="cta" data-variant={variant} data-theme={theme}>
+  <div class="inner">
+    <h2>{props.title}</h2>
+    {props.primaryAction && <a href={props.primaryAction.href}>{props.primaryAction.label}</a>}
+  </div>
+</section>
+
+<style>
+  section { padding: var(--space-section) var(--space-page); background: var(--color-surface-muted); color: var(--color-text-default); }
+  section[data-theme="inverted"] { background: var(--color-surface-inverted); color: var(--color-text-inverted); }
+  .inner { max-width: var(--size-content); margin: 0 auto; }
+  section[data-variant="centered"] .inner { text-align: center; }
+  h2 { max-width: 780px; margin: 0; font-size: var(--font-size-heading); line-height: var(--font-line-height-heading); letter-spacing: -.035em; }
+  section[data-variant="centered"] h2 { margin-inline: auto; }
+  a { display: inline-flex; margin-top: var(--space-stack-lg); padding: var(--space-control-y) var(--space-control-x); border-radius: var(--radius-control); background: var(--color-accent-default); color: var(--color-accent-contrast); font-weight: 700; text-decoration: none; }
+</style>

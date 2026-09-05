@@ -1,0 +1,38 @@
+specVersion: "0.1"
+page:
+  id: home
+  route: /
+  archetype: marketing
+
+seo:
+  title: Home
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Site Spec
+      title: A website that stays coherent as it evolves
+      text: Pages are composed from typed, validated sections instead of arbitrary markup.
+      primaryAction:
+        label: Explore the system
+        href: "#features"
+
+  - id: features
+    use: feature-grid
+    props:
+      title: Built for people and AI
+      items:
+        - title: Deterministic
+          text: Validation decides whether a change is allowed.
+        - title: Composable
+          text: Pages can use only registered sections.
+        - title: Static
+          text: Production output is plain HTML, CSS and assets.
+
+  - id: final-cta
+    use: cta
+    variant: centered
+    props:
+      title: Change the spec, not the page markup

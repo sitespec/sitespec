@@ -1,0 +1,41 @@
+---
+interface NavigationItem {
+  id: string;
+  label: string;
+  href: string;
+  target: "self" | "blank";
+  external: boolean;
+  current?: boolean;
+}
+interface Props {
+  site: { name: string };
+  navigation: Record<string, NavigationItem[]>;
+}
+const { site, navigation } = Astro.props;
+const items = navigation.footer ?? navigation.primary ?? [];
+---
+<footer class="site-footer" data-site-shell="footer">
+  <div class="inner">
+    <p>{site.name}</p>
+    {items.length > 0 && (
+      <nav aria-label="Footer">
+        <ul>
+          {items.map((item) => (
+            <li>
+              <a href={item.href} target={item.target === "blank" ? "_blank" : undefined} rel={item.target === "blank" ? "noreferrer" : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
+  </div>
+</footer>
+
+<style>
+  .site-footer { border-top: 1px solid var(--color-border-default); background: var(--color-surface-muted); color: var(--color-text-muted); }
+  .inner { max-width: var(--size-content); margin: 0 auto; padding: var(--space-stack-xl) var(--space-page); display: flex; align-items: center; justify-content: space-between; gap: var(--space-stack-lg); }
+  p { margin: 0; }
+  ul { display: flex; flex-wrap: wrap; gap: var(--space-stack-md); margin: 0; padding: 0; list-style: none; }
+</style>

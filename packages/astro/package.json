@@ -1,0 +1,37 @@
+{
+  "name": "@sitespec/astro",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "astro": "7.3.1",
+    "@sitespec/core": "0.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Astro static renderer adapter for SiteSpec.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sitespec",
+    "static-site",
+    "ai",
+    "cms"
+  ]
+}

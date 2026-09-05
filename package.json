@@ -1,0 +1,35 @@
+{
+  "name": "sitespec",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @sitespec/core && npm run build -w @sitespec/template && npm run build -w @sitespec/astro && npm run build -w @sitespec/cli && npm run build -w @sitespec/create",
+    "test": "npm run build && tsx --test --test-concurrency=1 tests/*.test.ts",
+    "site": "npm run build --silent && node packages/cli/dist/index.js",
+    "create:smoke": "npm run build --silent && node packages/create/dist/index.js",
+    "check": "npm test",
+    "changeset": "node scripts/verify-release-runtime.mjs && changeset",
+    "release:verify": "node scripts/verify-packages.mjs && node scripts/verify-lockfile.mjs",
+    "release:pack": "npm run build && node scripts/pack-release.mjs",
+    "release:smoke": "node scripts/smoke-release.mjs",
+    "release:check": "node scripts/verify-release-runtime.mjs && npm test && npm run release:verify && npm run release:pack && npm run release:smoke",
+    "release:version": "node scripts/verify-release-runtime.mjs && changeset version && node scripts/verify-packages.mjs",
+    "release:publish": "node scripts/verify-release-runtime.mjs && changeset publish",
+    "release:bootstrap": "npm run release:check && npm run release:publish"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "@changesets/cli": "3.0.2"
+  },
+  "engines": {
+    "node": "^22.11.0 || ^24.0.0 || >=26.0.0"
+  },
+  "license": "MIT",
+  "packageManager": "npm@11.19.1"
+}

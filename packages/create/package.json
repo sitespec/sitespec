@@ -1,0 +1,31 @@
+{
+  "name": "@sitespec/create",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "create-sitespec": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sitespec/template": "0.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Create a standalone SiteSpec website.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sitespec",
+    "static-site",
+    "ai",
+    "cms"
+  ]
+}

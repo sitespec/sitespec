@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.1:page",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "page", "sections"],
+  "properties": {
+    "specVersion": { "const": "0.1" },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "route", "archetype"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "route": { "$ref": "#/$defs/route" },
+        "archetype": { "enum": ["marketing", "article", "listing", "detail", "legal", "blank"] },
+        "state": { "enum": ["draft", "published"] }
+      }
+    },
+    "seo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "canonical": { "type": "string", "format": "uri" },
+        "image": { "type": "string", "minLength": 1 },
+        "noindex": { "type": "boolean" }
+      }
+    },
+    "structuredData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["Organization", "WebSite", "WebPage", "Article", "Product", "FAQPage", "BreadcrumbList"] },
+        "data": { "type": "object" }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/section" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "route": { "type": "string", "pattern": "^/$|^/[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$" },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "use"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "use": { "$ref": "#/$defs/id" },
+        "variant": { "$ref": "#/$defs/id" },
+        "theme": { "$ref": "#/$defs/id" },
+        "props": { "type": "object" }
+      }
+    }
+  }
+}

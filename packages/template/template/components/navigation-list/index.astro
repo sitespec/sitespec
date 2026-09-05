@@ -1,0 +1,37 @@
+---
+interface NavigationItem {
+  id: string;
+  label: string;
+  href: string;
+  target?: "self" | "blank";
+}
+interface NavigationListProps { title?: string; items: NavigationItem[] }
+interface Props { sectionId: string; variant: string; theme: string; props: NavigationListProps }
+const { sectionId, variant, theme, props } = Astro.props;
+---
+<section id={sectionId} data-section={sectionId} data-component="navigation-list" data-variant={variant} data-theme={theme}>
+  <div class="inner">
+    {props.title && <h2>{props.title}</h2>}
+    <nav aria-label={props.title ?? "Related"}>
+      <ul>
+        {props.items.map((item) => (
+          <li>
+            <a href={item.href} target={item.target === "blank" ? "_blank" : undefined} rel={item.target === "blank" ? "noreferrer" : undefined}>
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</section>
+
+<style>
+  section { padding: var(--space-stack-xl) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
+  section[data-theme="muted"] { background: var(--color-surface-muted); }
+  .inner { max-width: var(--size-content); margin: 0 auto; }
+  h2 { margin: 0 0 var(--space-stack-md); font-size: var(--font-size-subheading); }
+  ul { display: grid; gap: var(--space-stack-sm); margin: 0; padding: 0; list-style: none; }
+  section[data-variant="inline"] ul { display: flex; flex-wrap: wrap; gap: var(--space-stack-md); }
+  a { text-underline-offset: .18em; }
+</style>
