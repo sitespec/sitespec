@@ -6,7 +6,7 @@ page:
 
 seo:
   title: Examples
-  description: A SiteSpec v0.2 listing page demonstrating the pagination core type.
+  description: A SiteSpec v0.2 listing page demonstrating the pagination core type with static URLs.
 
 sections:
   - id: intro
@@ -14,32 +14,32 @@ sections:
     variant: split
     props:
       eyebrow: Core type
-      title: Pagination is data, not page markup
-      text: This section receives a standard v0.2 pagination object. The component owns rendering; the Page Spec owns the current state and links.
+      title: Pagination is static navigation
+      text: Each page has its own generated URL and receives a standard v0.2 pagination object. No client-side router is required.
 
   - id: examples
     use: feature-grid
     props:
-      title: The same rules apply to listing pages
+      title: Page 1 — the pagination contract
       items:
         - title: Typed input
           text: currentPage, totalPages and page links are validated against urn:site-spec:0.2:type:pagination.
-        - title: Reusable renderer
-          text: Any Page Spec can feed the same public pagination contract without knowing the component implementation.
+        - title: Static URLs
+          text: Page links target generated routes, so navigation works in a static build and on GitHub Pages.
         - title: Zero client runtime
-          text: Navigation is rendered as ordinary links and the component explicitly opts out of client JavaScript.
+          text: Pagination is rendered as ordinary links and does not require client JavaScript to update its state.
 
   - id: pagination
     use: pagination
     props:
       currentPage: 1
       totalPages: 3
-      nextHref: /examples?page=2
+      nextHref: /examples/page/2
       pages:
         - page: 1
           href: /examples
           current: true
         - page: 2
-          href: /examples?page=2
+          href: /examples/page/2
         - page: 3
-          href: /examples?page=3
+          href: /examples/page/3

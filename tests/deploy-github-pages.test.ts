@@ -73,8 +73,13 @@ test("npm run site -- deploy github-pages creates an idempotent workflow and bui
     assert.match(html, /rel="icon" href="\/acme\/brand\/favicon\.svg"/);
 
     const examplesHtml = await readFile(join(root, "dist", "examples", "index.html"), "utf8");
-    assert.match(examplesHtml, /href="\/acme\/examples\?page=2"/);
-    assert.doesNotMatch(examplesHtml, /href="\/examples\?page=2"/);
+    assert.match(examplesHtml, /href="\/acme\/examples\/page\/2"/);
+    assert.doesNotMatch(examplesHtml, /href="\/examples\/page\/2"/);
+
+    const examplesPage2Html = await readFile(join(root, "dist", "examples", "page", "2", "index.html"), "utf8");
+    assert.match(examplesPage2Html, /Page 2 of 3/);
+    assert.match(examplesPage2Html, /href="\/acme\/examples" rel="prev"/);
+    assert.match(examplesPage2Html, /href="\/acme\/examples\/page\/3" rel="next"/);
 
     const second = await deployGitHubPages({ root });
     assert.equal(second.workflowChanged, false);

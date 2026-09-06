@@ -34,7 +34,7 @@ sections:
         - title: Route parameters
           text: Dynamic sections read the current slug through param:slug while SEO strings interpolate the same value.
         - title: Typed pagination
-          text: The examples page passes a pagination object validated by the v0.2 pagination core type.
+          text: Three static examples pages pass pagination objects validated by the v0.2 pagination core type.
         - title: Agent protocol
           text: The CLI exposes capabilities, routes, components, UI primitives, assets, fonts and navigation as inspectable JSON.
 

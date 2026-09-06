@@ -31,6 +31,8 @@ test("v0.2 starter exposes UI primitives and reusable section presets", async ()
     assert.deepEqual(result.site?.pages.map(page => page.route), [
       "/",
       "/examples",
+      "/examples/page/2",
+      "/examples/page/3",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
@@ -45,13 +47,30 @@ test("v0.2 starter exposes UI primitives and reusable section presets", async ()
     assert.deepEqual(examples?.sections.at(-1)?.props, {
       currentPage: 1,
       totalPages: 3,
-      nextHref: "/examples?page=2",
+      nextHref: "/examples/page/2",
       pages: [
         { page: 1, href: "/examples", current: true },
-        { page: 2, href: "/examples?page=2" },
-        { page: 3, href: "/examples?page=3" }
+        { page: 2, href: "/examples/page/2" },
+        { page: 3, href: "/examples/page/3" }
       ]
     });
+
+    const examplesPage2 = result.site?.pages.find(page => page.route === "/examples/page/2");
+    assert.deepEqual(examplesPage2?.sections.at(-1)?.props, {
+      currentPage: 2,
+      totalPages: 3,
+      previousHref: "/examples",
+      nextHref: "/examples/page/3",
+      pages: [
+        { page: 1, href: "/examples" },
+        { page: 2, href: "/examples/page/2", current: true },
+        { page: 3, href: "/examples/page/3" }
+      ]
+    });
+    const examplesPage3 = result.site?.pages.find(page => page.route === "/examples/page/3");
+    assert.equal(examplesPage3?.sections.at(-1)?.props.currentPage, 3);
+    assert.equal(examplesPage3?.sections.at(-1)?.props.previousHref, "/examples/page/2");
+    assert.equal(examplesPage3?.sections.at(-1)?.props.nextHref, undefined);
 
     const inspection = await inspectProject(root);
     const capabilities = inspection.capabilities as Record<string, unknown>;
@@ -79,7 +98,7 @@ test("v0.2 starter exposes UI primitives and reusable section presets", async ()
     assert.equal(assets.values.appleTouchIcon, "/brand/apple-touch-icon.png");
     assert.equal(assets.values.defaultOgImage, "/brand/og-default.png");
     const design = inspection.design as { fonts: { families: Array<{ id: string }> } };
-    assert.deepEqual(design.fonts.families.map(item => item.id), ["andika"]);
+    assert.deepEqual(design.fonts.families.map(item => item.id), ["inter"]);
   });
 });
 

@@ -34,8 +34,8 @@ test("sitespec init creates the local-font design contract", async () => {
   try {
     const fonts = await readFile(join(root, "design", "fonts.yaml"), "utf8");
     assert.match(fonts, /specVersion: "0\.2"/);
-    assert.match(fonts, /family: Andika/);
-    assert.match(fonts, /src: \/fonts\/Andika-Regular\.woff2/);
+    assert.match(fonts, /family: Inter/);
+    assert.match(fonts, /src: \/fonts\/Inter-Regular\.woff2/);
     const result = await inspectProject(root, "fonts");
     assert.equal(result.type, "fonts");
     const inspected = result.fonts as { remoteFonts: boolean; formats: string[]; families: unknown[] };
@@ -43,12 +43,12 @@ test("sitespec init creates the local-font design contract", async () => {
     assert.deepEqual(inspected.formats, ["woff2", "woff"]);
     assert.equal(inspected.families.length, 1);
     const family = inspected.families[0] as { id: string; family: string; sources: Array<{ src: string; format: string; weight: number }> };
-    assert.equal(family.id, "andika");
-    assert.equal(family.family, "Andika");
-    assert.equal(family.sources[0]?.src, "/fonts/Andika-Regular.woff2");
+    assert.equal(family.id, "inter");
+    assert.equal(family.family, "Inter");
+    assert.equal(family.sources[0]?.src, "/fonts/Inter-Regular.woff2");
     assert.equal(family.sources[0]?.format, "woff2");
     assert.equal(family.sources[0]?.weight, 400);
-    assert.ok((await readFile(join(root, "public", "fonts", "Andika-Regular.woff2"))).length > 0);
+    assert.ok((await readFile(join(root, "public", "fonts", "Inter-Regular.woff2"))).length > 0);
     assert.match(await readFile(join(root, "public", "fonts", "LICENSE.txt"), "utf8"), /SIL OPEN FONT LICENSE/);
   } finally {
     await rm(temp, { recursive: true, force: true });
@@ -66,7 +66,7 @@ test("local variable and italic font faces validate with defaults", async () => 
     await writeFile(
       tokenFile,
       tokenSource.replace(
-        '"Andika, ui-sans-serif, system-ui, sans-serif"',
+        '"Inter, ui-sans-serif, system-ui, sans-serif"',
         '"Acme Sans, ui-sans-serif, system-ui, sans-serif"'
       ),
       "utf8"
@@ -184,7 +184,7 @@ fonts:
     await writeFile(
       tokenFile,
       tokenSource.replace(
-        '"Andika, ui-sans-serif, system-ui, sans-serif"',
+        '"Inter, ui-sans-serif, system-ui, sans-serif"',
         '"Acme Sans, ui-sans-serif, system-ui, sans-serif"'
       ),
       "utf8"

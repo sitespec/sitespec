@@ -203,8 +203,8 @@ The default v0.2 starter deliberately exercises the capabilities described above
 - `pages/features.yaml` uses both `navigation:features` and `navigation:project`.
 - `pages/feature.yaml` declares `/features/[slug]`, expands three explicit `page.paths`, interpolates `{slug}` in SEO, and passes `param:slug` into a registered section prop.
 - `sections/final-cta.yaml` is referenced by home, features, and every generated feature page.
-- `pages/examples.yaml` feeds `components/pagination` with `urn:site-spec:0.2:type:pagination` data.
-- `design/fonts.yaml` declares the bundled local Andika WOFF2 face and `design/tokens.json` wires it through the primitive and semantic font-family tokens.
+- `pages/examples.yaml`, `pages/examples-page-2.yaml`, and `pages/examples-page-3.yaml` feed `components/pagination` with `urn:site-spec:0.2:type:pagination` data and use real static page URLs.
+- `design/fonts.yaml` declares bundled Inter WOFF2 faces. Inter is the primary body/heading family with the system font stack kept as fallback; the starter remains fully self-hosted.
 - `site.yaml` declares favicon, Apple touch icon, default Open Graph image, and three named navigation collections.
 
 When editing the starter, prefer keeping each capability visible in a real page instead of replacing it with README-only documentation.

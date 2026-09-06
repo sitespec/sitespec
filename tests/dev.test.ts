@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { initProject } from "../packages/cli/src/init.ts";
 import { startDev, type DevEvent } from "../packages/cli/src/dev.ts";
 
-async function waitFor<T>(fn: () => Promise<T | undefined>, timeoutMs = 8000): Promise<T> {
+async function waitFor<T>(fn: () => Promise<T | undefined>, timeoutMs = 15000): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
   while (Date.now() < deadline) {

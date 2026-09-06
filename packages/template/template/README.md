@@ -10,7 +10,7 @@ The starter intentionally demonstrates the v0.2 contract instead of shipping a l
 - route-parameter references with `param:<name>`;
 - named navigation collections and `navigation:<id>` references;
 - the `urn:site-spec:0.2:type:pagination` core type;
-- local web fonts declared in `design/fonts.yaml`;
+- self-hosted Inter web fonts declared in `design/fonts.yaml` (OFL-1.1; no runtime Google Fonts request);
 - semantic favicon, Apple touch icon and default Open Graph image assets;
 - user-owned Site Shell and semantic design tokens;
 - agent-readable project inspection.
@@ -22,7 +22,9 @@ The starter intentionally demonstrates the v0.2 contract instead of shipping a l
 - `/features/composition` — generated from `pages/feature.yaml`.
 - `/features/dynamic-routes` — generated from `pages/feature.yaml`.
 - `/features/agent-protocol` — generated from `pages/feature.yaml`.
-- `/examples` — listing page using the pagination core type.
+- `/examples` — pagination example, page 1.
+- `/examples/page/2` — pagination example, page 2.
+- `/examples/page/3` — pagination example, page 3.
 
 ## Inspect the contract
 

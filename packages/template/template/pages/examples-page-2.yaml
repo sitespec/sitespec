@@ -1,0 +1,46 @@
+specVersion: "0.2"
+page:
+  id: examples-page-2
+  route: /examples/page/2
+  archetype: listing
+
+seo:
+  title: Examples — Page 2
+  description: Page 2 of the SiteSpec v0.2 static pagination example.
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Core type
+      title: Pagination keeps state in the generated page
+      text: Page 2 is a separate static route. Its Page Spec declares the current state, previous link, next link and numbered links.
+
+  - id: examples
+    use: feature-grid
+    props:
+      title: Page 2 — navigation state is explicit
+      items:
+        - title: Previous is available
+          text: The current page declares a previousHref back to the first examples route.
+        - title: Current is semantic
+          text: The numbered link for page 2 carries current true and renders with aria-current page.
+        - title: Next stays deterministic
+          text: The nextHref points to page 3, which is another generated static document.
+
+  - id: pagination
+    use: pagination
+    props:
+      currentPage: 2
+      totalPages: 3
+      previousHref: /examples
+      nextHref: /examples/page/3
+      pages:
+        - page: 1
+          href: /examples
+        - page: 2
+          href: /examples/page/2
+          current: true
+        - page: 3
+          href: /examples/page/3

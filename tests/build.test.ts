@@ -22,7 +22,7 @@ test("sitespec init creates a valid starter project", async () => {
     assert.ok(initialized.files.includes("public/brand/apple-touch-icon.png"));
     assert.ok(initialized.files.includes("public/brand/og-default.png"));
     assert.ok(initialized.files.includes("design/fonts.yaml"));
-    assert.ok(initialized.files.includes("public/fonts/Andika-Regular.woff2"));
+    assert.ok(initialized.files.includes("public/fonts/Inter-Regular.woff2"));
     assert.ok(initialized.files.includes("public/fonts/LICENSE.txt"));
     assert.ok(initialized.files.includes("components/pagination/component.yaml"));
     assert.ok(initialized.files.includes("pages/feature.yaml"));
@@ -49,10 +49,12 @@ test("sitespec init creates a valid starter project", async () => {
 
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.pages.length, 6);
+    assert.equal(validation.site?.pages.length, 8);
     assert.deepEqual(validation.site?.pages.map(page => page.route), [
       "/",
       "/examples",
+      "/examples/page/2",
+      "/examples/page/3",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
@@ -86,6 +88,8 @@ test("npm run build renders a static Astro site", async () => {
     assert.deepEqual(result.pages, [
       "/",
       "/examples",
+      "/examples/page/2",
+      "/examples/page/3",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
@@ -111,11 +115,16 @@ test("npm run build renders a static Astro site", async () => {
     assert.match(favicon, /<svg/);
     assert.ok((await readFile(join(root, "dist", "brand", "apple-touch-icon.png"))).length > 0);
     assert.ok((await readFile(join(root, "dist", "brand", "og-default.png"))).length > 0);
-    assert.ok((await readFile(join(root, "dist", "fonts", "Andika-Regular.woff2"))).length > 0);
+    assert.ok((await readFile(join(root, "dist", "fonts", "Inter-Regular.woff2"))).length > 0);
 
     const fontsCss = await readFile(join(root, ".site", "astro", "src", "styles", "fonts.css"), "utf8");
-    assert.match(fontsCss, /font-family: "Andika";/);
-    assert.match(fontsCss, /url\("\/fonts\/Andika-Regular\.woff2"\) format\("woff2"\)/);
+    assert.match(fontsCss, /font-family: "Inter";/);
+    assert.match(fontsCss, /url\("\/fonts\/Inter-Regular\.woff2"\) format\("woff2"\)/);
+
+    const examplesPage2 = await readFile(join(root, "dist", "examples", "page", "2", "index.html"), "utf8");
+    assert.match(examplesPage2, /Page 2 of 3/);
+    assert.match(examplesPage2, /href="\/examples" rel="prev"/);
+    assert.match(examplesPage2, /href="\/examples\/page\/3" rel="next"/);
 
     const sitemap = await readFile(join(root, "dist", "sitemap.xml"), "utf8");
     assert.match(sitemap, /https:\/\/acme\.test/);
@@ -139,6 +148,8 @@ test("npm run build renders a static Astro site", async () => {
     assert.deepEqual(buildState.pages, [
       "/",
       "/examples",
+      "/examples/page/2",
+      "/examples/page/3",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
