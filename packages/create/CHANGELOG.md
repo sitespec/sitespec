@@ -1,5 +1,12 @@
 # @sitespec/create
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [cbd722e]
+  - @sitespec/template@0.3.0
+
 ## 0.2.2
 
 ### Patch Changes
