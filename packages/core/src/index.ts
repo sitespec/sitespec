@@ -11,3 +11,5 @@ export * from "./resolver.js";
 export * from "./validate.js";
 export * from "./inspect.js";
 export * from "./design.js";
+export * from "./design-system-contract.js";
+export * from "./design-system.js";

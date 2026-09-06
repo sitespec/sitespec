@@ -3,16 +3,21 @@ import { fileExists } from "./fs.js";
 import { loadProject } from "./project.js";
 import { validateLoadedProject } from "./validate.js";
 import { inspectDesign } from "./design.js";
+import { inspectDesignSystem } from "./design-system.js";
 import { routeParamNames } from "./routes.js";
 import { resolvedContentEntry } from "./content-query.js";
 
 export function agentProtocol(): Record<string, unknown> {
   return {
-    protocolVersion: "3",
+    protocolVersion: "4",
     bootstrapFiles: ["AGENTS.md", "CLAUDE.md"],
     workflow: {
       inspect: "npm run site -- spec --json",
-      inspectTarget: "npm run site -- spec <page-or-collection-or-entry-or-component-or-ui-or-section-or-navigation-or-shell-or-assets-or-design-or-fonts> --json",
+      inspectTarget: "npm run site -- spec <page-or-collection-or-entry-or-component-or-ui-or-section-or-navigation-or-shell-or-assets-or-design-or-design-system-or-fonts> --json",
+      inspectDesignSystem: "npm run site -- spec design-system --json",
+      inspectDesignSystemPack: "npm run site -- design-system --json",
+      installDesignSystem: "npm run site -- design-system install <pack> --replace",
+      packDesignSystem: "npm run site -- design-system pack <directory>",
       validate: "npm run site -- validate --json",
       build: "npm run build",
       addComponent: "npm run site -- add component <id>",
@@ -21,7 +26,8 @@ export function agentProtocol(): Record<string, unknown> {
     composition: {
       pageLayer: "pages/*.yaml may use registered sections or reusable section:<id> presets only.",
       sectionLayer: "components/* are page-level sections.",
-      uiLayer: "ui/* are internal design-system primitives used by sections/shell; Page Spec cannot use them directly.",
+      uiLayer: "ui/* are internal Design System primitives used by sections/shell; Page Spec cannot use them directly.",
+      designSystem: "design-system.yaml declares the portable v0.4 Design System contract: UI and section libraries, shell packs, layout convention, themes, token sources, and extension policy.",
       reusableSections: "Store reusable section configuration under sections/*.yaml and reference it with { id, $ref: 'section:<id>' }.",
       dynamicRoutes: "Use /path/[param] with page.paths in specVersion 0.2+, or bind the route to content.entry in specVersion 0.3.",
       content: "Define typed collections under content/<collection>/collection.yaml. Bind detail pages with content.entry and listing data with content.queries; consume values through entry: and query: refs."
@@ -30,6 +36,7 @@ export function agentProtocol(): Record<string, unknown> {
       define: "design/tokens.json",
       inspect: "npm run site -- spec design --json",
       inspectFonts: "npm run site -- spec fonts --json",
+      inspectSystem: "npm run site -- design-system --json",
       model: "primitive values -> semantic aliases -> ui/components/shell",
       rule: "Use semantic design tokens for reusable visual decisions. UI primitives, components, and shell must not use primitive tokens or raw reusable colors, spacing, typography, radius, or shadows.",
       fonts: {
@@ -42,6 +49,15 @@ export function agentProtocol(): Record<string, unknown> {
         outer: "Outer shell/section owns responsive page gutter via var(--space-page).",
         inner: "Inner container owns max-width via var(--size-content) and margin-inline:auto."
       }
+    },
+    designSystem: {
+      define: "design-system.yaml",
+      inspect: "npm run site -- spec design-system --json",
+      inspectPack: "npm run site -- design-system --json",
+      install: "npm run site -- design-system install <pack> --replace",
+      pack: "npm run site -- design-system pack <directory>",
+      model: "portable source pack -> copy into site -> site-owned executable design system",
+      runtimeDependency: false
     },
     assets: {
       define: "site.yaml#/assets",
@@ -77,6 +93,8 @@ export function agentProtocol(): Record<string, unknown> {
       faviconRequired: true,
       semanticDesignTokensOnly: true,
       rawReusableStylesForbidden: true,
+      designSystemIsSourceOwned: true,
+      tokenExtensionsFollowContract: true,
       localFontsOnly: true,
       fontFacesInDesignConfig: true,
       inlineHtml: false,
@@ -87,6 +105,7 @@ export function agentProtocol(): Record<string, unknown> {
     },
     sourceOfTruth: [
       "site.yaml",
+      "design-system.yaml",
       "shell/",
       "pages/",
       "sections/",
@@ -96,6 +115,8 @@ export function agentProtocol(): Record<string, unknown> {
       "ui/*/ui.yaml",
       "ui/*/index.astro",
       "design/tokens.json",
+      "design/extensions.json",
+      "design/themes/",
       "design/fonts.yaml",
       "public/"
     ],
@@ -108,7 +129,8 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
   const validation = await validateLoadedProject(project);
   const diagnostics = validation.diagnostics;
   const design = (await inspectDesign(root)).design;
-  const specVersion = project.site?.specVersion ?? "0.3";
+  const designSystem = project.designSystem ? (await inspectDesignSystem(root)).designSystem : undefined;
+  const specVersion = project.site?.specVersion ?? "0.4";
 
   const components = [...project.registry.values()].map(component => ({
     id: component.id,
@@ -200,9 +222,12 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
     items: resolvedNavigation[id] ?? project.site?.navigation?.[id] ?? []
   }));
 
+  const selectedShellId = project.site?.designSystem?.shell ?? project.designSystem?.value.shells.default ?? "default";
+  const selectedShellEntry = project.designSystem?.value.shells.items[selectedShellId]?.entry ?? "shell/default.astro";
   const shell = {
-    layout: "shell/default.astro",
-    exists: await fileExists(join(root, "shell", "default.astro")),
+    id: selectedShellId,
+    layout: selectedShellEntry,
+    exists: await fileExists(join(root, selectedShellEntry)),
     conventionalFiles: {
       header: { path: "shell/Header.astro", exists: await fileExists(join(root, "shell", "Header.astro")) },
       footer: { path: "shell/Footer.astro", exists: await fileExists(join(root, "shell", "Footer.astro")) }
@@ -237,11 +262,16 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
       dynamicRoutes: specVersion !== "0.1",
       routeParamReferences: specVersion !== "0.1",
       paginationCoreType: specVersion !== "0.1",
-      typedContentCollections: specVersion === "0.3",
-      markdownEntries: specVersion === "0.3",
-      contentRelations: specVersion === "0.3",
-      contentQueries: specVersion === "0.3",
-      contentPagination: specVersion === "0.3",
+      typedContentCollections: specVersion === "0.3" || specVersion === "0.4",
+      markdownEntries: specVersion === "0.3" || specVersion === "0.4",
+      contentRelations: specVersion === "0.3" || specVersion === "0.4",
+      contentQueries: specVersion === "0.3" || specVersion === "0.4",
+      contentPagination: specVersion === "0.3" || specVersion === "0.4",
+      designSystemContract: specVersion === "0.4",
+      designSystemPacks: specVersion === "0.4",
+      shellPacks: specVersion === "0.4",
+      themes: specVersion === "0.4",
+      tokenExtensions: specVersion === "0.4",
       siteShell: true,
       semanticSiteAssets: true,
       designTokens: true,
@@ -261,6 +291,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
       ...(specVersion !== "0.1" ? { pagination: `urn:site-spec:${specVersion}:type:pagination` } : {})
     },
     shell,
+    designSystem,
     assets,
     design,
     navigation,
@@ -276,6 +307,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
   if (query === "shell") return { specVersion, valid: validation.valid, type: "shell", agent: agentProtocol(), shell, navigation, diagnostics };
   if (query === "assets") return { specVersion, valid: validation.valid, type: "assets", agent: agentProtocol(), assets, diagnostics };
   if (query === "design") return { specVersion, valid: validation.valid, type: "design", agent: agentProtocol(), design, diagnostics };
+  if (query === "design-system") return { specVersion, valid: validation.valid, type: "design-system", agent: agentProtocol(), designSystem, diagnostics };
   if (query === "fonts") return {
     specVersion, valid: validation.valid, type: "fonts", agent: agentProtocol(), fonts: design.fonts,
     typographyTokens: {
@@ -347,13 +379,13 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
       {
         code: "SPEC_QUERY_NOT_FOUND",
         severity: "error",
-        message: `No page, content collection/entry, component, UI primitive, section preset, navigation collection, shell, assets, design, or fonts target matched "${query}".`,
+        message: `No page, content collection/entry, component, UI primitive, section preset, navigation collection, shell, assets, design, Design System, or fonts target matched "${query}".`,
         actual: query,
         allowed: [
           ...pages.map(item => item.id), ...components.map(item => item.id), ...ui.map(item => `ui:${item.id}`),
           ...sectionPresets.map(item => item.reference), "content", ...contentCollections.map(item => item.reference),
           ...contentCollections.flatMap(item => item.entries.map(entry => entry.reference)),
-          "shell", "assets", "design", "fonts", ...navigation.map(item => item.reference)
+          "shell", "assets", "design", "design-system", "fonts", ...navigation.map(item => item.reference)
         ],
         suggestions: [{ action: "inspect-project", command: "npm run site -- spec --json" }]
       }

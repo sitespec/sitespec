@@ -1,4 +1,4 @@
-specVersion: "0.3"
+specVersion: "0.4"
 page:
   id: features
   route: /features
@@ -6,7 +6,7 @@ page:
 
 seo:
   title: Features
-  description: Inspect the SiteSpec v0.3 composition model through working routes in the starter.
+  description: Inspect the SiteSpec v0.4 composition model through working routes in the starter.
 
 sections:
   - id: intro
@@ -16,7 +16,7 @@ sections:
     props:
       eyebrow: Composition model
       title: Follow the contract through every layer
-      text: These routes are generated from one dynamic Page Spec and make the v0.3 route expansion and reference model visible in the built site.
+      text: These routes are generated from one dynamic Page Spec and make the route expansion and reference model visible in the built site.
 
   - id: feature-routes
     use: navigation-list

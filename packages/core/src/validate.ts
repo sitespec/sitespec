@@ -1,4 +1,4 @@
-import { lstat, realpath } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import type {
   ContentEntry, Diagnostic, LoadedProject, ResolvedNavigation, ResolvedPage, ResolvedSite,
@@ -7,7 +7,8 @@ import type {
 import { hasErrors, nearestStrings } from "./diagnostics.js";
 import { loadProject } from "./project.js";
 import { resolvePage } from "./resolver.js";
-import { validateDesign } from "./design.js";
+import { inspectDesign, validateDesign } from "./design.js";
+import { fileExists } from "./fs.js";
 import { isDynamicRoute, materializeRoute, resolvedPageId, routeParamNames } from "./routes.js";
 import { contentEntryRecord, runContentQuery, validatePaginationRoute } from "./content-query.js";
 
@@ -222,7 +223,7 @@ function containsPostV01CoreType(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(containsPostV01CoreType);
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[23]:/.test(record.$ref)) return true;
+  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[234]:/.test(record.$ref)) return true;
   return Object.values(record).some(containsPostV01CoreType);
 }
 
@@ -266,18 +267,18 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
     });
   }
   for (const collection of project.contentCollections) {
-    if (version !== "0.3") diagnostics.push({
+    if (version === "0.1" || version === "0.2") diagnostics.push({
       code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: collection.file,
-      message: `Typed content collections require specVersion "0.3".`,
-      expected: "0.3", actual: version,
+      message: `Typed content collections require specVersion "0.3" or newer.`,
+      expected: ["0.3", "0.4"], actual: version,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
     });
   }
-  if (version !== "0.3") {
+  if (version === "0.1" || version === "0.2") {
     for (const page of project.pages) if (page.value.content) diagnostics.push({
       code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: page.file, page: page.value.page.id,
-      path: "/content", message: `Content-driven pages and queries require specVersion "0.3".`,
-      expected: "0.3", actual: version,
+      path: "/content", message: `Content-driven pages and queries require specVersion "0.3" or newer.`,
+      expected: ["0.3", "0.4"], actual: version,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
     });
   }
@@ -298,7 +299,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
       if (containsPostV01CoreType(component.value.props)) diagnostics.push({
         code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: component.file, component: component.value.component.id,
         path: "/props", message: 'SiteSpec 0.2+ core prop types require specVersion "0.2" or newer.',
-        expected: ["0.2", "0.3"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+        expected: ["0.2", "0.3", "0.4"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
       });
     }
   }
@@ -312,6 +313,155 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
     expected: "0.2",
     actual: version,
     suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+  });
+}
+
+async function validateDesignSystemProject(project: LoadedProject, diagnostics: Diagnostic[]): Promise<void> {
+  if (!project.site) return;
+  const contract = project.designSystem?.value;
+  if (project.site.specVersion === "0.4" && !contract) {
+    diagnostics.push({
+      code: "DESIGN_SYSTEM_CONTRACT_MISSING",
+      severity: "error",
+      file: "design-system.yaml",
+      message: "SiteSpec 0.4 projects require design-system.yaml.",
+      expected: "formal Design System contract",
+      suggestions: [{ action: "install-design-system", command: "npm run site -- design-system install <pack> --replace" }]
+    });
+    return;
+  }
+  if (project.site.specVersion !== "0.4" && (contract || project.site.designSystem)) {
+    diagnostics.push({
+      code: "V04_FEATURE_REQUIRES_SPEC_VERSION",
+      severity: "error",
+      file: contract ? "design-system.yaml" : "site.yaml",
+      message: "Design System contracts and site-level Design System selection require specVersion \"0.4\".",
+      expected: "0.4",
+      actual: project.site.specVersion,
+      suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.4" }]
+    });
+    return;
+  }
+  if (!contract) return;
+
+  const selectedTheme = project.site.designSystem?.theme ?? contract.themes.default;
+  if (!(selectedTheme in contract.themes.items)) diagnostics.push({
+    code: "DESIGN_SYSTEM_THEME_UNKNOWN",
+    severity: "error",
+    file: "site.yaml",
+    path: "/designSystem/theme",
+    message: `Selected Design System theme "${selectedTheme}" is not available.`,
+    actual: selectedTheme,
+    allowed: Object.keys(contract.themes.items).sort()
+  });
+
+  const selectedShell = project.site.designSystem?.shell ?? contract.shells.default;
+  if (!(selectedShell in contract.shells.items)) diagnostics.push({
+    code: "DESIGN_SYSTEM_SHELL_UNKNOWN",
+    severity: "error",
+    file: "site.yaml",
+    path: "/designSystem/shell",
+    message: `Selected shell pack "${selectedShell}" is not available.`,
+    actual: selectedShell,
+    allowed: Object.keys(contract.shells.items).sort()
+  });
+
+  for (const id of contract.libraries.ui) if (!project.uiRegistry.has(id)) diagnostics.push({
+    code: "DESIGN_SYSTEM_UI_EXPORT_UNKNOWN",
+    severity: "error",
+    file: "design-system.yaml",
+    path: "/libraries/ui",
+    message: `Design System exports unknown UI primitive "${id}".`,
+    actual: id,
+    allowed: [...project.uiRegistry.keys()].sort()
+  });
+  for (const id of contract.libraries.sections) if (!project.registry.has(id)) diagnostics.push({
+    code: "DESIGN_SYSTEM_SECTION_EXPORT_UNKNOWN",
+    severity: "error",
+    file: "design-system.yaml",
+    path: "/libraries/sections",
+    message: `Design System exports unknown section component "${id}".`,
+    actual: id,
+    allowed: [...project.registry.keys()].sort()
+  });
+  const presets = new Map(project.sectionPresets.map(preset => [preset.id, preset]));
+  for (const id of contract.libraries.presets) if (!presets.has(id)) diagnostics.push({
+    code: "DESIGN_SYSTEM_PRESET_EXPORT_UNKNOWN",
+    severity: "error",
+    file: "design-system.yaml",
+    path: "/libraries/presets",
+    message: `Design System exports unknown section preset "${id}".`,
+    actual: id,
+    allowed: [...presets.keys()].sort()
+  });
+
+  if (!(await fileExists(join(project.root, contract.fonts.source)))) diagnostics.push({
+    code: "DESIGN_SYSTEM_FILE_MISSING",
+    severity: "error",
+    file: "design-system.yaml",
+    path: "/fonts/source",
+    message: `Design System references missing file ${JSON.stringify(contract.fonts.source)}.`,
+    expected: contract.fonts.source
+  });
+
+  const exportedSections = new Set(contract.libraries.sections);
+  for (const id of contract.libraries.presets) {
+    const preset = presets.get(id);
+    if (!preset || exportedSections.has(preset.value.section.use)) continue;
+    diagnostics.push({
+      code: "DESIGN_SYSTEM_PRESET_SECTION_NOT_EXPORTED",
+      severity: "error",
+      file: "design-system.yaml",
+      path: "/libraries/presets",
+      message: `Exported section preset "${id}" targets section "${preset.value.section.use}", which is not exported by this Design System.`,
+      actual: preset.value.section.use,
+      allowed: [...exportedSections].sort()
+    });
+  }
+
+  for (const [shellId, shell] of Object.entries(contract.shells.items)) {
+    for (const path of new Set([shell.entry, ...shell.files])) if (!(await fileExists(join(project.root, path)))) diagnostics.push({
+      code: "DESIGN_SYSTEM_FILE_MISSING",
+      severity: "error",
+      file: "design-system.yaml",
+      path: `/shells/items/${shellId}`,
+      message: `Shell pack "${shellId}" references missing file ${JSON.stringify(path)}.`,
+      expected: path
+    });
+
+    if (await fileExists(join(project.root, shell.entry))) {
+      try {
+        const source = await readFile(join(project.root, shell.entry), "utf8");
+        if (!/<slot(?:\s|\/>|>)/i.test(source)) diagnostics.push({
+          code: "DESIGN_SYSTEM_SHELL_SLOT_MISSING",
+          severity: "error",
+          file: shell.entry,
+          path: `/shells/items/${shellId}/entry`,
+          message: `Shell pack "${shellId}" must render <slot />.`,
+          expected: "<slot />"
+        });
+      } catch (error) {
+        diagnostics.push({
+          code: "DESIGN_SYSTEM_SHELL_READ_FAILED",
+          severity: "error",
+          file: shell.entry,
+          path: `/shells/items/${shellId}/entry`,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  }
+
+  const design = (await inspectDesign(project.root)).design;
+  const semantic = new Set(design.semantic.map(token => token.name));
+  for (const [field, token] of Object.entries(contract.layout.tokens)) if (!semantic.has(token)) diagnostics.push({
+    code: "DESIGN_SYSTEM_LAYOUT_TOKEN_UNKNOWN",
+    severity: "error",
+    file: "design-system.yaml",
+    path: `/layout/tokens/${field}`,
+    message: `Layout convention references unknown semantic token "${token}".`,
+    actual: token,
+    allowed: [...semantic].sort()
   });
 }
 
@@ -556,7 +706,7 @@ function pageInstances(project: LoadedProject, page: LoadedProject["pages"][numb
     diagnostics.push({
       code: "DYNAMIC_ROUTE_REQUIRES_V02", severity: "error", file: page.file, page: page.value.page.id,
       path: "/page/route", message: "Dynamic route templates require specVersion \"0.2\" or newer.",
-      expected: ["0.2", "0.3"], actual: page.value.specVersion
+      expected: ["0.2", "0.3", "0.4"], actual: page.value.specVersion
     });
     return [];
   }
@@ -743,6 +893,7 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
   const diagnostics = [...project.diagnostics];
   validateGlobalIdentities(project, diagnostics);
   validateSpecVersions(project, diagnostics);
+  await validateDesignSystemProject(project, diagnostics);
   validateSectionPresetDefinitions(project, diagnostics);
   validateContentPageDefinitions(project, diagnostics);
   prepareContentEntryHrefs(project, diagnostics);
@@ -778,6 +929,14 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
   const site: ResolvedSite | undefined = project.site ? {
     specVersion: project.site.specVersion,
     site: { ...project.site.site },
+    designSystem: project.designSystem ? {
+      id: project.designSystem.value.designSystem.id,
+      name: project.designSystem.value.designSystem.name,
+      version: project.designSystem.value.designSystem.version,
+      theme: project.site.designSystem?.theme ?? project.designSystem.value.themes.default,
+      shell: project.site.designSystem?.shell ?? project.designSystem.value.shells.default,
+      shellEntry: project.designSystem.value.shells.items[project.site.designSystem?.shell ?? project.designSystem.value.shells.default]?.entry ?? "shell/default.astro"
+    } : undefined,
     brand: { ...(project.site.brand ?? {}) },
     assets: { ...project.site.assets },
     navigation,

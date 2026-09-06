@@ -20,11 +20,11 @@ async function withSite(run: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
-test("v0.3 starter exposes composition and typed content", async () => {
+test("v0.4 starter exposes composition and typed content", async () => {
   await withSite(async root => {
     const result = await validateProject(root);
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
-    assert.equal(result.site?.specVersion, "0.3");
+    assert.equal(result.site?.specVersion, "0.4");
     const home = result.site?.pages.find(page => page.id === "home");
     assert.ok(home);
     assert.equal(home.sections.at(-1)?.preset, "section:final-cta");
@@ -112,9 +112,9 @@ test("v0.3 starter exposes composition and typed content", async () => {
   });
 });
 
-test("v0.3 starter keeps explicit dynamic routes and param refs", async () => {
+test("v0.4 starter keeps explicit dynamic routes and param refs", async () => {
   await withSite(async root => {
-    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.3"\npage:\n  id: product\n  route: /products/[slug]\n  archetype: detail\n  paths:\n    - slug: stories\n    - slug: banners\nseo:\n  title: "Product {slug}"\n  description: "Learn about {slug}."\nsections:\n  - id: intro\n    use: hero\n    props:\n      eyebrow: Product\n      title:\n        $ref: param:slug\n`, "utf8");
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.4"\npage:\n  id: product\n  route: /products/[slug]\n  archetype: detail\n  paths:\n    - slug: stories\n    - slug: banners\nseo:\n  title: "Product {slug}"\n  description: "Learn about {slug}."\nsections:\n  - id: intro\n    use: hero\n    props:\n      eyebrow: Product\n      title:\n        $ref: param:slug\n`, "utf8");
 
     const result = await validateProject(root);
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
@@ -135,9 +135,9 @@ test("v0.3 starter keeps explicit dynamic routes and param refs", async () => {
   });
 });
 
-test("v0.3 rejects incomplete dynamic route path parameters deterministically", async () => {
+test("v0.4 rejects incomplete dynamic route path parameters deterministically", async () => {
   await withSite(async root => {
-    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.3"\npage:\n  id: product\n  route: /products/[category]/[slug]\n  archetype: detail\n  paths:\n    - slug: stories\nseo:\n  title: Product\nsections:\n  - id: intro\n    use: hero\n    props:\n      title: Product\n`, "utf8");
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.4"\npage:\n  id: product\n  route: /products/[category]/[slug]\n  archetype: detail\n  paths:\n    - slug: stories\nseo:\n  title: Product\nsections:\n  - id: intro\n    use: hero\n    props:\n      title: Product\n`, "utf8");
     const result = await validateProject(root);
     assert.equal(result.valid, false);
     const diagnostic = result.diagnostics.find(item => item.code === "DYNAMIC_ROUTE_PARAMS_INVALID");
@@ -148,20 +148,20 @@ test("v0.3 rejects incomplete dynamic route path parameters deterministically", 
 
 test("Page Spec cannot use a UI primitive as a section", async () => {
   await withSite(async root => {
-    await writeFile(join(root, "pages", "bad-ui.yaml"), `specVersion: "0.3"\npage:\n  id: bad-ui\n  route: /bad-ui\n  archetype: blank\nseo:\n  title: Bad UI\nsections:\n  - id: action\n    use: button\n    props: {}\n`, "utf8");
+    await writeFile(join(root, "pages", "bad-ui.yaml"), `specVersion: "0.4"\npage:\n  id: bad-ui\n  route: /bad-ui\n  archetype: blank\nseo:\n  title: Bad UI\nsections:\n  - id: action\n    use: button\n    props: {}\n`, "utf8");
     const result = await validateProject(root);
     assert.equal(result.valid, false);
     assert.ok(result.diagnostics.some(item => item.code === "SECTION_UI_PRIMITIVE_FORBIDDEN"));
   });
 });
 
-test("pagination is a valid v0.3 core prop type", async () => {
+test("pagination is a valid v0.4 core prop type", async () => {
   await withSite(async root => {
     const dir = join(root, "components", "pager");
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, "component.yaml"), `specVersion: "0.3"\ncomponent:\n  id: pager\n  role: utility\nprops:\n  $ref: urn:site-spec:0.3:type:pagination\nruntime:\n  javascript: false\n`, "utf8");
+    await writeFile(join(dir, "component.yaml"), `specVersion: "0.4"\ncomponent:\n  id: pager\n  role: utility\nprops:\n  $ref: urn:site-spec:0.4:type:pagination\nruntime:\n  javascript: false\n`, "utf8");
     await writeFile(join(dir, "index.astro"), `---\ninterface Props { sectionId: string; variant: string; theme: string; props: { currentPage: number; totalPages: number } }\nconst { sectionId, variant, theme, props } = Astro.props;\n---\n<section id={sectionId} data-section={sectionId} data-component="pager" data-variant={variant} data-theme={theme}><p>{props.currentPage} / {props.totalPages}</p></section>\n`, "utf8");
-    await writeFile(join(root, "pages", "paging.yaml"), `specVersion: "0.3"\npage:\n  id: paging\n  route: /paging\n  archetype: blank\nseo:\n  title: Paging\nsections:\n  - id: pagination\n    use: pager\n    props:\n      currentPage: 1\n      totalPages: 3\n      nextHref: /paging\n`, "utf8");
+    await writeFile(join(root, "pages", "paging.yaml"), `specVersion: "0.4"\npage:\n  id: paging\n  route: /paging\n  archetype: blank\nseo:\n  title: Paging\nsections:\n  - id: pagination\n    use: pager\n    props:\n      currentPage: 1\n      totalPages: 3\n      nextHref: /paging\n`, "utf8");
     const result = await validateProject(root);
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
   });
@@ -174,7 +174,7 @@ test("site add ui creates a formal primitive contract", async () => {
     const project = await loadProject(root);
     assert.ok(project.uiRegistry.has("badge"));
     const manifest = await readFile(join(root, "ui", "badge", "ui.yaml"), "utf8");
-    assert.match(manifest, /specVersion: "0\.3"/);
+    assert.match(manifest, /specVersion: "0\.4"/);
   });
 });
 
@@ -182,7 +182,7 @@ test("site add ui creates a formal primitive contract", async () => {
 
 test("unused reusable section presets are still validated", async () => {
   await withSite(async root => {
-    await writeFile(join(root, "sections", "broken.yaml"), `specVersion: "0.3"
+    await writeFile(join(root, "sections", "broken.yaml"), `specVersion: "0.4"
 section:
   use: does-not-exist
   variant: default
@@ -194,7 +194,7 @@ section:
   });
 });
 
-test("v0.3 validates UI primitive implementation contracts", async () => {
+test("v0.4 validates UI primitive implementation contracts", async () => {
   await withSite(async root => {
     const button = join(root, "ui", "button", "index.astro");
     const source = await readFile(button, "utf8");

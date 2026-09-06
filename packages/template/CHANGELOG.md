@@ -1,5 +1,11 @@
 # @sitespec/template
 
+## 0.4.0
+
+### Minor Changes
+
+- Upgrade the default starter to SiteSpec 0.4 with a formal `design-system.yaml`, default/dark themes, exported UI/section/preset libraries, shell-pack metadata, layout-token conventions, and additive site token-extension policy.
+
 ## 0.3.0
 
 ### Minor Changes

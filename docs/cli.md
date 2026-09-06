@@ -22,7 +22,7 @@ Use npm scripts rather than relying on a globally installed SiteSpec CLI. This k
 npm run dev
 ```
 
-Development mode watches SiteSpec source, content, components, UI primitives, section presets, Site Shell, design tokens, and public assets. It re-resolves the project and reports structured diagnostics when the source becomes invalid.
+Development mode watches SiteSpec source, content, components, UI primitives, section presets, Site Shell, Design System contract, themes, design tokens/extensions, and public assets. It re-resolves the project and reports structured diagnostics when the source becomes invalid.
 
 ## Validation
 
@@ -58,6 +58,7 @@ npm run site -- spec --json
 Focused inspection:
 
 ```bash
+npm run site -- spec design-system --json
 npm run site -- spec design --json
 npm run site -- spec sections --json
 npm run site -- spec content --json
@@ -68,6 +69,34 @@ npm run site -- spec /blog/category/engineering --json
 ```
 
 The inspection surface is designed to be stable enough for agents and tooling to understand the project without inferring structure from arbitrary source code.
+
+## Design System commands
+
+Inspect the installed first-class Design System through the `site spec` surface requested by the v0.4 agent contract:
+
+```bash
+npm run site -- spec design-system --json
+```
+
+Inspect a site or standalone Design System pack directly:
+
+```bash
+npm run site -- design-system --json
+```
+
+Copy the current Design System into an empty portable pack directory:
+
+```bash
+npm run site -- design-system pack ../company-design-system
+```
+
+Install a pack into a SiteSpec v0.4 project:
+
+```bash
+npm run site -- design-system install ../company-design-system --replace
+```
+
+The install is source-copy based; the target website receives no runtime dependency on the pack. `--replace` replaces files owned by the current Design System while preserving `design/extensions.json`. Read [Design Systems](design-systems.md) for the ownership and extension rules.
 
 ## Add registered building blocks
 

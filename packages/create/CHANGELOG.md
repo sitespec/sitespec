@@ -1,5 +1,12 @@
 # @sitespec/create
 
+## 0.4.0
+
+### Patch Changes
+
+- Initialize the SiteSpec 0.4 Design System starter.
+- @sitespec/template@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes

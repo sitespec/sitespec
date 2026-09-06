@@ -1,20 +1,21 @@
 # __SITE_NAME__
 
-SiteSpec v0.3 starter and executable contract showcase.
+SiteSpec v0.4 starter and executable contract showcase.
 
 The starter stays deliberately small while demonstrating both composition and content:
 
 - typed Markdown collections in `content/*`;
 - content-driven detail routes with `content.entry` and `entry:` references;
 - declarative listing queries with sorting and pagination through `query:` references;
+- first-class Design System metadata in `design-system.yaml`;
 - formal UI primitives in `ui/*`;
 - reusable section presets in `sections/*`;
 - deterministic non-content dynamic routes with `page.paths` and `param:<name>`;
 - named navigation collections and `navigation:<id>` references;
-- the `urn:site-spec:0.3:type:pagination` core type;
+- the `urn:site-spec:0.4:type:pagination` core type;
 - self-hosted Inter web fonts declared in `design/fonts.yaml`;
 - semantic favicon, Apple touch icon and default Open Graph image assets;
-- user-owned Site Shell and semantic design tokens;
+- selectable shell packs, themes, semantic design tokens, and controlled site token extensions;
 - agent-readable project and content inspection.
 
 ## Starter routes
@@ -37,6 +38,7 @@ npm run site -- spec content --json
 npm run site -- spec collection:posts --json
 npm run site -- spec entry:posts/content-driven --json
 npm run site -- spec /blog/content-driven --json
+npm run site -- spec design-system --json
 npm run site -- spec shell --json
 npm run site -- spec design --json
 npm run site -- spec fonts --json

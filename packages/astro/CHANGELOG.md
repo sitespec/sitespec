@@ -1,5 +1,15 @@
 # @sitespec/astro
 
+## 0.4.0
+
+### Minor Changes
+
+- Render SiteSpec 0.4 Design System themes and selected shell packs, compile additive token extensions, and validate every declared shell-pack entry.
+
+### Patch Changes
+
+- @sitespec/core@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes

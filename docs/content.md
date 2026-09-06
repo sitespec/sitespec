@@ -1,6 +1,6 @@
 # Content
 
-SiteSpec v0.3 treats content as part of the resolved project contract. Collections and entries are loaded by `@sitespec/core`; schemas, relations, queries, pagination, routes, and references are resolved before the Astro renderer runs.
+SiteSpec v0.4 retains the typed content contract introduced in v0.3 and treats content as part of the resolved project contract. Collections and entries are loaded by `@sitespec/core`; schemas, relations, queries, pagination, routes, and references are resolved before the Astro renderer runs.
 
 That makes it possible to build blogs, documentation, case studies, catalogs, author pages, category pages, and similar sites from `spec` + content files without a runtime CMS.
 
@@ -32,7 +32,7 @@ The collection ID must match the directory name.
 ## Collection manifest
 
 ```yaml
-specVersion: "0.3"
+specVersion: "0.4"
 
 collection:
   id: posts
@@ -196,7 +196,7 @@ Relation expansion is shallow. SiteSpec does not recursively expand the entire c
 Bind a dynamic Page Spec to a collection with `content.entry`:
 
 ```yaml
-specVersion: "0.3"
+specVersion: "0.4"
 
 page:
   id: post
@@ -475,7 +475,7 @@ Inspection exposes the loaded collection contract, entries, status, relations, s
 
 ## Full repository example
 
-`examples/marketing` is the executable v0.3 Content reference. It includes:
+`examples/marketing` is the executable v0.4 reference for the Content contract introduced in v0.3. It includes:
 
 - `posts`, `authors`, `categories`, and `tags`;
 - Markdown and YAML entries;

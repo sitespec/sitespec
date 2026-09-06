@@ -1,5 +1,17 @@
 # @sitespec/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- Add Design System inspection plus source-copy `design-system pack` and `design-system install` workflows with managed replacement and preserved site token extensions.
+
+### Patch Changes
+
+- @sitespec/template@0.4.0
+- @sitespec/core@0.4.0
+- @sitespec/astro@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes

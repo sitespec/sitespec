@@ -27,7 +27,9 @@ Two main flows meet at Page Specs.
 Composition and design:
 
 ```text
-semantic design tokens
+formal Design System contract
+        ↓
+semantic design tokens + themes + layout
         ↓
 UI primitives
         ↓
@@ -50,7 +52,7 @@ queries / entry binding
 Page Specs
 ```
 
-The Site Shell surrounds the resolved page and uses the same site-wide navigation, assets, UI primitives, and semantic design vocabulary.
+The selected Design System shell pack surrounds the resolved page and uses the same site-wide navigation, assets, UI primitives, and semantic design vocabulary.
 
 ## Site
 
@@ -123,9 +125,15 @@ UI primitives live under `ui/<id>/` and form the internal design-system layer.
 
 Components and the Site Shell can compose them, but Page Specs cannot use UI primitives directly. Page composition therefore stays at a stable semantic level rather than exposing every low-level visual primitive as public page API.
 
+## Design System
+
+SiteSpec v0.4 makes `design-system.yaml` a first-class contract. It identifies and versions the installed Design System and declares its token/font sources, themes, layout convention, exported UI primitives, exported section library and presets, and shell packs.
+
+Design Systems use a copy/install model rather than a website runtime dependency. A portable pack can be created once and installed into many sites; after installation each site owns an executable copy in Git. See [Design Systems](design-systems.md).
+
 ## Design tokens and fonts
 
-`design/tokens.json` separates primitive values from semantic aliases.
+`design/tokens.json` contains the installed Design System base vocabulary. `design/extensions.json` is the optional site-owned additive layer permitted by the Design System contract. Primitive values remain separate from semantic aliases.
 
 Primitive tokens hold concrete values. Semantic tokens describe purpose: text color, surface color, spacing role, body font, and similar decisions. Components and shell code should consume the semantic vocabulary instead of embedding arbitrary raw values.
 
@@ -133,7 +141,7 @@ Primitive tokens hold concrete values. Semantic tokens describe purpose: text co
 
 ## Site Shell
 
-`shell/` is the user-owned application chrome around resolved page sections: document structure, header, footer, and other global layout concerns.
+`shell/` contains the installed Design System shell packs around resolved page sections: document structure, header, footer, and other global layout concerns.
 
 The shell can consume site navigation, semantic assets, UI primitives, and design tokens while remaining separate from Page Spec composition.
 
@@ -153,12 +161,12 @@ query:posts.items
 query:posts.pagination
 ```
 
-Core prop types have stable v0.3 URNs, for example:
+Core prop types use the current v0.4 URNs, for example:
 
 ```text
-urn:site-spec:0.3:type:action
-urn:site-spec:0.3:type:navigation
-urn:site-spec:0.3:type:pagination
+urn:site-spec:0.4:type:action
+urn:site-spec:0.4:type:navigation
+urn:site-spec:0.4:type:pagination
 ```
 
 References are resolved before final component prop validation.
@@ -262,6 +270,7 @@ The resolved model is inspectable through the CLI:
 
 ```bash
 npm run site -- spec --json
+npm run site -- spec design-system --json
 npm run site -- spec content --json
 npm run site -- spec collection:posts --json
 npm run site -- spec entry:posts/typed-relations --json

@@ -1,4 +1,4 @@
-specVersion: "0.3"
+specVersion: "0.4"
 site:
   id: marketing-example
   name: "SiteSpec Content Example"
@@ -25,4 +25,4 @@ navigation:
 
 seo:
   titleTemplate: "%s — SiteSpec Content Example"
-  defaultDescription: "Executable SiteSpec v0.3 content example."
+  defaultDescription: "Executable SiteSpec v0.4 Design System and content example."

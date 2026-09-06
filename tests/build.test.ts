@@ -14,6 +14,8 @@ test("sitespec init creates a valid starter project", async () => {
     const initialized = await initProject({ directory: root, name: "Acme" });
     assert.equal(initialized.id, "acme");
     assert.ok(initialized.files.includes("site.yaml"));
+    assert.ok(initialized.files.includes("design-system.yaml"));
+    assert.ok(initialized.files.includes("design/themes/dark.json"));
     assert.ok(initialized.files.includes("components/hero/index.astro"));
     assert.ok(initialized.files.includes("shell/default.astro"));
     assert.ok(initialized.files.includes("shell/Header.astro"));
@@ -55,7 +57,7 @@ test("sitespec init creates a valid starter project", async () => {
 
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.specVersion, "0.3");
+    assert.equal(validation.site?.specVersion, "0.4");
     assert.equal(validation.site?.pages.length, 9);
     assert.deepEqual(validation.site?.pages.map(page => page.route), [
       "/",
@@ -176,7 +178,7 @@ test("npm run build materializes explicit dynamic routes into static HTML", asyn
   const root = join(temp, "acme");
   try {
     await initProject({ directory: root, name: "Acme" });
-    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.3"
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.4"
 page:
   id: product
   route: /products/[slug]

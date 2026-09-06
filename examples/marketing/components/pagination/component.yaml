@@ -1,9 +1,9 @@
-specVersion: "0.3"
+specVersion: "0.4"
 component:
   id: pagination
   role: utility
 
-description: Render the standard SiteSpec v0.3 pagination core type as accessible static navigation.
+description: Render the standard SiteSpec pagination core type as accessible static navigation.
 
 variants:
   - default
@@ -13,7 +13,7 @@ themes:
   - muted
 
 props:
-  $ref: urn:site-spec:0.3:type:pagination
+  $ref: urn:site-spec:0.4:type:pagination
 
 runtime:
   javascript: false

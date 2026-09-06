@@ -13,7 +13,8 @@
       "enum": [
         "0.1",
         "0.2",
-        "0.3"
+        "0.3",
+        "0.4"
       ]
     },
     "site": {
@@ -43,6 +44,14 @@
           "minLength": 2,
           "maxLength": 35
         }
+      }
+    },
+    "designSystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "theme": { "$ref": "#/$defs/id" },
+        "shell": { "$ref": "#/$defs/id" }
       }
     },
     "brand": {

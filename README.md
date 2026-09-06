@@ -8,7 +8,7 @@ Figma and other design applications are optional; a separate design-handoff step
 
 ## Current format
 
-The current document format is `specVersion: "0.3"`.
+The current document format is `specVersion: "0.4"`.
 
 It supports:
 
@@ -18,7 +18,7 @@ It supports:
 - declarative filtering, deterministic sorting, and pagination;
 - content-driven detail and taxonomy routes;
 - `entry:` and `query:` references resolved before component validation;
-- section presets, registered components, UI primitives, design tokens, local fonts, and a user-owned Site Shell;
+- a first-class Design System contract with exported UI primitives, section libraries, shell packs, themes, layout conventions, semantic tokens, local fonts, and controlled site token extensions;
 - source/output validation and agent inspection through `site spec`;
 - static Astro build, preview, and GitHub Pages deployment.
 
@@ -42,6 +42,7 @@ npm run build
 npm run preview
 
 npm run site -- spec --json
+npm run site -- spec design-system --json
 npm run site -- spec content --json
 npm run site -- spec collection:posts --json
 npm run site -- spec entry:posts/hello-world --json
@@ -50,7 +51,7 @@ npm run site -- spec entry:posts/hello-world --json
 A content-driven page can be as small as:
 
 ```yaml
-specVersion: "0.3"
+specVersion: "0.4"
 
 page:
   id: post
@@ -77,6 +78,7 @@ Entries live under `content/posts/`. SiteSpec validates them, generates concrete
 
 - [Getting started](docs/getting-started.md)
 - [Core concepts](docs/concepts.md)
+- [Design Systems](docs/design-systems.md)
 - [Content](docs/content.md)
 - [CLI reference](docs/cli.md)
 - [Documentation index](docs/index.md)
@@ -91,7 +93,7 @@ npm run build
 npm test
 ```
 
-Run the full v0.3 content example:
+Run the full v0.4 reference example:
 
 ```bash
 npm run dev -w @sitespec/example-marketing

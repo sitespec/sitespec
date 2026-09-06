@@ -1,5 +1,11 @@
 # @sitespec/core
 
+## 0.4.0
+
+### Minor Changes
+
+- Add the SiteSpec 0.4 first-class Design System contract, token extension policy, themes, shell packs, layout conventions, Design System inspection, v0.4 schemas/types, and agent protocol v4 while retaining v0.1-v0.3 compatibility.
+
 ## 0.3.0
 
 ### Minor Changes

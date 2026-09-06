@@ -1,0 +1,21 @@
+{
+  "semantic": {
+    "color": {
+      "surface": {
+        "default": { "$type": "color", "$value": "{primitive.color.neutral950}" },
+        "muted": { "$type": "color", "$value": "{primitive.color.neutral900}" },
+        "card": { "$type": "color", "$value": "{primitive.color.neutral950}" },
+        "inverted": { "$type": "color", "$value": "{primitive.color.white}" }
+      },
+      "text": {
+        "default": { "$type": "color", "$value": "{primitive.color.white}" },
+        "muted": { "$type": "color", "$value": "{primitive.color.neutral700}" },
+        "inverted": { "$type": "color", "$value": "{primitive.color.neutral900}" },
+        "invertedMuted": { "$type": "color", "$value": "{primitive.color.neutral500}" }
+      },
+      "border": {
+        "default": { "$type": "color", "$value": "{primitive.color.neutral500}" }
+      }
+    }
+  }
+}

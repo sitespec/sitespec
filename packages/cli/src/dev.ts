@@ -35,6 +35,7 @@ interface DevValidationState {
 
 const WATCHED_SOURCE_PATHS: string[] = [
   "site.yaml",
+  "design-system.yaml",
   "pages",
   "content",
   "sections",
@@ -80,7 +81,7 @@ function sourcePath(root: string, absoluteOrRelativePath: string): string {
 }
 
 function isWatchedSourcePath(path: string): boolean {
-  if (path === "site.yaml") return true;
+  if (path === "site.yaml" || path === "design-system.yaml") return true;
   return ["pages/", "content/", "sections/", "components/", "ui/", "shell/", "design/", "public/"]
     .some(prefix => path.startsWith(prefix));
 }

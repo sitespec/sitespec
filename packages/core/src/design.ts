@@ -4,11 +4,13 @@ import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import type { Diagnostic } from "./types.js";
 import { validateFontsSchema } from "./ajv.js";
 import { fileExists, parseDataFile } from "./fs.js";
+import { loadDesignSystemContract } from "./design-system-contract.js";
 
 export type DesignTokenLayer = "primitive" | "semantic";
 
 export interface DesignTokenRecord {
   layer: DesignTokenLayer;
+  source: string;
   path: string;
   name: string;
   type: string;
@@ -36,7 +38,7 @@ export interface DesignFontFamily {
 }
 
 interface SourceDesignFonts {
-  specVersion: "0.1" | "0.2" | "0.3";
+  specVersion: "0.1" | "0.2" | "0.3" | "0.4";
   fonts: Record<string, {
     family: string;
     sources: Array<{
@@ -56,6 +58,14 @@ export interface DesignFontsInspection {
   formats: ["woff2", "woff"];
   defaults: { style: "normal"; display: "swap" };
   families: DesignFontFamily[];
+}
+
+export interface DesignThemeInspection {
+  id: string;
+  label: string;
+  source?: string;
+  selector: string;
+  overrides: DesignTokenRecord[];
 }
 
 export interface DesignInspection {
@@ -80,6 +90,10 @@ export interface DesignInspection {
   categories: Record<string, string[]>;
   primitive: DesignTokenRecord[];
   semantic: DesignTokenRecord[];
+  themes: {
+    default: string;
+    items: DesignThemeInspection[];
+  };
   fonts: DesignFontsInspection;
 }
 
@@ -414,6 +428,10 @@ function emptyInspection(): DesignInspection {
     categories: {},
     primitive: [],
     semantic: [],
+    themes: {
+      default: "default",
+      items: [{ id: "default", label: "Default", selector: ':root, [data-site-theme="default"]', overrides: [] }]
+    },
     fonts: emptyFontsInspection()
   };
 }
@@ -422,6 +440,7 @@ function flattenTokenLayer(
   layer: DesignTokenLayer,
   value: unknown,
   path: string[],
+  sourceFile: string,
   out: DesignTokenRecord[],
   diagnostics: Diagnostic[]
 ): void {
@@ -429,7 +448,7 @@ function flattenTokenLayer(
     diagnostics.push({
       code: "DESIGN_TOKEN_GROUP_INVALID",
       severity: "error",
-      file: "design/tokens.json",
+      file: sourceFile,
       path: `/${path.join("/")}`,
       message: `Design token group "${path.join(".")}" must be an object.`
     });
@@ -444,7 +463,7 @@ function flattenTokenLayer(
       diagnostics.push({
         code: "DESIGN_TOKEN_TYPE_INVALID",
         severity: "error",
-        file: "design/tokens.json",
+        file: sourceFile,
         path: `/${path.join("/")}/$type`,
         message: `Token "${tokenPath}" must declare a supported $type.`,
         actual: tokenType,
@@ -456,7 +475,7 @@ function flattenTokenLayer(
       diagnostics.push({
         code: "DESIGN_TOKEN_VALUE_INVALID",
         severity: "error",
-        file: "design/tokens.json",
+        file: sourceFile,
         path: `/${path.join("/")}/$value`,
         message: `Token "${tokenPath}" must use a string or number value in Site Spec v0.2.`,
         actual: tokenValue
@@ -469,7 +488,7 @@ function flattenTokenLayer(
       diagnostics.push({
         code: "DESIGN_PRIMITIVE_ALIAS_FORBIDDEN",
         severity: "error",
-        file: "design/tokens.json",
+        file: sourceFile,
         path: `/${path.join("/")}/$value`,
         message: `Primitive token "${tokenPath}" must contain a literal value, not an alias.`,
         actual: tokenValue
@@ -479,7 +498,7 @@ function flattenTokenLayer(
       diagnostics.push({
         code: "DESIGN_SEMANTIC_LITERAL_FORBIDDEN",
         severity: "error",
-        file: "design/tokens.json",
+        file: sourceFile,
         path: `/${path.join("/")}/$value`,
         message: `Semantic token "${tokenPath}" must alias a primitive token in the SiteSpec design contract.`,
         expected: "{primitive.<category>.<token>}",
@@ -494,6 +513,7 @@ function flattenTokenLayer(
 
     out.push({
       layer,
+      source: sourceFile,
       path: tokenPath,
       name: path.slice(1).join("."),
       type: tokenType,
@@ -506,7 +526,7 @@ function flattenTokenLayer(
 
   for (const [key, child] of Object.entries(value)) {
     if (key.startsWith("$")) continue;
-    flattenTokenLayer(layer, child, [...path, key], out, diagnostics);
+    flattenTokenLayer(layer, child, [...path, key], sourceFile, out, diagnostics);
   }
 }
 
@@ -521,49 +541,69 @@ function semanticCategories(tokens: DesignTokenRecord[]): Record<string, string[
 }
 
 export async function loadDesign(root: string): Promise<LoadedDesign> {
-  const fontDesign = await loadDesignFonts(root);
+  const [fontDesign, contractLoaded] = await Promise.all([
+    loadDesignFonts(root),
+    loadDesignSystemContract(root)
+  ]);
   const diagnostics: Diagnostic[] = [...fontDesign.diagnostics];
   const inspection = emptyInspection();
   inspection.fonts = fontDesign.inspection;
-  const file = join(root, "design", "tokens.json");
-  let parsed: unknown;
+  const contract = contractLoaded.designSystem?.value;
+  const tokenSource = contract?.tokens.source ?? "design/tokens.json";
+  inspection.source = tokenSource;
 
-  try {
-    parsed = JSON.parse(await readFile(file, "utf8"));
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    diagnostics.push({
-      code: code === "ENOENT" ? "DESIGN_TOKENS_MISSING" : "DESIGN_TOKENS_PARSE_FAILED",
-      severity: "error",
-      file: "design/tokens.json",
-      message: code === "ENOENT"
-        ? "design/tokens.json is required in SiteSpec projects."
-        : error instanceof Error ? error.message : String(error),
-      suggestions: code === "ENOENT" ? [{
-        action: "restore-design-tokens",
-        file: "design/tokens.json",
-        message: "Restore the project design token file or run sitespec init in a new project to inspect the current starter structure."
-      }] : undefined
-    });
-    return { inspection, diagnostics, semanticVariables: new Set(), primitiveVariables: new Set() };
+  async function readTokenObject(relFile: string, required: boolean): Promise<Record<string, unknown> | undefined> {
+    let raw: string;
+    try {
+      raw = await readFile(join(root, relFile), "utf8");
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" && !required) return undefined;
+      diagnostics.push({
+        code: code === "ENOENT" ? "DESIGN_TOKENS_MISSING" : "DESIGN_TOKENS_READ_FAILED",
+        severity: "error",
+        file: relFile,
+        message: code === "ENOENT"
+          ? `${relFile} is required by the installed Design System.`
+          : error instanceof Error ? error.message : String(error),
+        suggestions: code === "ENOENT" ? [{ action: "restore-design-tokens", file: relFile }] : undefined
+      });
+      return undefined;
+    }
+
+    let value: unknown;
+    try {
+      value = JSON.parse(raw);
+    } catch (error) {
+      diagnostics.push({
+        code: "DESIGN_TOKENS_PARSE_FAILED",
+        severity: "error",
+        file: relFile,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return undefined;
+    }
+    if (!isRecord(value)) {
+      diagnostics.push({
+        code: "DESIGN_TOKENS_ROOT_INVALID",
+        severity: "error",
+        file: relFile,
+        message: `${relFile} must contain an object.`
+      });
+      return undefined;
+    }
+    return value;
   }
 
-  if (!isRecord(parsed)) {
-    diagnostics.push({
-      code: "DESIGN_TOKENS_ROOT_INVALID",
-      severity: "error",
-      file: "design/tokens.json",
-      message: "design/tokens.json must contain an object with primitive and semantic layers."
-    });
-    return { inspection, diagnostics, semanticVariables: new Set(), primitiveVariables: new Set() };
-  }
+  const parsed = await readTokenObject(tokenSource, true);
+  if (!parsed) return { inspection, diagnostics, semanticVariables: new Set(), primitiveVariables: new Set() };
 
   const allowedTopLevel = new Set(["primitive", "semantic"]);
   for (const key of Object.keys(parsed)) {
     if (!allowedTopLevel.has(key)) diagnostics.push({
       code: "DESIGN_TOKENS_LAYER_UNKNOWN",
       severity: "error",
-      file: "design/tokens.json",
+      file: tokenSource,
       path: `/${key}`,
       message: `Unknown top-level design token layer "${key}".`,
       allowed: ["primitive", "semantic"]
@@ -573,22 +613,83 @@ export async function loadDesign(root: string): Promise<LoadedDesign> {
   if (!isRecord(parsed.primitive)) diagnostics.push({
     code: "DESIGN_PRIMITIVE_LAYER_MISSING",
     severity: "error",
-    file: "design/tokens.json",
+    file: tokenSource,
     path: "/primitive",
-    message: "design/tokens.json must define a primitive token layer."
+    message: `${tokenSource} must define a primitive token layer.`
   });
   if (!isRecord(parsed.semantic)) diagnostics.push({
     code: "DESIGN_SEMANTIC_LAYER_MISSING",
     severity: "error",
-    file: "design/tokens.json",
+    file: tokenSource,
     path: "/semantic",
-    message: "design/tokens.json must define a semantic token layer."
+    message: `${tokenSource} must define a semantic token layer.`
   });
 
   const primitive: DesignTokenRecord[] = [];
   const semantic: DesignTokenRecord[] = [];
-  if (isRecord(parsed.primitive)) flattenTokenLayer("primitive", parsed.primitive, ["primitive"], primitive, diagnostics);
-  if (isRecord(parsed.semantic)) flattenTokenLayer("semantic", parsed.semantic, ["semantic"], semantic, diagnostics);
+  if (isRecord(parsed.primitive)) flattenTokenLayer("primitive", parsed.primitive, ["primitive"], tokenSource, primitive, diagnostics);
+  if (isRecord(parsed.semantic)) flattenTokenLayer("semantic", parsed.semantic, ["semantic"], tokenSource, semantic, diagnostics);
+
+  if (contract) {
+    const extensionFile = contract.tokens.extension;
+    const extension = await readTokenObject(extensionFile, false);
+    if (extension) {
+      for (const key of Object.keys(extension)) {
+        if (!allowedTopLevel.has(key)) diagnostics.push({
+          code: "DESIGN_TOKEN_EXTENSION_LAYER_UNKNOWN",
+          severity: "error",
+          file: extensionFile,
+          path: `/${key}`,
+          message: `Unknown token extension layer "${key}".`,
+          allowed: ["primitive", "semantic"]
+        });
+      }
+
+      const extensionPrimitive: DesignTokenRecord[] = [];
+      const extensionSemantic: DesignTokenRecord[] = [];
+      if (isRecord(extension.primitive) && Object.keys(extension.primitive).length > 0) {
+        if (contract.tokens.rules.primitive === "locked") diagnostics.push({
+          code: "DESIGN_TOKEN_EXTENSION_PRIMITIVE_LOCKED",
+          severity: "error",
+          file: extensionFile,
+          path: "/primitive",
+          message: `Design System "${contract.designSystem.id}" locks primitive token extension.`,
+          expected: "no site primitive extensions",
+          actual: Object.keys(extension.primitive)
+        });
+        else flattenTokenLayer("primitive", extension.primitive, ["primitive"], extensionFile, extensionPrimitive, diagnostics);
+      }
+      if (isRecord(extension.semantic) && Object.keys(extension.semantic).length > 0) {
+        if (contract.tokens.rules.semantic === "locked") diagnostics.push({
+          code: "DESIGN_TOKEN_EXTENSION_SEMANTIC_LOCKED",
+          severity: "error",
+          file: extensionFile,
+          path: "/semantic",
+          message: `Design System "${contract.designSystem.id}" locks semantic token extension.`,
+          expected: "no site semantic extensions",
+          actual: Object.keys(extension.semantic)
+        });
+        else flattenTokenLayer("semantic", extension.semantic, ["semantic"], extensionFile, extensionSemantic, diagnostics);
+      }
+
+      const existingPaths = new Set([...primitive, ...semantic].map(token => token.path));
+      for (const token of [...extensionPrimitive, ...extensionSemantic]) {
+        if (existingPaths.has(token.path)) {
+          diagnostics.push({
+            code: "DESIGN_TOKEN_EXTENSION_OVERRIDE_FORBIDDEN",
+            severity: "error",
+            file: extensionFile,
+            path: `/${token.path.split(".").join("/")}`,
+            message: `Additive token extension cannot override existing token "${token.path}".`,
+            actual: token.path
+          });
+          continue;
+        }
+        existingPaths.add(token.path);
+        (token.layer === "primitive" ? primitive : semantic).push(token);
+      }
+    }
+  }
 
   const tokenByPath = new Map([...primitive, ...semantic].map(token => [token.path, token]));
   for (const token of semantic) {
@@ -596,25 +697,32 @@ export async function loadDesign(root: string): Promise<LoadedDesign> {
       diagnostics.push({
         code: "DESIGN_TOKEN_ALIAS_NOT_FOUND",
         severity: "error",
-        file: "design/tokens.json",
+        file: token.source,
         path: `/${token.path.split(".").join("/")}/$value`,
         message: `Semantic token "${token.path}" references unknown token "${token.alias}".`,
         expected: "existing primitive token",
         actual: token.alias,
         allowed: primitive.map(item => item.path).sort(),
-        suggestions: [{
-          action: "use-design-token",
-          candidates: primitive.map(item => item.path).sort()
-        }]
+        suggestions: [{ action: "use-design-token", candidates: primitive.map(item => item.path).sort() }]
       });
       continue;
     }
     if (token.alias) {
       const target = tokenByPath.get(token.alias);
+      if (target && target.layer !== "primitive") diagnostics.push({
+        code: "DESIGN_SEMANTIC_ALIAS_NON_PRIMITIVE",
+        severity: "error",
+        file: token.source,
+        path: `/${token.path.split(".").join("/")}/$value`,
+        message: `Semantic token "${token.path}" must alias a primitive token, not "${target.path}".`,
+        expected: "primitive token",
+        actual: target.path,
+        allowed: primitive.map(item => item.path).sort()
+      });
       if (target && target.type !== token.type) diagnostics.push({
         code: "DESIGN_TOKEN_ALIAS_TYPE_MISMATCH",
         severity: "error",
-        file: "design/tokens.json",
+        file: token.source,
         path: `/${token.path.split(".").join("/")}/$value`,
         message: `Semantic token "${token.path}" has type "${token.type}" but aliases ${token.alias} with type "${target.type}".`,
         expected: token.type,
@@ -629,7 +737,7 @@ export async function loadDesign(root: string): Promise<LoadedDesign> {
     if (owner) diagnostics.push({
       code: "DESIGN_TOKEN_CSS_VARIABLE_DUPLICATE",
       severity: "error",
-      file: "design/tokens.json",
+      file: token.source,
       message: `Tokens "${owner}" and "${token.path}" both compile to ${token.cssVariable}.`,
       actual: token.cssVariable
     });
@@ -652,7 +760,7 @@ export async function loadDesign(root: string): Promise<LoadedDesign> {
       suggestions: [{
         action: "wire-font-to-design-tokens",
         command: "npm run site -- spec fonts --json",
-        file: "design/tokens.json",
+        file: tokenSource,
         message: "Add the family to a primitive fontFamily stack, then keep body/heading mapped through semantic font-family tokens."
       }]
     });
@@ -664,6 +772,89 @@ export async function loadDesign(root: string): Promise<LoadedDesign> {
   inspection.semantic = semantic;
   inspection.categories = semanticCategories(semantic);
 
+  if (contract) {
+    const themes: DesignThemeInspection[] = [];
+    const semanticByPath = new Map(semantic.map(token => [token.path, token]));
+    for (const [id, definition] of Object.entries(contract.themes.items).sort(([a], [b]) => a.localeCompare(b))) {
+      const overrides: DesignTokenRecord[] = [];
+      if (definition.source) {
+        const theme = await readTokenObject(definition.source, true);
+        if (theme) {
+          for (const key of Object.keys(theme)) if (key !== "semantic") diagnostics.push({
+            code: "DESIGN_THEME_LAYER_INVALID",
+            severity: "error",
+            file: definition.source,
+            path: `/${key}`,
+            message: `Theme "${id}" may override semantic tokens only.`,
+            allowed: ["semantic"]
+          });
+          if (!isRecord(theme.semantic)) diagnostics.push({
+            code: "DESIGN_THEME_SEMANTIC_LAYER_MISSING",
+            severity: "error",
+            file: definition.source,
+            path: "/semantic",
+            message: `Theme "${id}" must contain a semantic token override object.`
+          });
+          else flattenTokenLayer("semantic", theme.semantic, ["semantic"], definition.source, overrides, diagnostics);
+
+          for (const token of overrides) {
+            const base = semanticByPath.get(token.path);
+            if (!base) {
+              diagnostics.push({
+                code: "DESIGN_THEME_TOKEN_UNKNOWN",
+                severity: "error",
+                file: definition.source,
+                path: `/${token.path.split(".").join("/")}`,
+                message: `Theme "${id}" overrides unknown semantic token "${token.path}". Add new tokens through ${contract.tokens.extension}.`,
+                actual: token.path,
+                allowed: [...semanticByPath.keys()].sort()
+              });
+              continue;
+            }
+            if (base.type !== token.type) diagnostics.push({
+              code: "DESIGN_THEME_TOKEN_TYPE_MISMATCH",
+              severity: "error",
+              file: definition.source,
+              path: `/${token.path.split(".").join("/")}`,
+              message: `Theme "${id}" changes token type for "${token.path}".`,
+              expected: base.type,
+              actual: token.type
+            });
+            const themeAliasTarget = token.alias ? tokenByPath.get(token.alias) : undefined;
+            if (token.alias && !themeAliasTarget) diagnostics.push({
+              code: "DESIGN_THEME_ALIAS_NOT_FOUND",
+              severity: "error",
+              file: definition.source,
+              path: `/${token.path.split(".").join("/")}/$value`,
+              message: `Theme "${id}" references unknown primitive token "${token.alias}".`,
+              actual: token.alias,
+              allowed: primitive.map(item => item.path).sort()
+            });
+            if (themeAliasTarget && themeAliasTarget.layer !== "primitive") diagnostics.push({
+              code: "DESIGN_THEME_ALIAS_NON_PRIMITIVE",
+              severity: "error",
+              file: definition.source,
+              path: `/${token.path.split(".").join("/")}/$value`,
+              message: `Theme "${id}" must alias a primitive token, not "${themeAliasTarget.path}".`,
+              expected: "primitive token",
+              actual: themeAliasTarget.path,
+              allowed: primitive.map(item => item.path).sort()
+            });
+          }
+        }
+      }
+      overrides.sort((a, b) => a.name.localeCompare(b.name));
+      themes.push({
+        id,
+        label: definition.label ?? id,
+        source: definition.source,
+        selector: `[data-site-theme="${id}"]`,
+        overrides
+      });
+    }
+    inspection.themes = { default: contract.themes.default, items: themes };
+  }
+
   return {
     inspection,
     diagnostics,
@@ -671,7 +862,6 @@ export async function loadDesign(root: string): Promise<LoadedDesign> {
     primitiveVariables: new Set(primitive.map(token => token.cssVariable))
   };
 }
-
 const RAW_COLOR = /#[0-9a-f]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(/i;
 const NAMED_COLOR = /\b(?:black|white|red|green|blue|gray|grey|purple|orange|yellow|pink|brown|cyan|magenta|rebeccapurple)\b/i;
 const RAW_LENGTH = /(?:^|[\s,(])[-+]?(?:\d*\.)?\d+(?:px|rem|em|vw|vh|vmin|vmax|ch|ex|cm|mm|in|pt|pc)(?=[\s,)]|$)/i;

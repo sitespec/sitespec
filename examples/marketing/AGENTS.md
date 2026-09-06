@@ -48,7 +48,7 @@ Each primitive owns `ui/<id>/ui.yaml` plus `ui/<id>/index.astro`. UI primitive s
 
 ## Dynamic routes
 
-Site Spec v0.3 supports explicit static expansion of route templates. Define full path parameter sets in `page.paths`:
+Site Spec v0.4 supports explicit static expansion of route templates. Define full path parameter sets in `page.paths`:
 
 ```yaml
 page:
@@ -64,7 +64,7 @@ Inside section props, the current path value is available with `{ $ref: param:sl
 
 ## Typed content
 
-SiteSpec v0.3 content lives under `content/<collection>/`. A typed collection has a `collection.yaml` manifest and Markdown, YAML, or JSON entries. Keep content selection in Page Spec rather than in Astro components.
+SiteSpec v0.4 content lives under `content/<collection>/`. A typed collection has a `collection.yaml` manifest and Markdown, YAML, or JSON entries. Keep content selection in Page Spec rather than in Astro components.
 
 For content work:
 
@@ -92,6 +92,22 @@ Use existing design tokens and existing components as examples. Do not bypass co
 
 Run `npm run site -- validate --json` and `npm run build` afterward.
 
+## Design System contract and packs
+
+`design-system.yaml` is the first-class v0.4 Design System contract. Inspect it before visual or structural UI work:
+
+```bash
+npm run site -- spec design-system --json
+```
+
+For a standalone pack directory, use `npm run site -- design-system --json`.
+
+The contract owns the reusable design vocabulary and portable library boundary: exported `ui/*` primitives, exported `components/*` section library, reusable section presets, shell packs, global themes, layout conventions, token sources, fonts, and additive/locked extension rules. Page Specs still compose registered sections only.
+
+Design System packs are source packs, not runtime dependencies. To reuse this system in another v0.4 site, create a portable copy with `npm run site -- design-system pack <directory>` and install it there with `npm run site -- design-system install <directory> --replace`. Installation copies the declared files into the target project; the target remains standalone and owns the installed source.
+
+Site-specific token additions belong in `design/extensions.json` and must obey `tokens.rules` from `design-system.yaml`. Additive extension may add new token paths but may not override pack tokens. Global theme overrides live in the theme files declared by the contract and may override existing semantic mappings only. Select a non-default global theme or shell pack in `site.yaml` under `designSystem.theme` / `designSystem.shell`.
+
 ## Visual styling and design tokens
 
 The site-wide design language lives in `design/tokens.json`. Before changing visual styling, run:
@@ -100,12 +116,12 @@ The site-wide design language lives in `design/tokens.json`. Before changing vis
 npm run site -- spec design --json
 ```
 
-The v0.3 design model has two layers:
+The v0.4 design model has two layers:
 
 - `primitive` contains literal design decisions such as brand colors, spacing values, typography values, and radii.
 - `semantic` aliases primitive tokens and defines the stable vocabulary used by UI code.
 
-Components and `shell/*.astro` may use semantic CSS variables such as `var(--color-text-default)` and `var(--space-section)`. Do not use `var(--primitive-...)` directly. Do not hardcode reusable colors, spacing, font size/family/line-height, border radius, or box shadows in components or shell. In v0.3, do not use inline `style=`, local CSS custom-property definitions, or imported component/shell stylesheets; keep validated styles in Astro `<style>` blocks.
+Components and `shell/*.astro` may use semantic CSS variables such as `var(--color-text-default)` and `var(--space-section)`. Do not use `var(--primitive-...)` directly. Do not hardcode reusable colors, spacing, font size/family/line-height, border radius, or box shadows in components or shell. In v0.4, do not use inline `style=`, local CSS custom-property definitions, or imported component/shell stylesheets; keep validated styles in Astro `<style>` blocks.
 
 For styling tasks:
 
@@ -118,7 +134,7 @@ For styling tasks:
 
 ## Local web fonts
 
-Local font faces are declared in `design/fonts.yaml`. Font files live under `public/fonts/`. Remote font stylesheets are not part of the v0.3 contract.
+Local font faces are declared in `design/fonts.yaml`. Font files live under `public/fonts/`. Remote font stylesheets are not part of the v0.4 contract.
 
 Before adding or changing a web font:
 
@@ -177,13 +193,13 @@ props:
     $ref: navigation:primary
 ```
 
-The component prop contract should accept `urn:site-spec:0.3:type:navigation`. Prefer the existing `navigation-list` section for simple in-page navigation. Never duplicate a cross-site menu into page YAML or component source. Inspect a collection with `npm run site -- spec navigation:<id> --json`.
+The component prop contract should accept `urn:site-spec:0.4:type:navigation`. Prefer the existing `navigation-list` section for simple in-page navigation. Never duplicate a cross-site menu into page YAML or component source. Inspect a collection with `npm run site -- spec navigation:<id> --json`.
 
 ## Global assets
 
 Site-level semantic assets are declared once in `site.yaml` under `assets` and stored as real files under `public/`.
 
-For Site Spec v0.3:
+For Site Spec v0.4:
 
 - `assets.favicon` is required.
 - `assets.appleTouchIcon` is optional.

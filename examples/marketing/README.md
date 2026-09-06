@@ -1,8 +1,8 @@
 # Marketing Content Example
 
-Executable SiteSpec v0.3 Content reference.
+Executable SiteSpec v0.4 Design System and Content reference.
 
-This example exercises the broader Content API beyond the intentionally small starter:
+This example installs its own formal `sitespec-marketing` Design System contract and exercises the broader Content API beyond the intentionally small starter:
 
 - `posts`, `authors`, `categories`, and `tags` typed collections;
 - Markdown entries plus YAML data entries;
@@ -33,6 +33,7 @@ Other useful commands:
 npm run validate -w @sitespec/example-marketing
 npm run build -w @sitespec/example-marketing
 npm run preview -w @sitespec/example-marketing
+npm run site -w @sitespec/example-marketing -- spec design-system --json
 npm run site -w @sitespec/example-marketing -- spec content --json
 ```
 

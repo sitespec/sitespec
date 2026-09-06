@@ -1,6 +1,6 @@
 import type { ValidateFunction } from "ajv";
 
-export type SpecVersion = "0.1" | "0.2" | "0.3";
+export type SpecVersion = "0.1" | "0.2" | "0.3" | "0.4";
 export type Archetype = "marketing" | "article" | "listing" | "detail" | "legal" | "blank";
 export type PageState = "draft" | "published";
 export type ContentStatus = PageState;
@@ -50,6 +50,7 @@ export type SourceNavigation = Record<string, SourceNavigationItem[]>;
 export interface SourceSite {
   specVersion: SpecVersion;
   site: { id: string; name: string; url: string; locale: string };
+  designSystem?: { theme?: string; shell?: string };
   brand?: { logo?: string; logoDark?: string };
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
   navigation?: SourceNavigation;
@@ -82,7 +83,7 @@ export interface SourceContentRelation {
 }
 
 export interface CollectionManifest {
-  specVersion: "0.3";
+  specVersion: "0.3" | "0.4";
   collection: { id: string };
   entry: { schema: Record<string, unknown> };
   relations?: Record<string, SourceContentRelation>;
@@ -176,7 +177,7 @@ export interface SourcePage {
 }
 
 export interface SectionPresetManifest {
-  specVersion: "0.2" | "0.3";
+  specVersion: "0.2" | "0.3" | "0.4";
   description?: string;
   section: Omit<SourceSection, "id">;
 }
@@ -198,7 +199,7 @@ export interface ComponentManifest {
 }
 
 export interface UiManifest {
-  specVersion: "0.2" | "0.3";
+  specVersion: "0.2" | "0.3" | "0.4";
   ui: { id: string; role: UiRole };
   description?: string;
   variants?: string[];
@@ -231,6 +232,56 @@ export interface LoadedComponent { file: string; dirName: string; value: Compone
 export interface LoadedUiPrimitive { file: string; dirName: string; value: UiManifest }
 export interface LoadedSectionPreset { file: string; id: string; value: SectionPresetManifest }
 
+export type DesignSystemExtensionMode = "locked" | "additive";
+
+export interface DesignSystemManifest {
+  specVersion: "0.4";
+  designSystem: {
+    id: string;
+    name: string;
+    version: string;
+    description?: string;
+  };
+  tokens: {
+    source: string;
+    extension: string;
+    rules: {
+      primitive: DesignSystemExtensionMode;
+      semantic: DesignSystemExtensionMode;
+    };
+  };
+  fonts: {
+    source: string;
+    assetsRoot: string;
+  };
+  themes: {
+    default: string;
+    items: Record<string, { label?: string; source?: string }>;
+  };
+  layout: {
+    convention: "outer-gutter-inner-container";
+    tokens: {
+      pageGutter: string;
+      contentWidth: string;
+      sectionSpacing: string;
+    };
+  };
+  libraries: {
+    ui: string[];
+    sections: string[];
+    presets: string[];
+  };
+  shells: {
+    default: string;
+    items: Record<string, { entry: string; files: string[] }>;
+  };
+}
+
+export interface LoadedDesignSystem {
+  file: "design-system.yaml";
+  value: DesignSystemManifest;
+}
+
 export interface LoadedProject {
   root: string;
   site?: SourceSite;
@@ -241,6 +292,7 @@ export interface LoadedProject {
   ui: LoadedUiPrimitive[];
   uiRegistry: Map<string, RegisteredUiPrimitive>;
   sectionPresets: LoadedSectionPreset[];
+  designSystem?: LoadedDesignSystem;
   contentCollections: LoadedContentCollection[];
   contentRegistry: Map<string, LoadedContentCollection>;
   diagnostics: Diagnostic[];
@@ -319,6 +371,14 @@ export interface ResolvedContentQuery {
 export interface ResolvedSite {
   specVersion: SpecVersion;
   site: { id: string; name: string; url: string; locale: string };
+  designSystem?: {
+    id: string;
+    name: string;
+    version: string;
+    theme: string;
+    shell: string;
+    shellEntry: string;
+  };
   brand: { logo?: string; logoDark?: string };
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
   navigation: ResolvedNavigation;

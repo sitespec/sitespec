@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { inspectProject, loadProject, validateLoadedProject, type Diagnostic } from "@sitespec/core";
+import { inspectDesignSystem, inspectProject, loadProject, validateLoadedProject, type Diagnostic } from "@sitespec/core";
 import { initProject } from "./init.js";
 import { buildProject } from "./build.js";
 import { addComponent } from "./add-component.js";
@@ -12,6 +12,7 @@ import { validateAstroComponentContracts } from "@sitespec/astro";
 import { PreviewError, startPreview } from "./preview.js";
 import { startDev, type DevEvent } from "./dev.js";
 import { deployGitHubPages, GitHubPagesDeployError } from "./deploy-github-pages.js";
+import { installDesignSystem, packDesignSystem } from "./design-system.js";
 
 function printDiagnostics(diagnostics: Diagnostic[]): void {
   for (const diagnostic of diagnostics) {
@@ -152,6 +153,85 @@ add
     }
   });
 
+const designSystemCommand = program
+  .command("design-system")
+  .description("Inspect, pack, or install a SiteSpec 0.4 Design System")
+  .option("--root <path>", "project root", ".")
+  .option("--json", "print machine-readable JSON")
+  .action(async (options: { root: string; json?: boolean }) => {
+    const result = await inspectDesignSystem(resolve(options.root));
+    if (options.json) {
+      console.log(JSON.stringify({ version: "0.4", ...result }, null, 2));
+    } else if (result.designSystem) {
+      const ds = result.designSystem as {
+        id: string; name: string; version: string;
+        themes: { default: string; items: Array<{ id: string }> };
+        libraries: { ui: unknown[]; sections: unknown[]; presets: unknown[] };
+        shells: { default: string; items: Array<{ id: string }> };
+        tokens: { primitive: number; semantic: number; extension: string; rules: Record<string, string> };
+      };
+      console.log(`${ds.name} (${ds.id}) v${ds.version}`);
+      console.log(`tokens: ${ds.tokens.primitive} primitive, ${ds.tokens.semantic} semantic`);
+      console.log(`extensions: ${ds.tokens.extension} (${Object.entries(ds.tokens.rules).map(([key, value]) => `${key}=${value}`).join(", ")})`);
+      console.log(`themes: ${ds.themes.items.map(item => item.id).join(", ")} (default: ${ds.themes.default})`);
+      console.log(`shells: ${ds.shells.items.map(item => item.id).join(", ")} (default: ${ds.shells.default})`);
+      console.log(`library: ${ds.libraries.ui.length} UI, ${ds.libraries.sections.length} sections, ${ds.libraries.presets.length} presets`);
+      if (result.diagnostics.length > 0) printDiagnostics(result.diagnostics);
+    } else {
+      printDiagnostics(result.diagnostics);
+    }
+    process.exitCode = result.valid ? 0 : 1;
+  });
+
+designSystemCommand
+  .command("pack")
+  .description("Copy the current Design System into a portable pack directory")
+  .argument("<directory>", "empty target directory for the pack")
+  .option("--root <path>", "project root", ".")
+  .option("--json", "print machine-readable JSON")
+  .action(async (directory: string, options: { root: string; json?: boolean }) => {
+    try {
+      const result = await packDesignSystem({ root: resolve(options.root), directory });
+      if (options.json) console.log(JSON.stringify({ version: "0.4", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
+      else {
+        console.log(`Packed Design System ${result.id}@${result.version}`);
+        console.log(`  target: ${result.root}`);
+        console.log(`  files: ${result.files.length}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (options.json) console.log(JSON.stringify({ version: "0.4", success: false, error: message }, null, 2));
+      else console.error(`ERROR DESIGN_SYSTEM_PACK_FAILED\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+designSystemCommand
+  .command("install")
+  .description("Copy a portable Design System pack into this SiteSpec 0.4 project")
+  .argument("<source>", "Design System pack directory")
+  .option("--root <path>", "project root", ".")
+  .option("--replace", "replace files owned by the currently installed Design System pack")
+  .option("--force", "overwrite colliding site-owned files")
+  .option("--json", "print machine-readable JSON")
+  .action(async (source: string, options: { root: string; replace?: boolean; force?: boolean; json?: boolean }) => {
+    try {
+      const result = await installDesignSystem({ root: resolve(options.root), source, replace: options.replace, force: options.force });
+      if (options.json) console.log(JSON.stringify({ version: "0.4", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
+      else {
+        console.log(`Installed Design System ${result.id}@${result.version}`);
+        console.log(`  root: ${result.root}`);
+        console.log(`  files: ${result.files.length}`);
+        console.log("\nNext: npm run site -- validate --json");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (options.json) console.log(JSON.stringify({ version: "0.4", success: false, error: message }, null, 2));
+      else console.error(`ERROR DESIGN_SYSTEM_INSTALL_FAILED\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
 program
   .command("validate")
   .description("Validate a Site Spec project")
@@ -181,8 +261,8 @@ program
 
 program
   .command("spec")
-  .description("Inspect the site, content, design, composition, a page, component, UI primitive, or navigation collection")
-  .argument("[query]", "page id/route, content, collection:<id>, entry:<collection>/<id>, component id, ui:<id>, section:<id>, navigation:<id>, shell, assets, design, or fonts")
+  .description("Inspect the site, content, Design System, design, composition, a page, component, UI primitive, or navigation collection")
+  .argument("[query]", "page id/route, content, collection:<id>, entry:<collection>/<id>, component id, ui:<id>, section:<id>, navigation:<id>, shell, assets, design-system, design, or fonts")
   .option("--json", "print machine-readable JSON")
   .option("--root <path>", "project root", ".")
   .action(async (query: string | undefined, options: { json?: boolean; root: string }) => {
@@ -298,6 +378,11 @@ source: ${design.source}`);
           console.log(`  ${token.padEnd(32)} ${item?.cssVariable ?? ""}${item?.alias ? ` -> ${item.alias}` : ""}`);
         }
       }
+      return;
+    }
+    if (result.type === "design-system") {
+      const ds = result.designSystem as { id?: string; name?: string; version?: string; themes?: { default?: string }; shells?: { default?: string } } | undefined;
+      console.log(ds ? `${ds.name ?? ds.id} (${ds.id}) v${ds.version}\ndefault theme: ${ds.themes?.default ?? "default"}\ndefault shell: ${ds.shells?.default ?? "default"}` : "No Design System contract installed.");
       return;
     }
 

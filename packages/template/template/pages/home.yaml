@@ -1,4 +1,4 @@
-specVersion: "0.3"
+specVersion: "0.4"
 page:
   id: home
   route: /
@@ -6,16 +6,16 @@ page:
 
 seo:
   title: Home
-  description: A compact SiteSpec v0.3 starter demonstrating composition and typed content end to end.
+  description: A compact SiteSpec v0.4 starter demonstrating composition and typed content end to end.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec 0.3
+      eyebrow: SiteSpec 0.4
       title: The specification and content are the source of truth
-      text: This starter demonstrates typed Markdown content, content-driven routes and pagination alongside reusable sections, UI primitives, dynamic routes, local fonts, semantic assets and agent inspection.
+      text: This starter demonstrates a first-class Design System with themes, reusable sections and UI primitives alongside typed Markdown content, content-driven routes, local fonts, semantic assets and agent inspection.
       primaryAction:
         label: Explore the content example
         href: /blog
@@ -23,7 +23,7 @@ sections:
   - id: features
     use: feature-grid
     props:
-      title: One small site, the SiteSpec composition and content model
+      title: One small site, the SiteSpec Design System, composition and content model
       items:
         - title: Typed content
           text: Markdown entries under content/posts are validated against a collection schema before they can feed pages.
@@ -31,8 +31,8 @@ sections:
           text: pages/post.yaml binds /blog/[slug] to the posts collection, so entries materialize static detail routes automatically.
         - title: Declarative queries
           text: The blog listing sorts and paginates posts in Page Spec; Astro components only render the resolved props.
-        - title: UI primitives
-          text: Section implementations compose formal button and container primitives that Page Spec cannot use directly.
+        - title: First-class Design System
+          text: design-system.yaml exports UI and section libraries, themes, shell packs, layout conventions and controlled token extensions.
         - title: Dynamic routes
           text: The feature example still demonstrates explicit page.paths and param:slug for non-content route expansion.
         - title: Agent protocol

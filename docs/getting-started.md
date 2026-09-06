@@ -1,6 +1,6 @@
 # Getting started
 
-This guide creates a SiteSpec v0.3 website and walks through the normal edit → inspect → validate → build workflow.
+This guide creates a SiteSpec v0.4 website and walks through the normal edit → inspect → validate → build workflow.
 
 ## Requirements
 
@@ -48,19 +48,22 @@ Do not edit either directory directly.
 The website-owned source is:
 
 ```text
-site.yaml               global site contract
+site.yaml               global site contract and selected theme/shell
+design-system.yaml      reusable Design System contract
 pages/*.yaml            routes and page composition
 content/*                typed content collections and entries
 sections/*.yaml         reusable configured section presets
 components/*            public section components
 ui/*                    internal UI primitives
-design/tokens.json      primitive and semantic design tokens
+design/tokens.json      Design System primitive and semantic tokens
+design/extensions.json  optional site-owned additive tokens
+design/themes/*         Design System theme overrides
 design/fonts.yaml       local web-font declarations
 shell/*                  user-owned document/site shell
 public/*                 static assets
 ```
 
-The starter contains a small content-driven blog so the v0.3 content path is visible immediately.
+The starter contains a small content-driven blog so the v0.4 content path is visible immediately.
 
 ## 4. Inspect the project contract
 
@@ -73,6 +76,7 @@ npm run site -- spec --json
 Useful focused inspections:
 
 ```bash
+npm run site -- spec design-system --json
 npm run site -- spec design --json
 npm run site -- spec sections --json
 npm run site -- spec content --json
@@ -90,7 +94,7 @@ A collection lives under `content/<collection>/` and has a `collection.yaml` man
 Example:
 
 ```yaml
-specVersion: "0.3"
+specVersion: "0.4"
 
 collection:
   id: posts
@@ -130,7 +134,7 @@ Read [Content](content.md) for relations, queries, filtering, sorting, paginatio
 A detail page binds a dynamic route to a collection:
 
 ```yaml
-specVersion: "0.3"
+specVersion: "0.4"
 
 page:
   id: post
@@ -181,7 +185,7 @@ pagination: { $ref: "query:posts.pagination" }
 Pages select registered section components; they do not contain Astro markup.
 
 ```yaml
-specVersion: "0.3"
+specVersion: "0.4"
 
 page:
   id: home

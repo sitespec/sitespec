@@ -30,6 +30,7 @@ test("sitespec init creates portable agent bootstrap instructions", async () => 
     assert.match(agents, /shell\/default\.astro/);
     assert.match(agents, /Visual styling and design tokens/);
     assert.match(agents, /npm run site -- spec design --json/);
+    assert.match(agents, /npm run site -- spec design-system --json/);
     assert.match(agents, /semantic CSS variables/);
     assert.match(agents, /Global assets/);
     assert.match(agents, /npm run site -- spec assets --json/);
@@ -52,13 +53,16 @@ test("site spec exposes a stable agent protocol", async () => {
       navigation: Record<string, string>;
       assets: { inspect: string; faviconRequired: boolean };
       design: { inspect: string; model: string };
+      designSystem: { inspect: string; inspectPack: string; install: string; pack: string; runtimeDependency: boolean };
       generated: string[];
     };
 
-    assert.equal(agent.protocolVersion, "3");
+    assert.equal(agent.protocolVersion, "4");
     assert.equal(agent.workflow.inspect, "npm run site -- spec --json");
     assert.equal(agent.workflow.validate, "npm run site -- validate --json");
     assert.equal(agent.workflow.build, "npm run build");
+    assert.equal(agent.workflow.inspectDesignSystem, "npm run site -- spec design-system --json");
+    assert.equal(agent.workflow.inspectDesignSystemPack, "npm run site -- design-system --json");
     assert.equal(agent.rules.preferExistingComponents, true);
     assert.equal(agent.rules.sharedNavigationInSiteYaml, true);
     assert.equal(agent.rules.siteShellOwnsPersistentUi, true);
@@ -68,6 +72,11 @@ test("site spec exposes a stable agent protocol", async () => {
     assert.equal(agent.assets.inspect, "npm run site -- spec assets --json");
     assert.equal(agent.design.inspect, "npm run site -- spec design --json");
     assert.match(agent.design.model, /primitive values -> semantic aliases/);
+    assert.equal(agent.designSystem.inspect, "npm run site -- spec design-system --json");
+    assert.equal(agent.designSystem.inspectPack, "npm run site -- design-system --json");
+    assert.equal(agent.designSystem.install, "npm run site -- design-system install <pack> --replace");
+    assert.equal(agent.designSystem.pack, "npm run site -- design-system pack <directory>");
+    assert.equal(agent.designSystem.runtimeDependency, false);
     assert.equal(agent.assets.faviconRequired, true);
     assert.equal(agent.rules.editGeneratedFiles, false);
     assert.deepEqual(agent.generated, [".site/", "dist/"]);

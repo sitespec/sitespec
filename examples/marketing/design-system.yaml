@@ -1,0 +1,59 @@
+specVersion: "0.4"
+
+designSystem:
+  id: sitespec-marketing
+  name: SiteSpec Marketing
+  version: 1.0.0
+  description: Portable default Design System for new SiteSpec projects.
+
+tokens:
+  source: design/tokens.json
+  extension: design/extensions.json
+  rules:
+    primitive: additive
+    semantic: additive
+
+fonts:
+  source: design/fonts.yaml
+  assetsRoot: public/fonts
+
+themes:
+  default: default
+  items:
+    default:
+      label: Default
+    dark:
+      label: Dark
+      source: design/themes/dark.json
+
+layout:
+  convention: outer-gutter-inner-container
+  tokens:
+    pageGutter: space.page
+    contentWidth: size.content
+    sectionSpacing: space.section
+
+libraries:
+  ui:
+    - button
+    - container
+  sections:
+    - article
+    - cta
+    - feature-grid
+    - hero
+    - navigation-list
+    - pagination
+    - post-list
+  presets:
+    - final-cta
+
+shells:
+  default: default
+  items:
+    default:
+      entry: shell/default.astro
+      files:
+        - shell/default.astro
+        - shell/Header.astro
+        - shell/Footer.astro

@@ -1,4 +1,4 @@
-specVersion: "0.3"
+specVersion: "0.4"
 page:
   id: home
   route: /
@@ -17,14 +17,14 @@ content:
 
 seo:
   title: Home
-  description: SiteSpec v0.3 content showcase with typed collections, relations, filters, and generated routes.
+  description: SiteSpec v0.4 content showcase with typed collections, relations, filters, and generated routes.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec v0.3 Content
+      eyebrow: SiteSpec v0.4 Content
       title: Build the content model in files, not in component code
       text: This example uses typed Markdown collections, generic relations, declarative filters, sorting, pagination, draft state, and content-driven routes.
       primaryAction:

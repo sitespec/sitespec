@@ -67,9 +67,13 @@ export function createAjv(): Ajv2020Instance {
   ajv.addSchema(schemaAlias(action, "urn:site-spec:0.3:type:action"));
   ajv.addSchema(schemaAlias(image, "urn:site-spec:0.3:type:image"));
   ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.3:type:navigation"));
+  ajv.addSchema(schemaAlias(action, "urn:site-spec:0.4:type:action"));
+  ajv.addSchema(schemaAlias(image, "urn:site-spec:0.4:type:image"));
+  ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.4:type:navigation"));
   const pagination = loadSchema("types/pagination.schema.json");
   ajv.addSchema(pagination);
   ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.3:type:pagination"));
+  ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.4:type:pagination"));
   return ajv;
 }
 
@@ -81,6 +85,7 @@ export const validateUiSchema = baseAjv.compile(loadSchema("ui.schema.json"));
 export const validateSectionPresetSchema = baseAjv.compile(loadSchema("section-preset.schema.json"));
 export const validateFontsSchema = baseAjv.compile(loadSchema("fonts.schema.json"));
 export const validateCollectionSchema = baseAjv.compile(loadSchema("collection.schema.json"));
+export const validateDesignSystemSchema = baseAjv.compile(loadSchema("design-system.schema.json"));
 
 export function compilePropsSchema(schema: Record<string, unknown>): ValidateFunction {
   const ajv = createAjv();

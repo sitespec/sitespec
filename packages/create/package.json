@@ -1,6 +1,6 @@
 {
   "name": "@sitespec/create",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "bin": {
     "create-sitespec": "./dist/index.js"
@@ -12,7 +12,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@sitespec/template": "0.3.0"
+    "@sitespec/template": "0.4.0"
   },
   "engines": {
     "node": ">=22"

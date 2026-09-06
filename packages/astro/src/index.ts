@@ -2,7 +2,7 @@ import { readFile, realpath, rm, mkdir, writeFile, readdir } from "node:fs/promi
 import { createRequire } from "node:module";
 import { dirname, join, relative } from "node:path";
 import { build as astroBuild, dev as astroDev } from "astro";
-import { loadDesignFonts } from "@sitespec/core";
+import { inspectDesign, loadDesignFonts, loadDesignSystemContract } from "@sitespec/core";
 import type { Diagnostic, RegisteredComponent, RegisteredUiPrimitive, ResolvedPage, ResolvedSite } from "@sitespec/core";
 
 export interface AstroBuildOptions {
@@ -124,37 +124,44 @@ async function readComponentSource(root: string, component: RegisteredComponent)
 export async function validateAstroComponentContracts(options: AstroComponentContractOptions): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
 
-  const shellFile = join(options.root, "shell", "default.astro");
-  try {
-    const shellSource = await readFile(shellFile, "utf8");
-    if (!/<slot(?:\s|\/>|>)/i.test(shellSource)) {
+  const contract = await loadDesignSystemContract(options.root);
+  const shellEntries = contract.designSystem
+    ? [...new Set(Object.values(contract.designSystem.value.shells.items).map(shell => shell.entry))].sort()
+    : ["shell/default.astro"];
+
+  for (const shellEntry of shellEntries) {
+    const shellFile = join(options.root, shellEntry);
+    try {
+      const shellSource = await readFile(shellFile, "utf8");
+      if (!/<slot(?:\s|\/>|>)/i.test(shellSource)) {
+        diagnostics.push({
+          code: "SHELL_SLOT_MISSING",
+          severity: "error",
+          file: shellEntry,
+          message: `Site shell ${shellEntry} must render <slot /> so page sections remain visible.`,
+          expected: "<slot />",
+          suggestions: [{
+            action: "restore-shell-slot",
+            file: shellEntry,
+            message: "Render <slot /> at the point where page sections should appear."
+          }]
+        });
+      }
+    } catch (error) {
       diagnostics.push({
-        code: "SHELL_SLOT_MISSING",
+        code: (error as NodeJS.ErrnoException).code === "ENOENT" ? "SHELL_IMPLEMENTATION_MISSING" : "SHELL_IMPLEMENTATION_READ_FAILED",
         severity: "error",
-        file: "shell/default.astro",
-        message: "Site shell must render <slot /> so page sections remain visible.",
-        expected: "<slot />",
+        file: shellEntry,
+        message: (error as NodeJS.ErrnoException).code === "ENOENT"
+          ? `Site shell ${shellEntry} was not found.`
+          : error instanceof Error ? error.message : String(error),
         suggestions: [{
-          action: "restore-shell-slot",
-          file: "shell/default.astro",
-          message: "Render <slot /> at the point where page sections should appear."
+          action: "restore-site-shell",
+          file: shellEntry,
+          message: "Restore the user-owned shell pack entry. Renderer code must not contain header/footer presentation."
         }]
       });
     }
-  } catch (error) {
-    diagnostics.push({
-      code: (error as NodeJS.ErrnoException).code === "ENOENT" ? "SHELL_IMPLEMENTATION_MISSING" : "SHELL_IMPLEMENTATION_READ_FAILED",
-      severity: "error",
-      file: "shell/default.astro",
-      message: (error as NodeJS.ErrnoException).code === "ENOENT"
-        ? "Site shell shell/default.astro was not found."
-        : error instanceof Error ? error.message : String(error),
-      suggestions: [{
-        action: "restore-site-shell",
-        file: "shell/default.astro",
-        message: "Restore the user-owned Site Shell. Renderer code must not contain header/footer presentation."
-      }]
-    });
   }
 
   for (const component of [...options.registry.values()].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -521,45 +528,32 @@ async function compileFonts(root: string, generatedSrc: string, siteUrl: string,
 }
 
 async function compileTokens(root: string, generatedSrc: string, diagnostics: Diagnostic[]): Promise<void> {
-  const file = join(root, "design", "tokens.json");
-  let raw: string;
-  try {
-    raw = await readFile(file, "utf8");
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      await writeFile(join(generatedSrc, "styles", "tokens.css"), ":root {}\n", "utf8");
-      return;
-    }
-    diagnostics.push({
-      code: "RENDERER_TOKENS_READ_FAILED",
-      severity: "error",
-      file: "design/tokens.json",
-      message: error instanceof Error ? error.message : String(error)
-    });
+  const loaded = await inspectDesign(root);
+  diagnostics.push(...loaded.diagnostics);
+  if (loaded.diagnostics.some(diagnostic => diagnostic.severity === "error")) {
+    await writeFile(join(generatedSrc, "styles", "tokens.css"), ":root {}\n", "utf8");
     return;
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    diagnostics.push({
-      code: "RENDERER_TOKENS_PARSE_FAILED",
-      severity: "error",
-      file: "design/tokens.json",
-      message: error instanceof Error ? error.message : String(error)
-    });
-    return;
+  const valueFor = (token: { value: string | number; alias?: string }): string => {
+    if (token.alias) return `var(--${cssName(token.alias.split("."))})`;
+    return String(token.value);
+  };
+  const baseTokens = [...loaded.design.primitive, ...loaded.design.semantic]
+    .sort((a, b) => a.cssVariable.localeCompare(b.cssVariable));
+  const baseBody = baseTokens.map(token => `  ${token.cssVariable}: ${valueFor(token)};`).join("\n");
+  const blocks = [`:root {\n${baseBody}\n}`];
+
+  for (const theme of loaded.design.themes.items) {
+    if (theme.overrides.length === 0) continue;
+    const body = theme.overrides
+      .map(token => `  ${token.cssVariable}: ${valueFor(token)};`)
+      .join("\n");
+    blocks.push(`${theme.selector} {\n${body}\n}`);
   }
 
-  const tokens: Array<{ name: string; value: string }> = [];
-  collectTokens(parsed, [], tokens, diagnostics);
-  tokens.sort((a, b) => a.name.localeCompare(b.name));
-  const body = tokens.map(token => `  --${token.name}: ${token.value};`).join("\n");
-  await writeFile(join(generatedSrc, "styles", "tokens.css"), `:root {\n${body}\n}\n`, "utf8");
+  await writeFile(join(generatedSrc, "styles", "tokens.css"), `${blocks.join("\n\n")}\n`, "utf8");
 }
-
 async function listAstroFiles(root: string): Promise<string[]> {
   const files: string[] = [];
   async function walk(path: string): Promise<void> {
@@ -586,14 +580,14 @@ import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 
-const { page, assets, jsonLd } = Astro.props;
+const { page, assets, designSystem, jsonLd } = Astro.props;
 ---
 <!doctype html>
-<html lang={page.locale}>
+<html lang={page.locale} data-site-theme={designSystem?.theme}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content="Site Spec v0.2" />
+    <meta name="generator" content="SiteSpec" />
     <title>{page.seo.title}</title>
     <meta name="description" content={page.seo.description} />
     <link rel="canonical" href={page.seo.canonical} />
@@ -701,6 +695,7 @@ function pageSource(page: ResolvedPage, site: ResolvedSite): string {
       }).replaceAll("<", "\\u003c").replaceAll(">", "\\u003e").replaceAll("&", "\\u0026")
     : undefined;
   const unique = [...new Set(page.sections.map(section => section.component))];
+  const shellEntry = site.designSystem?.shellEntry ?? "shell/default.astro";
   const variableFor = new Map(unique.map((component, index) => [component, `Section${index}`]));
   const imports = unique
     .map(component => `import ${variableFor.get(component)} from "@site-project/components/${component}/index.astro";`)
@@ -719,7 +714,7 @@ function pageSource(page: ResolvedPage, site: ResolvedSite): string {
 
   return `---
 import SiteLayout from "@site-generated/layouts/SiteLayout.astro";
-import SiteShell from "@site-project/shell/default.astro";
+import SiteShell from "@site-project/${shellEntry}";
 ${imports}
 
 const site = ${JSON.stringify(renderSite, null, 2)};
@@ -727,9 +722,10 @@ const page = ${JSON.stringify(renderPage, null, 2)};
 const brand = ${JSON.stringify(renderBrand, null, 2)};
 const assets = ${JSON.stringify(renderAssets, null, 2)};
 const navigation = ${JSON.stringify(renderNavigation, null, 2)};
+const designSystem = ${JSON.stringify(site.designSystem)};
 const jsonLd = ${JSON.stringify(jsonLd)};
 ---
-<SiteLayout page={page} assets={assets} jsonLd={jsonLd}>
+<SiteLayout page={page} assets={assets} designSystem={designSystem} jsonLd={jsonLd}>
   <SiteShell site={site} brand={brand} page={page} navigation={navigation}>
 ${sectionMarkup}
   </SiteShell>
