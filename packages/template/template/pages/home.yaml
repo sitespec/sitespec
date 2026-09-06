@@ -6,30 +6,45 @@ page:
 
 seo:
   title: Home
+  description: A compact SiteSpec v0.2 site that demonstrates the composition model end to end.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: Site Spec
-      title: A website that stays coherent as it evolves
-      text: Pages are composed from typed, validated sections instead of arbitrary markup.
+      eyebrow: SiteSpec 0.2
+      title: The specification is the source of truth
+      text: This starter demonstrates pages, reusable sections, UI primitives, dynamic routes, typed data, local fonts, semantic assets and agent inspection without a separate design handoff.
       primaryAction:
-        label: View on GitHub
-        href: https://github.com/sitespec/sitespec
+        label: Explore the v0.2 features
+        href: /features
 
   - id: features
     use: feature-grid
     props:
-      title: Built for people and AI
+      title: One small site, the complete v0.2 composition model
       items:
-        - title: Deterministic
-          text: Validation decides whether a change is allowed.
-        - title: Composable
-          text: Pages can use only registered sections.
-        - title: Static
-          text: Production output is plain HTML, CSS and assets.
+        - title: UI primitives
+          text: Section implementations compose formal button and container primitives that Page Spec cannot use directly.
+        - title: Section presets
+          text: The final CTA is configured once and referenced across multiple pages with section:final-cta.
+        - title: Dynamic routes
+          text: One /features/[slug] Page Spec expands into three deterministic static routes declared in page.paths.
+        - title: Route parameters
+          text: Dynamic sections read the current slug through param:slug while SEO strings interpolate the same value.
+        - title: Typed pagination
+          text: The examples page passes a pagination object validated by the v0.2 pagination core type.
+        - title: Agent protocol
+          text: The CLI exposes capabilities, routes, components, UI primitives, assets, fonts and navigation as inspectable JSON.
+
+  - id: explore
+    use: navigation-list
+    variant: inline
+    props:
+      title: Explore the starter
+      items:
+        $ref: navigation:primary
 
   - id: final-cta
     $ref: section:final-cta

@@ -1,0 +1,45 @@
+specVersion: "0.2"
+page:
+  id: examples
+  route: /examples
+  archetype: listing
+
+seo:
+  title: Examples
+  description: A SiteSpec v0.2 listing page demonstrating the pagination core type.
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Core type
+      title: Pagination is data, not page markup
+      text: This section receives a standard v0.2 pagination object. The component owns rendering; the Page Spec owns the current state and links.
+
+  - id: examples
+    use: feature-grid
+    props:
+      title: The same rules apply to listing pages
+      items:
+        - title: Typed input
+          text: currentPage, totalPages and page links are validated against urn:site-spec:0.2:type:pagination.
+        - title: Reusable renderer
+          text: Any Page Spec can feed the same public pagination contract without knowing the component implementation.
+        - title: Zero client runtime
+          text: Navigation is rendered as ordinary links and the component explicitly opts out of client JavaScript.
+
+  - id: pagination
+    use: pagination
+    props:
+      currentPage: 1
+      totalPages: 3
+      nextHref: /examples?page=2
+      pages:
+        - page: 1
+          href: /examples
+          current: true
+        - page: 2
+          href: /examples?page=2
+        - page: 3
+          href: /examples?page=3

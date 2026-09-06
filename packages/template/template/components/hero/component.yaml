@@ -38,6 +38,7 @@ rules:
   allowedArchetypes:
     - marketing
     - detail
+    - listing
   placement: first
 
 semantics:

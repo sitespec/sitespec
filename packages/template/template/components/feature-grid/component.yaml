@@ -42,3 +42,4 @@ rules:
   allowedArchetypes:
     - marketing
     - detail
+    - listing

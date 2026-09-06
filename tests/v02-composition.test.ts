@@ -28,6 +28,30 @@ test("v0.2 starter exposes UI primitives and reusable section presets", async ()
     const home = result.site?.pages.find(page => page.id === "home");
     assert.ok(home);
     assert.equal(home.sections.at(-1)?.preset, "section:final-cta");
+    assert.deepEqual(result.site?.pages.map(page => page.route), [
+      "/",
+      "/examples",
+      "/features",
+      "/features/agent-protocol",
+      "/features/composition",
+      "/features/dynamic-routes"
+    ]);
+    for (const route of ["/", "/features", "/features/agent-protocol", "/features/composition", "/features/dynamic-routes"]) {
+      const page = result.site?.pages.find(item => item.route === route);
+      assert.equal(page?.sections.at(-1)?.preset, "section:final-cta");
+    }
+    const examples = result.site?.pages.find(page => page.route === "/examples");
+    assert.equal(examples?.sections.at(-1)?.component, "pagination");
+    assert.deepEqual(examples?.sections.at(-1)?.props, {
+      currentPage: 1,
+      totalPages: 3,
+      nextHref: "/examples?page=2",
+      pages: [
+        { page: 1, href: "/examples", current: true },
+        { page: 2, href: "/examples?page=2" },
+        { page: 3, href: "/examples?page=3" }
+      ]
+    });
 
     const inspection = await inspectProject(root);
     const capabilities = inspection.capabilities as Record<string, unknown>;
@@ -41,6 +65,21 @@ test("v0.2 starter exposes UI primitives and reusable section presets", async ()
     assert.deepEqual(ui.map(item => item.id).sort(), ["button", "container"]);
     const presets = inspection.sectionPresets as Array<{ reference: string }>;
     assert.ok(presets.some(item => item.reference === "section:final-cta"));
+    const pages = inspection.pages as Array<{ id: string; dynamic: boolean; generatedRoutes: Array<{ route: string }> }>;
+    const feature = pages.find(page => page.id === "feature");
+    assert.equal(feature?.dynamic, true);
+    assert.deepEqual(feature?.generatedRoutes.map(item => item.route), [
+      "/features/agent-protocol",
+      "/features/composition",
+      "/features/dynamic-routes"
+    ]);
+    const navigation = inspection.navigation as Array<{ id: string }>;
+    assert.deepEqual(navigation.map(item => item.id), ["features", "primary", "project"]);
+    const assets = inspection.assets as { values: { appleTouchIcon?: string; defaultOgImage?: string } };
+    assert.equal(assets.values.appleTouchIcon, "/brand/apple-touch-icon.png");
+    assert.equal(assets.values.defaultOgImage, "/brand/og-default.png");
+    const design = inspection.design as { fonts: { families: Array<{ id: string }> } };
+    assert.deepEqual(design.fonts.families.map(item => item.id), ["andika"]);
   });
 });
 

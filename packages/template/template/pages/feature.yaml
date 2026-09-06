@@ -1,0 +1,49 @@
+specVersion: "0.2"
+page:
+  id: feature
+  route: /features/[slug]
+  archetype: detail
+  paths:
+    - slug: composition
+    - slug: dynamic-routes
+    - slug: agent-protocol
+
+seo:
+  title: "Feature: {slug}"
+  description: "A generated SiteSpec v0.2 feature page for {slug}."
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Resolved from param:slug
+      title:
+        $ref: param:slug
+      text: This page comes from /features/[slug]. Its route, heading and SEO are resolved deterministically from an explicit page.paths entry.
+      primaryAction:
+        label: Back to all features
+        href: /features
+
+  - id: proof
+    use: feature-grid
+    props:
+      title: What this generated page proves
+      items:
+        - title: Explicit expansion
+          text: No runtime lookup or remote data decides this URL. Every production path is declared in Page Spec.
+        - title: Typed reference
+          text: The heading receives the concrete route value through a param:slug reference before component validation.
+        - title: Static output
+          text: The renderer materializes this route into plain HTML while preserving the same section contracts and shell.
+
+  - id: sibling-features
+    use: navigation-list
+    variant: inline
+    props:
+      title: Other generated routes
+      items:
+        $ref: navigation:features
+
+  - id: final-cta
+    $ref: section:final-cta

@@ -22,7 +22,7 @@ test("sitespec init exposes named navigation and a user-owned Site Shell", async
     const navigation = spec.navigation as Array<{ id: string; reference: string }>;
     const shell = spec.shell as { layout: string; exists: boolean; conventionalFiles: { header: { path: string; exists: boolean }; footer: { path: string; exists: boolean } } };
 
-    assert.deepEqual(navigation.map(item => item.id), ["primary"]);
+    assert.deepEqual(navigation.map(item => item.id), ["features", "primary", "project"]);
     assert.ok(navigation.some(item => item.reference === "navigation:primary"));
     assert.equal(shell.layout, "shell/default.astro");
     assert.equal(shell.exists, true);
@@ -49,7 +49,7 @@ test("site spec can inspect a navigation collection directly", async () => {
     const navigation = result.navigation as { id: string; reference: string; items: Array<{ id: string; href: string }> };
     assert.equal(navigation.id, "primary");
     assert.equal(navigation.reference, "navigation:primary");
-    assert.deepEqual(navigation.items.map(item => item.id), ["home"]);
+    assert.deepEqual(navigation.items.map(item => item.id), ["home", "features", "examples"]);
     const usage = result.usage as { shell: string; componentProp: { $ref: string } };
     assert.equal(usage.shell, "navigation.primary");
     assert.equal(usage.componentProp.$ref, "navigation:primary");
@@ -70,7 +70,11 @@ test("a page section can reuse a named navigation collection by reference", asyn
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
     const section = result.site?.pages[0]?.sections.find(item => item.id === "page-navigation");
     const items = section?.props.items as Array<{ id: string; label: string; href: string }>;
-    assert.deepEqual(items, [{ id: "home", label: "Home", href: "/" }]);
+    assert.deepEqual(items, [
+      { id: "home", label: "Home", href: "/" },
+      { id: "features", label: "Features", href: "/features" },
+      { id: "examples", label: "Examples", href: "/examples" }
+    ]);
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

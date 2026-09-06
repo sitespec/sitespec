@@ -1,0 +1,56 @@
+specVersion: "0.2"
+page:
+  id: features
+  route: /features
+  archetype: marketing
+
+seo:
+  title: Features
+  description: Inspect the SiteSpec v0.2 composition model through working routes in the starter.
+
+sections:
+  - id: intro
+    use: hero
+    variant: centered
+    theme: muted
+    props:
+      eyebrow: Composition model
+      title: Follow the contract through every layer
+      text: These routes are generated from one dynamic Page Spec and make the v0.2 route expansion and reference model visible in the built site.
+
+  - id: feature-routes
+    use: navigation-list
+    props:
+      title: Generated feature routes
+      items:
+        $ref: navigation:features
+
+  - id: model
+    use: feature-grid
+    theme: muted
+    props:
+      title: The hierarchy stays explicit
+      items:
+        - title: Site
+          text: site.yaml owns global metadata, semantic assets and named navigation collections.
+        - title: Page
+          text: Page Specs select registered sections and provide validated content, variants, themes and references.
+        - title: Section preset
+          text: Repeated configured sections live in sections/*.yaml and remain independent from Astro markup.
+        - title: Section component
+          text: Registered components define public prop contracts, semantics, composition rules and runtime policy.
+        - title: UI primitive
+          text: Internal design-system building blocks are composed by sections and shell, never directly by pages.
+        - title: Semantic tokens
+          text: Components consume stable semantic CSS variables while primitive design decisions remain centralized.
+
+  - id: project-links
+    use: navigation-list
+    variant: inline
+    props:
+      title: Project links
+      items:
+        $ref: navigation:project
+
+  - id: final-cta
+    $ref: section:final-cta

@@ -1,2 +1,10 @@
 specVersion: "0.2"
-fonts: {}
+fonts:
+  andika:
+    family: Andika
+    sources:
+      - src: /fonts/Andika-Regular.woff2
+        format: woff2
+        weight: 400
+        style: normal
+        display: swap

@@ -47,16 +47,20 @@ test("npm run dev serves source changes, survives invalid specs, and does not cr
     dev = await startDev({ root: devRoot, port: 0, debounceMs: 20, onEvent: event => events.push(event) });
     assert.equal(dev.root, await realpath(root));
 
-    const initial = await fetch(dev.url);
-    assert.equal(initial.status, 200);
-    assert.match(await initial.text(), /A website that stays coherent as it evolves/);
-    assert.equal(await exists(join(root, "dist")), false);
-
     const pageFile = join(root, "pages", "home.yaml");
     const original = await readFile(pageFile, "utf8");
+    const titleLine = original.match(/^      title: (.+)$/m);
+    assert.ok(titleLine);
+    const originalTitle = titleLine[1]!;
+
+    const initial = await fetch(dev.url);
+    assert.equal(initial.status, 200);
+    assert.ok((await initial.text()).includes(originalTitle));
+    assert.equal(await exists(join(root, "dist")), false);
+
     const updated = original.replace(
-      "A website that stays coherent as it evolves",
-      "A live Site Spec development loop"
+      titleLine[0],
+      "      title: A live Site Spec development loop"
     );
     await writeFile(pageFile, updated, "utf8");
 
@@ -80,7 +84,7 @@ test("npm run dev serves source changes, survives invalid specs, and does not cr
     await waitFor(async () => {
       const response = await fetch(dev!.url);
       const html = await response.text();
-      return html.includes("A website that stays coherent as it evolves") ? html : undefined;
+      return html.includes(originalTitle) ? html : undefined;
     });
     assert.equal(await exists(join(root, "dist")), false);
   } finally {

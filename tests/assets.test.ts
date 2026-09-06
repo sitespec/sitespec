@@ -12,13 +12,17 @@ test("sitespec init creates the required favicon contract", async () => {
   try {
     const initialized = await initProject({ directory: root, name: "Acme" });
     assert.ok(initialized.files.includes("public/brand/favicon.svg"));
+    assert.ok(initialized.files.includes("public/brand/apple-touch-icon.png"));
+    assert.ok(initialized.files.includes("public/brand/og-default.png"));
 
     const siteYaml = await readFile(join(root, "site.yaml"), "utf8");
-    assert.match(siteYaml, /assets:\n  favicon: \/brand\/favicon\.svg/);
+    assert.match(siteYaml, /assets:\n  favicon: \/brand\/favicon\.svg\n  appleTouchIcon: \/brand\/apple-touch-icon\.png\n  defaultOgImage: \/brand\/og-default\.png/);
 
     const result = await validateProject(root);
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
     assert.equal(result.site?.assets.favicon, "/brand/favicon.svg");
+    assert.equal(result.site?.assets.appleTouchIcon, "/brand/apple-touch-icon.png");
+    assert.equal(result.site?.assets.defaultOgImage, "/brand/og-default.png");
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
@@ -66,18 +70,9 @@ test("defaultOgImage becomes the absolute Open Graph fallback", async () => {
   const root = join(temp, "acme");
   try {
     await initProject({ directory: root, name: "Acme" });
-    await writeFile(join(root, "public", "brand", "og.png"), "placeholder", "utf8");
-    const siteFile = join(root, "site.yaml");
-    const source = await readFile(siteFile, "utf8");
-    await writeFile(
-      siteFile,
-      source.replace("assets:\n  favicon: /brand/favicon.svg", "assets:\n  favicon: /brand/favicon.svg\n  defaultOgImage: /brand/og.png"),
-      "utf8"
-    );
-
     const result = await validateProject(root);
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
-    assert.equal(result.site?.pages[0]?.seo.openGraph.image, "https://acme.test/brand/og.png");
+    assert.equal(result.site?.pages[0]?.seo.openGraph.image, "https://acme.test/brand/og-default.png");
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
@@ -92,12 +87,16 @@ test("site spec assets exposes the agent-facing asset contract", async () => {
     assert.equal(result.type, "assets");
     const assets = result.assets as {
       publicDirectory: string;
-      values: { favicon: string };
-      contract: { favicon: { required: boolean } };
+      values: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
+      contract: { favicon: { required: boolean }; appleTouchIcon: { required: boolean }; defaultOgImage: { required: boolean } };
     };
     assert.equal(assets.publicDirectory, "public/");
     assert.equal(assets.values.favicon, "/brand/favicon.svg");
+    assert.equal(assets.values.appleTouchIcon, "/brand/apple-touch-icon.png");
+    assert.equal(assets.values.defaultOgImage, "/brand/og-default.png");
     assert.equal(assets.contract.favicon.required, true);
+    assert.equal(assets.contract.appleTouchIcon.required, false);
+    assert.equal(assets.contract.defaultOgImage.required, false);
 
     const agent = result.agent as { assets: { inspect: string; faviconRequired: boolean } };
     assert.equal(agent.assets.inspect, "npm run site -- spec assets --json");

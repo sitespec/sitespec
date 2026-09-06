@@ -118,7 +118,9 @@ test("unknown prop diagnostic exposes the component vocabulary", async () => {
   try {
     const pageFile = join(root, "pages", "home.yaml");
     const source = await readFile(pageFile, "utf8");
-    await writeFile(pageFile, source.replace("title: A website that stays coherent as it evolves", "title: A website that stays coherent as it evolves\n      titel: Typo"), "utf8");
+    const titleLine = source.match(/^      title: .+$/m)?.[0];
+    assert.ok(titleLine);
+    await writeFile(pageFile, source.replace(titleLine, `${titleLine}\n      titel: Typo`), "utf8");
 
     const result = await validateProject(root);
     const diagnostic = result.diagnostics.find(item => item.code === "COMPONENT_PROP_UNKNOWN");

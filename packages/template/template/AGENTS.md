@@ -194,3 +194,17 @@ Never manually edit:
 ## Recovery loop
 
 When a command returns diagnostics, prefer the machine-readable fields `code`, `expected`, `actual`, `allowed`, and `suggestions` over guessing. Apply a suggested repair when it matches the user's intent, then validate again.
+
+## Starter showcase map
+
+The default v0.2 starter deliberately exercises the capabilities described above. Preserve these examples unless the user asks to simplify the project:
+
+- `pages/home.yaml` uses `navigation:primary` inside page content while the Header consumes the same collection from Site Shell.
+- `pages/features.yaml` uses both `navigation:features` and `navigation:project`.
+- `pages/feature.yaml` declares `/features/[slug]`, expands three explicit `page.paths`, interpolates `{slug}` in SEO, and passes `param:slug` into a registered section prop.
+- `sections/final-cta.yaml` is referenced by home, features, and every generated feature page.
+- `pages/examples.yaml` feeds `components/pagination` with `urn:site-spec:0.2:type:pagination` data.
+- `design/fonts.yaml` declares the bundled local Andika WOFF2 face and `design/tokens.json` wires it through the primitive and semantic font-family tokens.
+- `site.yaml` declares favicon, Apple touch icon, default Open Graph image, and three named navigation collections.
+
+When editing the starter, prefer keeping each capability visible in a real page instead of replacing it with README-only documentation.

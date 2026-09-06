@@ -7,12 +7,41 @@ site:
 
 assets:
   favicon: /brand/favicon.svg
+  appleTouchIcon: /brand/apple-touch-icon.png
+  defaultOgImage: /brand/og-default.png
 
 navigation:
   primary:
     - id: home
       label: Home
       href: /
+    - id: features
+      label: Features
+      href: /features
+    - id: examples
+      label: Examples
+      href: /examples
+
+  features:
+    - id: composition
+      label: Composition
+      href: /features/composition
+    - id: dynamic-routes
+      label: Dynamic routes
+      href: /features/dynamic-routes
+    - id: agent-protocol
+      label: Agent protocol
+      href: /features/agent-protocol
+
+  project:
+    - id: github
+      label: GitHub
+      href: https://github.com/sitespec/sitespec
+      target: blank
+    - id: npm
+      label: npm
+      href: https://www.npmjs.com/search?q=%40sitespec
+      target: blank
 
 seo:
   titleTemplate: "%s — __SITE_NAME__"

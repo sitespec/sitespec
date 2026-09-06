@@ -645,7 +645,7 @@ function rebaseRenderValue(value: unknown, basePath: string): unknown {
   if (Array.isArray(value)) return value.map(item => rebaseRenderValue(item, basePath));
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => {
-    if ((key === "href" || key === "src") && typeof child === "string") {
+    if ((key === "href" || key.endsWith("Href") || key === "src") && typeof child === "string") {
       return [key, rebaseSitePath(child, basePath)];
     }
     return [key, rebaseRenderValue(child, basePath)];
