@@ -29,11 +29,11 @@ fonts:
         display: swap
 `;
 
-test("sitespec init creates the v0.1 local-font design contract", async () => {
+test("sitespec init creates the local-font design contract", async () => {
   const { temp, root } = await starter("site-spec-fonts-init-");
   try {
     const fonts = await readFile(join(root, "design", "fonts.yaml"), "utf8");
-    assert.match(fonts, /specVersion: "0\.1"/);
+    assert.match(fonts, /specVersion: "0\.2"/);
     assert.match(fonts, /fonts: \{\}/);
     const result = await inspectProject(root, "fonts");
     assert.equal(result.type, "fonts");
@@ -93,7 +93,7 @@ test("missing local font file is repair-oriented", async () => {
   }
 });
 
-test("remote font URLs are rejected in v0.1", async () => {
+test("remote font URLs are rejected by the current contract", async () => {
   const { temp, root } = await starter("site-spec-fonts-remote-");
   try {
     await writeFile(join(root, "design", "fonts.yaml"), `specVersion: "0.1"

@@ -3,6 +3,8 @@ import { validatePageSchema, validateSiteSchema } from "./ajv.js";
 import { schemaDiagnostics } from "./diagnostics.js";
 import { fileExists, listFiles, parseDataFile } from "./fs.js";
 import { buildRegistry } from "./registry.js";
+import { buildUiRegistry } from "./ui-registry.js";
+import { loadSectionPresets } from "./section-presets.js";
 import type { Diagnostic, LoadedPage, LoadedProject, SourcePage, SourceSite } from "./types.js";
 
 export async function loadProject(root: string): Promise<LoadedProject> {
@@ -43,6 +45,12 @@ export async function loadProject(root: string): Promise<LoadedProject> {
   const built = await buildRegistry(root);
   diagnostics.push(...built.diagnostics);
 
+  const builtUi = await buildUiRegistry(root);
+  diagnostics.push(...builtUi.diagnostics);
+
+  const loadedPresets = await loadSectionPresets(root);
+  diagnostics.push(...loadedPresets.diagnostics);
+
   const pages: LoadedPage[] = [];
   for (const file of await listFiles(join(root, "pages"), [".yaml", ".yml"])) {
     const parsed = await parseDataFile<SourcePage>(root, file);
@@ -51,7 +59,7 @@ export async function loadProject(root: string): Promise<LoadedProject> {
       continue;
     }
 
-    const relFile = relative(root, file);
+    const relFile = relative(root, file).replaceAll("\\", "/");
     const value = parsed.value;
     if (value === undefined || !validatePageSchema(value)) {
       diagnostics.push(...schemaDiagnostics("PAGE_SCHEMA_INVALID", relFile, validatePageSchema.errors));
@@ -67,6 +75,9 @@ export async function loadProject(root: string): Promise<LoadedProject> {
     pages,
     components: built.components,
     registry: built.registry,
+    ui: builtUi.ui,
+    uiRegistry: builtUi.registry,
+    sectionPresets: loadedPresets.presets,
     diagnostics
   };
 }

@@ -1,10 +1,13 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { inspectProject, loadProject, validateLoadedProject, type Diagnostic } from "@sitespec/core";
 import { initProject } from "./init.js";
 import { buildProject } from "./build.js";
 import { addComponent } from "./add-component.js";
+import { addUi } from "./add-ui.js";
 import { validateAstroComponentContracts } from "@sitespec/astro";
 import { PreviewError, startPreview } from "./preview.js";
 import { startDev, type DevEvent } from "./dev.js";
@@ -31,8 +34,10 @@ function printDiagnostics(diagnostics: Diagnostic[]): void {
   }
 }
 
+const cliPackage = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8")) as { version: string };
+
 const program = new Command();
-program.name("sitespec").description("Site Spec v0.1 prototype").version("0.1.0");
+program.name("sitespec").description("SiteSpec CLI").version(cliPackage.version);
 
 program
   .command("init")
@@ -44,7 +49,7 @@ program
     try {
       const result = await initProject({ directory, name: options.name });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", success: true, ...result }, null, 2));
+        console.log(JSON.stringify({ version: "0.2", success: true, ...result }, null, 2));
       } else {
         console.log(`Initialized ${result.name}`);
         console.log(`  root: ${result.root}`);
@@ -58,7 +63,7 @@ program
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", success: false, error: message }, null, 2));
+        console.log(JSON.stringify({ version: "0.2", success: false, error: message }, null, 2));
       } else {
         console.error(`ERROR INIT_FAILED\n  ${message}`);
       }
@@ -88,7 +93,7 @@ add
       ];
       if (options.json) {
         console.log(JSON.stringify({
-          version: "0.1",
+          version: "0.2",
           success: true,
           component: { id: result.id, role: result.role },
           files: result.files,
@@ -108,10 +113,41 @@ add
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", success: false, error: message }, null, 2));
+        console.log(JSON.stringify({ version: "0.2", success: false, error: message }, null, 2));
       } else {
         console.error(`ERROR ADD_COMPONENT_FAILED\n  ${message}`);
       }
+      process.exitCode = 2;
+    }
+  });
+
+add
+  .command("ui")
+  .description("Create an internal UI primitive")
+  .argument("<id>", "UI primitive id, for example button")
+  .option("--role <role>", "UI role", "content")
+  .option("--root <path>", "project root", ".")
+  .option("--json", "print machine-readable JSON")
+  .action(async (id: string, options: { role: string; root: string; json?: boolean }) => {
+    try {
+      const result = await addUi({ root: resolve(options.root), id, role: options.role });
+      const nextActions = [
+        { action: "inspect-ui", command: `npm run site -- spec ui:${result.id} --json` },
+        { action: "define-contract", file: `ui/${result.id}/ui.yaml` },
+        { action: "implement-ui", file: `ui/${result.id}/index.astro` },
+        { action: "validate", command: "npm run site -- validate --json" }
+      ];
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.2", success: true, ui: { id: result.id, role: result.role }, files: result.files, nextActions }, null, 2));
+      } else {
+        console.log(`Added UI primitive ${result.id}`);
+        for (const file of result.files) console.log(`  ${file}`);
+        console.log(`\nInspect: npm run site -- spec ui:${result.id} --json`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (options.json) console.log(JSON.stringify({ version: "0.2", success: false, error: message }, null, 2));
+      else console.error(`ERROR ADD_UI_FAILED\n  ${message}`);
       process.exitCode = 2;
     }
   });
@@ -125,7 +161,7 @@ program
     const root = resolve(options.root);
     const project = await loadProject(root);
     const result = await validateLoadedProject(project);
-    const rendererDiagnostics = await validateAstroComponentContracts({ root, registry: project.registry });
+    const rendererDiagnostics = await validateAstroComponentContracts({ root, registry: project.registry, uiRegistry: project.uiRegistry });
     const diagnostics = [...result.diagnostics, ...rendererDiagnostics];
     const valid = result.valid && !rendererDiagnostics.some(diagnostic => diagnostic.severity === "error");
     if (options.json) {
@@ -134,19 +170,19 @@ program
         warnings: diagnostics.filter(d => d.severity === "warning").length,
         info: diagnostics.filter(d => d.severity === "info").length
       };
-      console.log(JSON.stringify({ version: "0.1", valid, summary, diagnostics }, null, 2));
+      console.log(JSON.stringify({ version: "0.2", valid, summary, diagnostics }, null, 2));
     } else if (diagnostics.length > 0) {
       printDiagnostics(diagnostics);
     } else {
-      console.log("OK  Site Spec and component contracts are valid.");
+      console.log("OK  Site Spec and Astro source contracts are valid.");
     }
     process.exitCode = valid ? 0 : 1;
   });
 
 program
   .command("spec")
-  .description("Inspect the site, design, assets, shell, a page, a component, or a navigation collection")
-  .argument("[query]", "page id, route, component id, navigation:<id>, shell, assets, or design")
+  .description("Inspect the site, design, composition, a page, component, UI primitive, or navigation collection")
+  .argument("[query]", "page id, route, component id, ui:<id>, section:<id>, navigation:<id>, shell, assets, design, or fonts")
   .option("--json", "print machine-readable JSON")
   .option("--root <path>", "project root", ".")
   .action(async (query: string | undefined, options: { json?: boolean; root: string }) => {
@@ -157,14 +193,36 @@ program
     }
 
     if (result.type === "page") {
-      const page = result.page as { id: string; route: string; archetype: string; state: string; sections: Array<{ id: string; use: string; variant: string; theme: string }> };
-      console.log(`${page.id}  ${page.route}  ${page.archetype}  ${page.state}\n`);
-      for (const section of page.sections) console.log(`${section.id.padEnd(16)} ${section.use}:${section.variant} theme=${section.theme}`);
+      const page = result.page as {
+        id: string; route: string; archetype: string; state: string; dynamic?: boolean;
+        generatedRoutes?: Array<{ route: string }>;
+        sections: Array<{ id: string; use?: string; variant?: string; theme?: string; ref?: string }>;
+      };
+      console.log(`${page.id}  ${page.route}  ${page.archetype}  ${page.state}${page.dynamic ? "  dynamic" : ""}\n`);
+      for (const section of page.sections) {
+        console.log(section.ref
+          ? `${section.id.padEnd(16)} ${section.ref}`
+          : `${section.id.padEnd(16)} ${section.use}:${section.variant} theme=${section.theme}`);
+      }
+      if (page.generatedRoutes && page.generatedRoutes.length > 1) {
+        console.log("\nGenerated routes");
+        for (const item of page.generatedRoutes) console.log(`  ${item.route}`);
+      }
       return;
     }
     if (result.type === "component") {
       const component = result.component as { id: string; role: string; variants: string[]; themes: string[] };
       console.log(`${component.id}\nrole: ${component.role}\nvariants: ${component.variants.join(", ")}\nthemes: ${component.themes.join(", ")}`);
+      return;
+    }
+    if (result.type === "ui") {
+      const primitive = result.ui as { id: string; role: string; variants: string[]; files: { contract: string; implementation: string } };
+      console.log(`${primitive.id}\nrole: ${primitive.role}\nvariants: ${primitive.variants.join(", ")}\ncontract: ${primitive.files.contract}\nimplementation: ${primitive.files.implementation}`);
+      return;
+    }
+    if (result.type === "section-preset") {
+      const preset = result.sectionPreset as { reference: string; source: string; section: { use: string; variant?: string; theme?: string } };
+      console.log(`${preset.reference}\nsource: ${preset.source}\nuse: ${preset.section.use}\nvariant: ${preset.section.variant ?? "default"}\ntheme: ${preset.section.theme ?? "default"}`);
       return;
     }
     if (result.type === "navigation") {
@@ -215,10 +273,14 @@ source: ${design.source}`);
     const site = result.site as { name?: string; url?: string } | undefined;
     const pages = result.pages as Array<{ route: string; id: string; archetype: string }>;
     const components = result.components as Array<{ id: string; variants: string[] }>;
+    const ui = (result.ui ?? []) as Array<{ id: string; role: string }>;
+    const presets = (result.sectionPresets ?? []) as Array<{ id: string }>;
     const navigation = result.navigation as Array<{ id: string; items: unknown[] }>;
     console.log(`${site?.name ?? "Invalid site"}${site?.url ? `\n${site.url}` : ""}\n`);
     console.log(`Pages       ${pages.length}`);
     console.log(`Components  ${components.length}`);
+    console.log(`UI          ${ui.length}`);
+    console.log(`Presets     ${presets.length}`);
     console.log(`Navigation  ${navigation.length}\n`);
     console.log("Pages");
     for (const page of pages) console.log(`${page.route.padEnd(18)} ${page.id.padEnd(16)} ${page.archetype}`);
@@ -234,7 +296,7 @@ program
   .command("dev")
   .description("Run the source-oriented development server with live Site Spec validation")
   .option("--host <host>", "host to bind", "127.0.0.1")
-  .option("--port <port>", "port to bind", value => {
+  .option("--port <port>", "port to bind", (value: string) => {
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) throw new Error(`Invalid port: ${value}`);
     return parsed;
@@ -244,14 +306,14 @@ program
   .action(async (options: { host: string; port: number; json?: boolean; root: string }) => {
     const printEvent = (event: DevEvent): void => {
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", ...event }));
+        console.log(JSON.stringify({ version: "0.2", ...event }));
         return;
       }
       if (event.event === "ready") {
         console.log(`Development server at ${event.url}`);
         console.log(`  root: ${resolve(options.root)}`);
         console.log(`  state: ${event.valid ? "valid" : "invalid"}`);
-        console.log("  watching Site Spec, content, components, Site Shell, design tokens, and public assets");
+        console.log("  watching Site Spec, content, section presets, components, UI primitives, Site Shell, design tokens, and public assets");
         console.log("  press Ctrl+C to stop");
         if (!event.valid) printDiagnostics(event.diagnostics);
         return;
@@ -284,7 +346,7 @@ program
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", event: "error", valid: false, diagnostics: [{ code: "DEV_START_FAILED", severity: "error", message }] }));
+        console.log(JSON.stringify({ version: "0.2", event: "error", valid: false, diagnostics: [{ code: "DEV_START_FAILED", severity: "error", message }] }));
       } else {
         console.error(`ERROR DEV_START_FAILED\n  ${message}`);
       }
@@ -296,7 +358,7 @@ program
   .command("preview")
   .description("Serve the existing production build from dist without rebuilding")
   .option("--host <host>", "host to bind", "127.0.0.1")
-  .option("--port <port>", "port to bind", value => {
+  .option("--port <port>", "port to bind", (value: string) => {
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) throw new Error(`Invalid port: ${value}`);
     return parsed;
@@ -312,7 +374,7 @@ program
       });
       if (options.json) {
         console.log(JSON.stringify({
-          version: "0.1",
+          version: "0.2",
           success: true,
           url: preview.url,
           host: preview.host,
@@ -338,7 +400,7 @@ program
       const code = error instanceof PreviewError ? error.code : "PREVIEW_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", success: false, error: { code, message } }, null, 2));
+        console.log(JSON.stringify({ version: "0.2", success: false, error: { code, message } }, null, 2));
       } else {
         console.error(`ERROR ${code}\n  ${message}`);
       }
@@ -363,7 +425,7 @@ deploy
         branch: options.branch
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", ...result }, null, 2));
+        console.log(JSON.stringify({ version: "0.2", ...result }, null, 2));
       } else {
         console.log(`GitHub Pages deployment configured for ${result.repository}`);
         console.log(`  branch: ${result.branch}`);
@@ -379,7 +441,7 @@ deploy
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof GitHubPagesDeployError ? error.details : undefined;
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.1", success: false, error: { code, message, details } }, null, 2));
+        console.log(JSON.stringify({ version: "0.2", success: false, error: { code, message, details } }, null, 2));
       } else {
         console.error(`ERROR ${code}\n  ${message}`);
       }
@@ -397,7 +459,7 @@ program
     const result = await buildProject(root);
     if (options.json) {
       console.log(JSON.stringify({
-        version: "0.1",
+        version: "0.2",
         success: result.success,
         outDir: result.outDir,
         pages: result.pages,

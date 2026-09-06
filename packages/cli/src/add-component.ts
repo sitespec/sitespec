@@ -1,5 +1,7 @@
 import { access, mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import type { SpecVersion } from "@sitespec/core";
+import { readProjectSpecVersion } from "./project-spec-version.js";
 
 const ID_PATTERN = /^[a-z][a-z0-9-]*$/;
 const ROLES = new Set(["intro", "content", "proof", "conversion", "utility"]);
@@ -33,8 +35,8 @@ async function write(root: string, path: string, content: string, files: string[
   files.push(path);
 }
 
-function componentManifest(id: string, role: string): string {
-  return `specVersion: "0.1"
+function componentManifest(id: string, role: string, specVersion: SpecVersion): string {
+  return `specVersion: "${specVersion}"
 
 component:
   id: ${id}
@@ -112,6 +114,8 @@ export async function addComponent(options: AddComponentOptions): Promise<AddCom
     throw new Error(`site.yaml was not found in ${root}. Run this command from a Site Spec project or pass --root.`);
   }
 
+  const specVersion = await readProjectSpecVersion(root);
+
   const componentDir = join(root, "components", id);
   try {
     const entries = await readdir(componentDir);
@@ -124,7 +128,7 @@ export async function addComponent(options: AddComponentOptions): Promise<AddCom
   }
 
   const files: string[] = [];
-  await write(root, `components/${id}/component.yaml`, componentManifest(id, role), files);
+  await write(root, `components/${id}/component.yaml`, componentManifest(id, role, specVersion), files);
   await write(root, `components/${id}/index.astro`, componentAstro(id), files);
 
   return { root, id, role, files };

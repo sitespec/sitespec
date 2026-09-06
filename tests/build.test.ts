@@ -101,9 +101,51 @@ test("npm run build renders a static Astro site", async () => {
     assert.equal(resolved.pages[0].sections[0].component, "hero");
 
     const buildState = JSON.parse(await readFile(join(root, ".site", "build.json"), "utf8"));
-    assert.equal(buildState.version, "0.1");
+    assert.equal(buildState.version, "0.2");
     assert.match(buildState.sourceHash, /^[a-f0-9]{64}$/);
     assert.deepEqual(buildState.pages, ["/"]);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+
+test("npm run build materializes v0.2 dynamic routes into static HTML", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "site-spec-build-dynamic-"));
+  const root = join(temp, "acme");
+  try {
+    await initProject({ directory: root, name: "Acme" });
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.2"
+page:
+  id: product
+  route: /products/[slug]
+  archetype: detail
+  paths:
+    - slug: stories
+    - slug: banners
+seo:
+  title: "Product {slug}"
+  description: "Learn about {slug}."
+sections:
+  - id: intro
+    use: hero
+    props:
+      eyebrow: Product
+      title:
+        $ref: param:slug
+`, "utf8");
+
+    const result = await buildProject(root);
+    assert.equal(result.success, true, JSON.stringify(result.diagnostics, null, 2));
+    assert.deepEqual(result.pages, ["/", "/products/banners", "/products/stories"]);
+
+    const stories = await readFile(join(root, "dist", "products", "stories", "index.html"), "utf8");
+    assert.match(stories, /<title>Product stories — Acme<\/title>/);
+    assert.match(stories, />stories<\/h1>/);
+
+    const sitemap = await readFile(join(root, "dist", "sitemap.xml"), "utf8");
+    assert.match(sitemap, /https:\/\/acme\.test\/products\/stories/);
+    assert.match(sitemap, /https:\/\/acme\.test\/products\/banners/);
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

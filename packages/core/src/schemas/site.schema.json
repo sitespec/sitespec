@@ -1,71 +1,139 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:site-spec:0.1:site",
+  "$id": "urn:site-spec:site",
   "type": "object",
   "additionalProperties": false,
-  "required": ["specVersion", "site", "assets"],
+  "required": [
+    "specVersion",
+    "site",
+    "assets"
+  ],
   "properties": {
-    "specVersion": { "const": "0.1" },
+    "specVersion": {
+      "enum": [
+        "0.1",
+        "0.2"
+      ]
+    },
     "site": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "url", "locale"],
+      "required": [
+        "id",
+        "name",
+        "url",
+        "locale"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
-        "url": { "type": "string", "format": "uri" },
-        "locale": { "type": "string", "minLength": 2, "maxLength": 35 }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "locale": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 35
+        }
       }
     },
     "brand": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "logo": { "$ref": "#/$defs/publicPath" },
-        "logoDark": { "$ref": "#/$defs/publicPath" }
+        "logo": {
+          "$ref": "#/$defs/publicPath"
+        },
+        "logoDark": {
+          "$ref": "#/$defs/publicPath"
+        }
       }
     },
     "assets": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["favicon"],
+      "required": [
+        "favicon"
+      ],
       "properties": {
-        "favicon": { "$ref": "#/$defs/publicPath" },
-        "appleTouchIcon": { "$ref": "#/$defs/publicPath" },
-        "defaultOgImage": { "$ref": "#/$defs/publicPath" }
+        "favicon": {
+          "$ref": "#/$defs/publicPath"
+        },
+        "appleTouchIcon": {
+          "$ref": "#/$defs/publicPath"
+        },
+        "defaultOgImage": {
+          "$ref": "#/$defs/publicPath"
+        }
       }
     },
     "navigation": {
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/id" },
-      "additionalProperties": { "$ref": "urn:site-spec:0.1:type:navigation" }
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "urn:site-spec:0.2:type:navigation"
+      }
     },
     "seo": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "titleTemplate": { "type": "string", "minLength": 1, "maxLength": 120 },
-        "defaultDescription": { "type": "string", "minLength": 1, "maxLength": 300 }
+        "titleTemplate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "defaultDescription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
       }
     },
     "quality": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "accessibility": { "enum": ["AA"] },
+        "accessibility": {
+          "enum": [
+            "AA"
+          ]
+        },
         "performance": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "lighthouse": { "type": "integer", "minimum": 0, "maximum": 100 },
-            "javascriptKb": { "type": "integer", "minimum": 0 }
+            "lighthouse": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "javascriptKb": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         }
       }
     }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-    "publicPath": { "type": "string", "pattern": "^/" }
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "publicPath": {
+      "type": "string",
+      "pattern": "^/"
+    }
   }
 }

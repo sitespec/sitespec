@@ -1,0 +1,17 @@
+specVersion: "0.2"
+ui:
+  id: container
+  role: layout
+
+description: Shared max-width content container. Outer sections own the page gutter.
+
+variants:
+  - default
+
+props:
+  type: object
+  additionalProperties: false
+  properties: {}
+
+runtime:
+  javascript: false

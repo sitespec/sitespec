@@ -1,8 +1,10 @@
 export * from "./types.js";
 export * from "./project.js";
 export * from "./registry.js";
+export * from "./ui-registry.js";
+export * from "./section-presets.js";
+export * from "./routes.js";
 export * from "./resolver.js";
 export * from "./validate.js";
 export * from "./inspect.js";
-
 export * from "./design.js";

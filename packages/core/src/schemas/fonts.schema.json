@@ -1,48 +1,110 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:site-spec:0.1:fonts",
+  "$id": "urn:site-spec:fonts",
   "type": "object",
   "additionalProperties": false,
-  "required": ["specVersion", "fonts"],
+  "required": [
+    "specVersion",
+    "fonts"
+  ],
   "properties": {
-    "specVersion": { "const": "0.1" },
+    "specVersion": {
+      "enum": [
+        "0.1",
+        "0.2"
+      ]
+    },
     "fonts": {
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/id" },
-      "additionalProperties": { "$ref": "#/$defs/fontFamily" }
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/fontFamily"
+      }
     }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-    "publicPath": { "type": "string", "pattern": "^/" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "publicPath": {
+      "type": "string",
+      "pattern": "^/"
+    },
     "weight": {
       "oneOf": [
-        { "type": "integer", "minimum": 1, "maximum": 1000 },
-        { "type": "string", "pattern": "^(?:[1-9][0-9]{0,2}|1000) (?:[1-9][0-9]{0,2}|1000)$" }
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        {
+          "type": "string",
+          "pattern": "^(?:[1-9][0-9]{0,2}|1000) (?:[1-9][0-9]{0,2}|1000)$"
+        }
       ]
     },
     "fontSource": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["src", "format", "weight"],
+      "required": [
+        "src",
+        "format",
+        "weight"
+      ],
       "properties": {
-        "src": { "type": "string", "minLength": 1 },
-        "format": { "enum": ["woff2", "woff"] },
-        "weight": { "$ref": "#/$defs/weight" },
-        "style": { "enum": ["normal", "italic", "oblique"] },
-        "display": { "enum": ["auto", "block", "swap", "fallback", "optional"] }
+        "src": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "enum": [
+            "woff2",
+            "woff"
+          ]
+        },
+        "weight": {
+          "$ref": "#/$defs/weight"
+        },
+        "style": {
+          "enum": [
+            "normal",
+            "italic",
+            "oblique"
+          ]
+        },
+        "display": {
+          "enum": [
+            "auto",
+            "block",
+            "swap",
+            "fallback",
+            "optional"
+          ]
+        }
       }
     },
     "fontFamily": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["family", "sources"],
+      "required": [
+        "family",
+        "sources"
+      ],
       "properties": {
-        "family": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "family": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
         "sources": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/fontSource" }
+          "items": {
+            "$ref": "#/$defs/fontSource"
+          }
         }
       }
     }

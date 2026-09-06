@@ -8,6 +8,7 @@ import { hasErrors, nearestStrings } from "./diagnostics.js";
 import { loadProject } from "./project.js";
 import { resolvePage } from "./resolver.js";
 import { validateDesign } from "./design.js";
+import { isDynamicRoute, materializeRoute, resolvedPageId, routeParamNames } from "./routes.js";
 
 interface AssetRule {
   label: string;
@@ -31,7 +32,7 @@ async function validateAssetRule(project: LoadedProject, rule: AssetRule, diagno
       severity: "error",
       file: "site.yaml",
       path: rule.path,
-      message: `${rule.label} is required in Site Spec v0.1.`,
+      message: `${rule.label} is required in SiteSpec.`,
       expected: `public asset path (${rule.extensions.join(", ")})`,
       actual: undefined,
       suggestions: [{
@@ -211,9 +212,179 @@ function validateGlobalIdentities(project: LoadedProject, diagnostics: Diagnosti
     }); else ids.set(id, page.file);
     if (routes.has(route)) diagnostics.push({
       code: "PAGE_ROUTE_DUPLICATE", severity: "error", file: page.file, page: id,
-      message: `Duplicate route "${route}"; first declared in ${routes.get(route)}.`
+      message: `Duplicate route template "${route}"; first declared in ${routes.get(route)}.`
     }); else routes.set(route, page.file);
   }
+}
+
+function containsV02CoreType(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsV02CoreType);
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (typeof record.$ref === "string" && record.$ref.startsWith("urn:site-spec:0.2:")) return true;
+  return Object.values(record).some(containsV02CoreType);
+}
+
+function containsReferencePrefix(value: unknown, prefix: string): boolean {
+  if (Array.isArray(value)) return value.some(item => containsReferencePrefix(item, prefix));
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (typeof record.$ref === "string" && record.$ref.startsWith(prefix)) return true;
+  return Object.values(record).some(item => containsReferencePrefix(item, prefix));
+}
+
+function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[]): void {
+  if (!project.site) return;
+  const version = project.site.specVersion;
+  for (const page of project.pages) {
+    if (page.value.specVersion !== version) diagnostics.push({
+      code: "SPEC_VERSION_MISMATCH", severity: "error", file: page.file,
+      message: `Page uses Site Spec ${page.value.specVersion}, but site.yaml uses ${version}.`,
+      expected: version, actual: page.value.specVersion
+    });
+  }
+  for (const component of project.components) {
+    if (component.value.specVersion !== version) diagnostics.push({
+      code: "SPEC_VERSION_MISMATCH", severity: "error", file: component.file,
+      message: `Component uses Site Spec ${component.value.specVersion}, but site.yaml uses ${version}.`,
+      expected: version, actual: component.value.specVersion
+    });
+  }
+  if (version === "0.1") {
+    for (const page of project.pages) {
+      if (page.value.sections.some(section => "$ref" in section)) diagnostics.push({
+        code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: page.file, page: page.value.page.id,
+        path: "/sections", message: 'Reusable section:<id> presets require specVersion "0.2".',
+        expected: "0.2", actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+      });
+      if (page.value.sections.some(section => "use" in section && containsReferencePrefix(section.props, "param:"))) diagnostics.push({
+        code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: page.file, page: page.value.page.id,
+        path: "/sections", message: 'Route parameter references (param:<name>) require specVersion "0.2".',
+        expected: "0.2", actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+      });
+    }
+    for (const component of project.components) {
+      if (containsV02CoreType(component.value.props)) diagnostics.push({
+        code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: component.file, component: component.value.component.id,
+        path: "/props", message: 'SiteSpec 0.2 core prop types require specVersion "0.2".',
+        expected: "0.2", actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+      });
+    }
+  }
+
+  if (version === "0.1" && (project.ui.length > 0 || project.sectionPresets.length > 0)) diagnostics.push({
+    code: "V02_FEATURE_REQUIRES_SPEC_VERSION",
+    severity: "error",
+    file: "site.yaml",
+    path: "/specVersion",
+    message: "ui/ primitives and reusable section presets require specVersion \"0.2\".",
+    expected: "0.2",
+    actual: version,
+    suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+  });
+}
+
+function validateSectionPresetDefinitions(project: LoadedProject, diagnostics: Diagnostic[]): void {
+  for (const preset of project.sectionPresets) {
+    const section = preset.value.section;
+    const component = project.registry.get(section.use);
+    if (!component) {
+      const uiMatch = project.uiRegistry.has(section.use);
+      const allowed = [...project.registry.keys()].sort();
+      diagnostics.push({
+        code: uiMatch ? "SECTION_PRESET_UI_PRIMITIVE_FORBIDDEN" : "SECTION_PRESET_COMPONENT_UNKNOWN",
+        severity: "error",
+        file: preset.file,
+        path: "/section/use",
+        component: section.use,
+        message: uiMatch
+          ? `Section preset "section:${preset.id}" cannot target UI primitive "${section.use}"; target a registered section.`
+          : `Section preset "section:${preset.id}" targets unknown component "${section.use}".`,
+        expected: "registered section component",
+        actual: section.use,
+        allowed,
+        suggestions: uiMatch
+          ? [{ action: "use-ui-inside-component", command: `npm run site -- spec ui:${section.use} --json` }]
+          : nearestStrings(section.use, allowed).length > 0
+            ? [{ action: "reuse-component", candidates: nearestStrings(section.use, allowed) }]
+            : [{ action: "create-component", command: `npm run site -- add component ${section.use}` }]
+      });
+      continue;
+    }
+    const variant = section.variant ?? "default";
+    if (!component.variants.includes(variant)) diagnostics.push({
+      code: "SECTION_PRESET_VARIANT_UNKNOWN", severity: "error", file: preset.file, path: "/section/variant", component: component.id,
+      message: `Section preset "section:${preset.id}" uses unknown variant "${variant}" for "${component.id}".`,
+      actual: variant, allowed: component.variants, suggestions: [{ action: "use-value", field: "variant", value: nearestStrings(variant, component.variants, 1)[0] ?? "default" }]
+    });
+    const theme = section.theme ?? "default";
+    if (!component.themes.includes(theme)) diagnostics.push({
+      code: "SECTION_PRESET_THEME_UNKNOWN", severity: "error", file: preset.file, path: "/section/theme", component: component.id,
+      message: `Section preset "section:${preset.id}" uses unknown theme "${theme}" for "${component.id}".`,
+      actual: theme, allowed: component.themes, suggestions: [{ action: "use-value", field: "theme", value: nearestStrings(theme, component.themes, 1)[0] ?? "default" }]
+    });
+  }
+}
+
+function pageInstances(project: LoadedProject, page: LoadedProject["pages"][number], diagnostics: Diagnostic[]): Array<{ route: string; params: Record<string, string>; id: string }> {
+  const template = page.value.page.route;
+  const names = routeParamNames(template);
+  const paths = page.value.page.paths;
+  if (names.length === 0) {
+    if (paths) diagnostics.push({
+      code: "STATIC_ROUTE_PATHS_FORBIDDEN", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/page/paths", message: "page.paths is only valid for dynamic route templates containing [param] segments."
+    });
+    return [{ route: template, params: {}, id: page.value.page.id }];
+  }
+
+  if (page.value.specVersion !== "0.2" || project.site?.specVersion !== "0.2") {
+    diagnostics.push({
+      code: "DYNAMIC_ROUTE_REQUIRES_V02", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/page/route", message: "Dynamic route templates require specVersion \"0.2\".",
+      expected: "0.2", actual: page.value.specVersion
+    });
+    return [];
+  }
+  if (!paths?.length) {
+    diagnostics.push({
+      code: "DYNAMIC_ROUTE_PATHS_REQUIRED", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/page/paths", message: `Dynamic route "${template}" requires at least one explicit path parameter set.`,
+      expected: names
+    });
+    return [];
+  }
+
+  const instances: Array<{ route: string; params: Record<string, string>; id: string }> = [];
+  const seenRoutes = new Set<string>();
+  for (let index = 0; index < paths.length; index++) {
+    const params = paths[index]!;
+    const keys = Object.keys(params).sort();
+    const missing = names.filter(name => !(name in params));
+    const extra = keys.filter(name => !names.includes(name));
+    if (missing.length || extra.length) {
+      diagnostics.push({
+        code: "DYNAMIC_ROUTE_PARAMS_INVALID", severity: "error", file: page.file, page: page.value.page.id,
+        path: `/page/paths/${index}`,
+        message: `Dynamic route path parameters must match [${names.join("], [")}].`,
+        expected: names,
+        actual: keys,
+        details: { missing, extra }
+      });
+      continue;
+    }
+    const route = materializeRoute(template, params);
+    if (seenRoutes.has(route)) {
+      diagnostics.push({
+        code: "DYNAMIC_ROUTE_PATH_DUPLICATE", severity: "error", file: page.file, page: page.value.page.id,
+        path: `/page/paths/${index}`, message: `Dynamic route materializes duplicate path "${route}".`, actual: route
+      });
+      continue;
+    }
+    seenRoutes.add(route);
+    instances.push({ route, params, id: resolvedPageId(page.value.page.id, names, params) });
+  }
+  return instances;
 }
 
 function validateInternalLinks(pages: ResolvedPage[], diagnostics: Diagnostic[]): void {
@@ -358,15 +529,29 @@ function resolveNavigation(
 export async function validateLoadedProject(project: LoadedProject): Promise<ValidationResult> {
   const diagnostics = [...project.diagnostics];
   validateGlobalIdentities(project, diagnostics);
+  validateSpecVersions(project, diagnostics);
+  validateSectionPresetDefinitions(project, diagnostics);
   await validateSiteAssets(project, diagnostics);
   diagnostics.push(...await validateDesign(project.root));
 
   const resolvedPages: ResolvedPage[] = [];
+  const concreteRoutes = new Map<string, string>();
   if (project.site) {
     for (const page of project.pages) {
-      const resolved = await resolvePage(project, page);
-      diagnostics.push(...resolved.diagnostics);
-      if (resolved.page) resolvedPages.push(resolved.page);
+      for (const instance of pageInstances(project, page, diagnostics)) {
+        const owner = concreteRoutes.get(instance.route);
+        if (owner) {
+          diagnostics.push({
+            code: "PAGE_ROUTE_DUPLICATE", severity: "error", file: page.file, page: page.value.page.id,
+            message: `Concrete route "${instance.route}" conflicts with ${owner}.`, actual: instance.route
+          });
+          continue;
+        }
+        concreteRoutes.set(instance.route, page.file);
+        const resolved = await resolvePage(project, page, instance);
+        diagnostics.push(...resolved.diagnostics);
+        if (resolved.page) resolvedPages.push(resolved.page);
+      }
     }
     validateInternalLinks(resolvedPages, diagnostics);
   }
@@ -376,7 +561,7 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
     : {};
 
   const site: ResolvedSite | undefined = project.site ? {
-    specVersion: "0.1",
+    specVersion: project.site.specVersion,
     site: { ...project.site.site },
     brand: { ...(project.site.brand ?? {}) },
     assets: { ...project.site.assets },

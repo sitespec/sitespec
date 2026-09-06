@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.2:type:pagination",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["currentPage", "totalPages"],
+  "properties": {
+    "currentPage": { "type": "integer", "minimum": 1 },
+    "totalPages": { "type": "integer", "minimum": 1 },
+    "previousHref": { "type": "string", "minLength": 1 },
+    "nextHref": { "type": "string", "minLength": 1 },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "href"],
+        "properties": {
+          "page": { "type": "integer", "minimum": 1 },
+          "href": { "type": "string", "minLength": 1 },
+          "current": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

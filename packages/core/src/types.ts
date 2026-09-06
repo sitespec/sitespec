@@ -1,8 +1,10 @@
 import type { ValidateFunction } from "ajv";
 
+export type SpecVersion = "0.1" | "0.2";
 export type Archetype = "marketing" | "article" | "listing" | "detail" | "legal" | "blank";
 export type PageState = "draft" | "published";
 export type ComponentRole = "intro" | "content" | "proof" | "conversion" | "utility";
+export type UiRole = "layout" | "action" | "content" | "navigation" | "feedback" | "media" | "typography";
 export type DiagnosticSeverity = "error" | "warning" | "info";
 
 export interface DiagnosticSuggestion {
@@ -45,7 +47,7 @@ export interface SourceNavigationItem {
 export type SourceNavigation = Record<string, SourceNavigationItem[]>;
 
 export interface SourceSite {
-  specVersion: "0.1";
+  specVersion: SpecVersion;
   site: { id: string; name: string; url: string; locale: string };
   brand?: { logo?: string; logoDark?: string };
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
@@ -65,9 +67,23 @@ export interface SourceSection {
   props?: Record<string, unknown>;
 }
 
+export interface SourceSectionReference {
+  id: string;
+  $ref: string;
+}
+
+export type SourceSectionEntry = SourceSection | SourceSectionReference;
+export type RouteParams = Record<string, string>;
+
 export interface SourcePage {
-  specVersion: "0.1";
-  page: { id: string; route: string; archetype: Archetype; state?: PageState };
+  specVersion: SpecVersion;
+  page: {
+    id: string;
+    route: string;
+    archetype: Archetype;
+    state?: PageState;
+    paths?: RouteParams[];
+  };
   seo?: {
     title?: string;
     description?: string;
@@ -79,11 +95,17 @@ export interface SourcePage {
     type: "Organization" | "WebSite" | "WebPage" | "Article" | "Product" | "FAQPage" | "BreadcrumbList";
     data?: Record<string, unknown>;
   };
-  sections: SourceSection[];
+  sections: SourceSectionEntry[];
+}
+
+export interface SectionPresetManifest {
+  specVersion: "0.2";
+  description?: string;
+  section: Omit<SourceSection, "id">;
 }
 
 export interface ComponentManifest {
-  specVersion: "0.1";
+  specVersion: SpecVersion;
   component: { id: string; role: ComponentRole };
   description?: string;
   variants?: string[];
@@ -98,6 +120,15 @@ export interface ComponentManifest {
   semantics?: { pageHeading?: boolean };
 }
 
+export interface UiManifest {
+  specVersion: "0.2";
+  ui: { id: string; role: UiRole };
+  description?: string;
+  variants?: string[];
+  props: Record<string, unknown>;
+  runtime?: { javascript?: boolean };
+}
+
 export interface RegisteredComponent {
   id: string;
   role: ComponentRole;
@@ -108,8 +139,20 @@ export interface RegisteredComponent {
   file: string;
 }
 
+export interface RegisteredUiPrimitive {
+  id: string;
+  role: UiRole;
+  variants: string[];
+  manifest: UiManifest;
+  validateProps: ValidateFunction;
+  file: string;
+  implementation: string;
+}
+
 export interface LoadedPage { file: string; value: SourcePage }
 export interface LoadedComponent { file: string; dirName: string; value: ComponentManifest }
+export interface LoadedUiPrimitive { file: string; dirName: string; value: UiManifest }
+export interface LoadedSectionPreset { file: string; id: string; value: SectionPresetManifest }
 
 export interface LoadedProject {
   root: string;
@@ -118,6 +161,9 @@ export interface LoadedProject {
   pages: LoadedPage[];
   components: LoadedComponent[];
   registry: Map<string, RegisteredComponent>;
+  ui: LoadedUiPrimitive[];
+  uiRegistry: Map<string, RegisteredUiPrimitive>;
+  sectionPresets: LoadedSectionPreset[];
   diagnostics: Diagnostic[];
 }
 
@@ -143,6 +189,7 @@ export interface ResolvedSection {
   variant: string;
   theme: string;
   props: Record<string, unknown>;
+  preset?: string;
 }
 
 export interface ResolvedSeo {
@@ -161,7 +208,10 @@ export interface ResolvedSeo {
 
 export interface ResolvedPage {
   id: string;
+  templateId: string;
   route: string;
+  routeTemplate: string;
+  params: RouteParams;
   archetype: Archetype;
   state: PageState;
   locale: string;
@@ -171,7 +221,7 @@ export interface ResolvedPage {
 }
 
 export interface ResolvedSite {
-  specVersion: "0.1";
+  specVersion: SpecVersion;
   site: { id: string; name: string; url: string; locale: string };
   brand: { logo?: string; logoDark?: string };
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };

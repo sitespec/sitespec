@@ -1,0 +1,31 @@
+specVersion: "0.2"
+ui:
+  id: button
+  role: action
+
+description: Primary and secondary link-style action primitive for sections and shell.
+
+variants:
+  - default
+  - primary
+  - secondary
+
+props:
+  type: object
+  additionalProperties: false
+  required:
+    - label
+    - href
+  properties:
+    label:
+      type: string
+      minLength: 1
+      maxLength: 80
+    href:
+      type: string
+      minLength: 1
+    target:
+      enum: [self, blank]
+
+runtime:
+  javascript: false

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.2:ui",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "ui", "props"],
+  "properties": {
+    "specVersion": { "const": "0.2" },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "role": { "enum": ["layout", "action", "content", "navigation", "feedback", "media", "typography"] }
+      }
+    },
+    "description": { "type": "string", "maxLength": 500 },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "props": { "type": "object" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "javascript": { "type": "boolean" } }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+  }
+}

@@ -20,6 +20,12 @@ for (const [dir, expectedName] of packages) {
   if (pkg.license !== "MIT") throw new Error(`${expectedName}: license must be MIT`);
   if (!pkg.version) throw new Error(`${expectedName}: version is missing`);
   if (!pkg.engines?.node) throw new Error(`${expectedName}: engines.node is missing`);
+  if (pkg.repository?.url !== "https://github.com/sitespec/sitespec") {
+    throw new Error(`${expectedName}: repository.url must be https://github.com/sitespec/sitespec for npm provenance`);
+  }
+  if (pkg.repository?.directory !== dir) {
+    throw new Error(`${expectedName}: repository.directory must be ${dir}`);
+  }
   loaded.push({ dir, pkg });
 }
 

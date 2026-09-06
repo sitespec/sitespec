@@ -10,7 +10,7 @@
     "site": "sitespec"
   },
   "devDependencies": {
-    "@sitespec/cli": "0.1.1"
+    "@sitespec/cli": "*"
   },
   "engines": {
     "node": ">=22"

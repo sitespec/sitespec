@@ -2,13 +2,15 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, stat, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
-export const BUILD_STATE_VERSION = "0.1" as const;
+export const BUILD_STATE_VERSION = "0.2" as const;
 
 const SOURCE_ENTRIES = [
   "site.yaml",
   "pages",
   "content",
+  "sections",
   "components",
+  "ui",
   "shell",
   "design",
   "public"

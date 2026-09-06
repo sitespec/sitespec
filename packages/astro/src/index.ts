@@ -3,12 +3,13 @@ import { createRequire } from "node:module";
 import { dirname, join, relative } from "node:path";
 import { build as astroBuild, dev as astroDev } from "astro";
 import { loadDesignFonts } from "@sitespec/core";
-import type { Diagnostic, RegisteredComponent, ResolvedPage, ResolvedSite } from "@sitespec/core";
+import type { Diagnostic, RegisteredComponent, RegisteredUiPrimitive, ResolvedPage, ResolvedSite } from "@sitespec/core";
 
 export interface AstroBuildOptions {
   root: string;
   site: ResolvedSite;
   registry?: Map<string, RegisteredComponent>;
+  uiRegistry?: Map<string, RegisteredUiPrimitive>;
   outDir?: string;
 }
 
@@ -68,6 +69,7 @@ function astroRuntimeResolverPlugin() {
 export interface AstroComponentContractOptions {
   root: string;
   registry: Map<string, RegisteredComponent>;
+  uiRegistry?: Map<string, RegisteredUiPrimitive>;
 }
 
 function countMatches(value: string, pattern: RegExp): number {
@@ -76,6 +78,26 @@ function countMatches(value: string, pattern: RegExp): number {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function readUiSource(root: string, primitive: RegisteredUiPrimitive): Promise<{ file: string; source?: string; diagnostic?: Diagnostic }> {
+  const file = join(root, primitive.implementation);
+  try {
+    return { file: relative(root, file), source: await readFile(file, "utf8") };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return {
+      file: relative(root, file),
+      diagnostic: {
+        code: code === "ENOENT" ? "UI_IMPLEMENTATION_MISSING" : "UI_IMPLEMENTATION_READ_FAILED",
+        severity: "error",
+        file: relative(root, file),
+        message: code === "ENOENT"
+          ? `Astro implementation for UI primitive "${primitive.id}" was not found.`
+          : error instanceof Error ? error.message : String(error)
+      }
+    };
+  }
 }
 
 async function readComponentSource(root: string, component: RegisteredComponent): Promise<{ file: string; source?: string; diagnostic?: Diagnostic }> {
@@ -206,6 +228,56 @@ export async function validateAstroComponentContracts(options: AstroComponentCon
         component: component.id,
         message: `Component "${component.id}" ships client JavaScript but runtime.javascript is not true.`,
         hint: "Remove the client JavaScript or declare runtime.javascript: true in component.yaml."
+      });
+    }
+  }
+
+  for (const primitive of [...(options.uiRegistry?.values() ?? [])].sort((a, b) => a.id.localeCompare(b.id))) {
+    const loaded = await readUiSource(options.root, primitive);
+    if (loaded.diagnostic) {
+      diagnostics.push(loaded.diagnostic);
+      continue;
+    }
+
+    const source = loaded.source!;
+    if (!source.includes(`data-ui="${primitive.id}"`)) {
+      diagnostics.push({
+        code: "UI_CONTRACT_IDENTITY_MISSING",
+        severity: "error",
+        file: loaded.file,
+        message: `UI primitive "${primitive.id}" must render data-ui="${primitive.id}" on its root element.`
+      });
+    }
+    if (!source.includes("data-variant={variant}")) {
+      diagnostics.push({
+        code: "UI_CONTRACT_VARIANT_MISSING",
+        severity: "error",
+        file: loaded.file,
+        message: `UI primitive "${primitive.id}" must expose data-variant={variant} on its root element.`
+      });
+    }
+
+    for (const tag of source.match(/<img\b[^>]*>/gi) ?? []) {
+      if (!/\balt\s*=/.test(tag)) {
+        diagnostics.push({
+          code: "UI_CONTRACT_IMAGE_ALT_MISSING",
+          severity: "error",
+          file: loaded.file,
+          message: `UI primitive "${primitive.id}" contains an <img> without an alt attribute.`
+        });
+      }
+    }
+
+    const allowsJavascript = primitive.manifest.runtime?.javascript === true;
+    const hasScript = /<script(?:\s|>)/i.test(source);
+    const hasClientDirective = /\bclient:[a-z-]+\s*=/i.test(source);
+    if (!allowsJavascript && (hasScript || hasClientDirective)) {
+      diagnostics.push({
+        code: "UI_CONTRACT_JAVASCRIPT_FORBIDDEN",
+        severity: "error",
+        file: loaded.file,
+        message: `UI primitive "${primitive.id}" ships client JavaScript but runtime.javascript is not true.`,
+        hint: "Remove the client JavaScript or declare runtime.javascript: true in ui.yaml."
       });
     }
   }
@@ -413,7 +485,7 @@ function collectTokens(
         severity: "error",
         file: "design/tokens.json",
         path: `/${path.join("/")}/$value`,
-        message: `Token "${path.join(".")}" must resolve to a string or number in Site Spec v0.1.`
+        message: `Token "${path.join(".")}" must resolve to a string or number in Site Spec v0.2.`
       });
       return;
     }
@@ -521,7 +593,7 @@ const { page, assets, jsonLd } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content="Site Spec v0.1" />
+    <meta name="generator" content="Site Spec v0.2" />
     <title>{page.seo.title}</title>
     <meta name="description" content={page.seo.description} />
     <link rel="canonical" href={page.seo.canonical} />
@@ -894,7 +966,7 @@ export async function buildAstroSite(options: AstroBuildOptions): Promise<AstroB
   const root = await realpath(options.root);
   const outDir = options.outDir ?? join(root, "dist");
   const diagnostics = options.registry
-    ? await validateAstroComponentContracts({ root, registry: options.registry })
+    ? await validateAstroComponentContracts({ root, registry: options.registry, uiRegistry: options.uiRegistry })
     : await validateImplementations(root, options.site);
   if (diagnostics.some(diagnostic => diagnostic.severity === "error")) {
     return { success: false, outDir, pages: [], diagnostics };

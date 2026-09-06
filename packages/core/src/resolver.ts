@@ -2,8 +2,8 @@ import type { ErrorObject } from "ajv";
 import { findOrigin, nearestStrings } from "./diagnostics.js";
 import { resolveRefs } from "./refs.js";
 import type {
-  Diagnostic, LoadedPage, LoadedProject, Origin, RegisteredComponent,
-  ResolvedPage, ResolvedSection, ResolvedSeo
+  Diagnostic, LoadedPage, LoadedProject, Origin, RegisteredComponent, RouteParams,
+  SourceSection, SourceSectionEntry, ResolvedPage, ResolvedSection, ResolvedSeo
 } from "./types.js";
 
 function normalizeCanonical(siteUrl: string, route: string): string {
@@ -14,6 +14,25 @@ function absoluteAsset(siteUrl: string, value?: string): string | undefined {
   if (!value) return undefined;
   if (/^https?:\/\//.test(value)) return value;
   return value.startsWith("/") ? `${siteUrl}${value}` : value;
+}
+
+function interpolateParams(value: string | undefined, params: RouteParams): string | undefined {
+  if (value === undefined) return undefined;
+  return value.replace(/\{([a-z][a-z0-9-]*)\}/g, (match, name: string) => params[name] ?? match);
+}
+
+function unresolvedParamNames(value: string | undefined): string[] {
+  if (!value) return [];
+  return [...value.matchAll(/\{([a-z][a-z0-9-]*)\}/g)].map(match => match[1]!).filter((name, index, all) => all.indexOf(name) === index);
+}
+
+function validCanonical(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function propProperties(component: RegisteredComponent): Record<string, unknown> {
@@ -48,7 +67,8 @@ function propDiagnostics(
   sectionId: string,
   component: RegisteredComponent,
   provenance: Map<string, Origin>,
-  props: Record<string, unknown>
+  props: Record<string, unknown>,
+  fallbackOrigin?: Origin
 ): Diagnostic[] {
   return (errors ?? []).map(error => {
     const additional = error.keyword === "additionalProperties"
@@ -57,7 +77,7 @@ function propDiagnostics(
     const pointer = additional
       ? `${error.instancePath}/${additional.replaceAll("~", "~0").replaceAll("/", "~1")}`
       : error.instancePath || "/";
-    const origin = findOrigin(provenance, pointer);
+    const origin = findOrigin(provenance, pointer) ?? fallbackOrigin;
     const properties = propProperties(component);
     const allowedProps = Object.keys(properties).sort();
     let code = "COMPONENT_PROP_INVALID";
@@ -72,9 +92,7 @@ function propDiagnostics(
       expected = "declared component prop";
       actual = additional;
       allowed = allowedProps;
-      suggestions = [
-        { action: "remove-prop", field: additional, message: `Remove unsupported prop "${additional}".` }
-      ];
+      suggestions = [{ action: "remove-prop", field: additional, message: `Remove unsupported prop "${additional}".` }];
       const candidates = additional ? nearestStrings(additional, allowedProps) : [];
       if (candidates.length > 0) suggestions.push({
         action: "rename-prop",
@@ -88,11 +106,7 @@ function propDiagnostics(
       message = `Component "${component.id}" requires prop "${missing}".`;
       expected = properties[missing] ?? "required prop";
       actual = undefined;
-      suggestions = [{
-        action: "add-prop",
-        field: missing,
-        message: `Add required prop "${missing}" using the component contract.`
-      }];
+      suggestions = [{ action: "add-prop", field: missing, message: `Add required prop "${missing}" using the component contract.` }];
     } else if (error.keyword === "enum") {
       allowed = ((error.params as { allowedValues?: unknown[] }).allowedValues ?? []);
       expected = { enum: allowed };
@@ -125,10 +139,16 @@ function propDiagnostics(
   });
 }
 
-function resolveSeo(project: LoadedProject, page: LoadedPage, diagnostics: Diagnostic[]): ResolvedSeo {
+function resolveSeo(
+  project: LoadedProject,
+  page: LoadedPage,
+  diagnostics: Diagnostic[],
+  route: string,
+  params: RouteParams
+): ResolvedSeo {
   const site = project.site!;
   const source = page.value.seo ?? {};
-  const rawTitle = source.title;
+  const rawTitle = interpolateParams(source.title, params);
   if (!rawTitle && page.value.page.state !== "draft") diagnostics.push({
     code: "SEO_TITLE_MISSING", severity: "error", file: page.file, page: page.value.page.id,
     path: "/seo/title", message: "Published pages require seo.title."
@@ -136,13 +156,34 @@ function resolveSeo(project: LoadedProject, page: LoadedPage, diagnostics: Diagn
   const title = rawTitle
     ? site.seo?.titleTemplate?.replace("%s", rawTitle) ?? rawTitle
     : "";
-  const description = source.description ?? site.seo?.defaultDescription ?? "";
+  const description = interpolateParams(source.description, params) ?? site.seo?.defaultDescription ?? "";
   if (!description && page.value.page.state !== "draft") diagnostics.push({
     code: "SEO_DESCRIPTION_MISSING", severity: "error", file: page.file, page: page.value.page.id,
     path: "/seo/description", message: "Published pages require a description or site.seo.defaultDescription."
   });
-  const canonical = source.canonical ?? normalizeCanonical(site.site.url, page.value.page.route);
-  const image = absoluteAsset(site.site.url, source.image ?? site.assets.defaultOgImage);
+  const seoFields: Array<[string, string | undefined]> = [
+    ["title", rawTitle],
+    ["description", description],
+    ["canonical", interpolateParams(source.canonical, params)],
+    ["image", interpolateParams(source.image, params)]
+  ];
+  for (const [field, value] of seoFields) {
+    const unresolved = unresolvedParamNames(value);
+    if (unresolved.length > 0) diagnostics.push({
+      code: "ROUTE_PARAM_PLACEHOLDER_NOT_FOUND", severity: "error", file: page.file, page: page.value.page.id,
+      path: `/seo/${field}`, message: `SEO ${field} references route parameter(s) that are not available: ${unresolved.join(", ")}.`,
+      expected: Object.keys(params).sort(), actual: unresolved
+    });
+  }
+
+  const canonicalSource = interpolateParams(source.canonical, params);
+  const canonical = canonicalSource ?? normalizeCanonical(site.site.url, route);
+  if (!validCanonical(canonical)) diagnostics.push({
+    code: "SEO_CANONICAL_INVALID", severity: "error", file: page.file, page: page.value.page.id,
+    path: "/seo/canonical", message: `Resolved canonical URL ${JSON.stringify(canonical)} must be an absolute http(s) URL.`,
+    expected: "absolute http(s) URL", actual: canonical
+  });
+  const image = absoluteAsset(site.site.url, interpolateParams(source.image, params) ?? site.assets.defaultOgImage);
   return {
     title,
     description,
@@ -153,18 +194,62 @@ function resolveSeo(project: LoadedProject, page: LoadedPage, diagnostics: Diagn
   };
 }
 
-export async function resolvePage(project: LoadedProject, page: LoadedPage): Promise<{
-  page?: ResolvedPage;
-  diagnostics: Diagnostic[];
-}> {
+function resolveSectionSource(
+  project: LoadedProject,
+  page: LoadedPage,
+  entry: SourceSectionEntry,
+  index: number,
+  diagnostics: Diagnostic[]
+): { source?: SourceSection; preset?: string; origin?: Origin } {
+  if (!("$ref" in entry)) return { source: entry };
+  const ref = entry.$ref;
+  const logical = ref.slice("section:".length);
+  const preset = project.sectionPresets.find(item => item.id === logical);
+  if (!preset) {
+    const refs = project.sectionPresets.map(item => `section:${item.id}`).sort();
+    diagnostics.push({
+      code: "SECTION_PRESET_NOT_FOUND",
+      severity: "error",
+      file: page.file,
+      page: page.value.page.id,
+      section: entry.id,
+      path: `/sections/${index}/$ref`,
+      message: `Section preset "${ref}" was not found.`,
+      expected: "existing section preset",
+      actual: ref,
+      allowed: refs,
+      suggestions: nearestStrings(ref, refs).length > 0
+        ? [{ action: "use-reference", candidates: nearestStrings(ref, refs) }]
+        : [{ action: "create-section-preset", file: `sections/${logical}.yaml` }]
+    });
+    return {};
+  }
+  return {
+    source: { id: entry.id, ...preset.value.section },
+    preset: ref,
+    origin: { file: preset.file, path: "/section/props" }
+  };
+}
+
+export async function resolvePage(
+  project: LoadedProject,
+  page: LoadedPage,
+  options: { route?: string; params?: RouteParams; id?: string } = {}
+): Promise<{ page?: ResolvedPage; diagnostics: Diagnostic[] }> {
   const diagnostics: Diagnostic[] = [];
   if (!project.site) return { diagnostics };
+  const params = options.params ?? {};
+  const route = options.route ?? page.value.page.route;
+  const resolvedId = options.id ?? page.value.page.id;
   const seenSectionIds = new Set<string>();
   const sections: ResolvedSection[] = [];
   const counts = new Map<string, number>();
 
   for (let index = 0; index < page.value.sections.length; index++) {
-    const source = page.value.sections[index]!;
+    const entry = page.value.sections[index]!;
+    const materialized = resolveSectionSource(project, page, entry, index, diagnostics);
+    const source = materialized.source;
+    if (!source) continue;
     if (seenSectionIds.has(source.id)) {
       diagnostics.push({
         code: "SECTION_ID_DUPLICATE", severity: "error", file: page.file, page: page.value.page.id,
@@ -178,14 +263,22 @@ export async function resolvePage(project: LoadedProject, page: LoadedPage): Pro
     if (!component) {
       const registered = [...project.registry.keys()].sort();
       const candidates = nearestStrings(source.use, registered);
+      const uiMatch = project.uiRegistry.has(source.use);
       diagnostics.push({
-        code: "SECTION_COMPONENT_UNKNOWN", severity: "error", file: page.file, page: page.value.page.id,
+        code: uiMatch ? "SECTION_UI_PRIMITIVE_FORBIDDEN" : "SECTION_COMPONENT_UNKNOWN",
+        severity: "error", file: page.file, page: page.value.page.id,
         section: source.id, component: source.use, path: `/sections/${index}/use`,
-        message: `Unknown component "${source.use}".`,
+        message: uiMatch
+          ? `UI primitive "${source.use}" cannot be used directly by Page Spec; compose it inside a registered section.`
+          : `Unknown component "${source.use}".`,
         expected: "registered section component",
         actual: source.use,
         allowed: registered,
-        suggestions: [
+        suggestions: uiMatch ? [{
+          action: "use-ui-inside-component",
+          command: `npm run site -- spec ui:${source.use} --json`,
+          message: "UI primitives are internal design-system building blocks, not page sections."
+        }] : [
           ...(candidates.length > 0 ? [{
             action: "reuse-component",
             candidates,
@@ -262,14 +355,30 @@ export async function resolvePage(project: LoadedProject, page: LoadedPage): Pro
     const props = await resolveRefs(source.props ?? {}, "", {
       root: project.root, diagnostics, provenance, page: page.value.page.id,
       section: source.id, pageFile: page.file, siteFile: project.siteFile,
-      navigation: project.site.navigation ?? {}
+      navigation: project.site.navigation ?? {}, params
     }) as Record<string, unknown>;
 
     if (!component.validateProps(props)) {
-      diagnostics.push(...propDiagnostics(component.validateProps.errors, page, source.id, component, provenance, props));
+      diagnostics.push(...propDiagnostics(
+        component.validateProps.errors,
+        page,
+        source.id,
+        component,
+        provenance,
+        props,
+        materialized.origin
+      ));
     }
 
-    sections.push({ id: source.id, component: component.id, role: component.role, variant, theme, props });
+    sections.push({
+      id: source.id,
+      component: component.id,
+      role: component.role,
+      variant,
+      theme,
+      props,
+      preset: materialized.preset
+    });
   }
 
   const state = page.value.page.state ?? "published";
@@ -285,11 +394,14 @@ export async function resolvePage(project: LoadedProject, page: LoadedPage): Pro
     });
   }
 
-  const seo = resolveSeo(project, page, diagnostics);
+  const seo = resolveSeo(project, page, diagnostics, route, params);
   return {
     page: {
-      id: page.value.page.id,
-      route: page.value.page.route,
+      id: resolvedId,
+      templateId: page.value.page.id,
+      route,
+      routeTemplate: page.value.page.route,
+      params,
       archetype: page.value.page.archetype,
       state,
       locale: project.site.site.locale,

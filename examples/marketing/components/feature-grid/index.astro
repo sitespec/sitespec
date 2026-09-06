@@ -1,11 +1,12 @@
 ---
+import Container from "../../ui/container/index.astro";
 interface Item { title: string; text: string }
 interface FeatureGridProps { title: string; items: Item[] }
 interface Props { sectionId: string; variant: string; theme: string; props: FeatureGridProps }
 const { sectionId, variant, theme, props } = Astro.props;
 ---
 <section id={sectionId} data-section={sectionId} data-component="feature-grid" data-variant={variant} data-theme={theme}>
-  <div class="inner">
+  <Container>
     <h2>{props.title}</h2>
     <div class="grid">
       {props.items.map((item) => (
@@ -15,13 +16,12 @@ const { sectionId, variant, theme, props } = Astro.props;
         </article>
       ))}
     </div>
-  </div>
+  </Container>
 </section>
 
 <style>
   section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
   section[data-theme="muted"] { background: var(--color-surface-muted); }
-  .inner { max-width: var(--size-content); margin: 0 auto; }
   h2 { max-width: 720px; margin: 0 0 var(--space-stack-2xl); font-size: var(--font-size-heading); letter-spacing: -.035em; }
   .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-stack-md); }
   article { padding: var(--space-stack-xl); border: 1px solid var(--color-border-default); border-radius: var(--radius-card); background: var(--color-surface-card); }

@@ -22,6 +22,9 @@ test("sitespec init creates portable agent bootstrap instructions", async () => 
     assert.match(agents, /npm run site -- spec --json/);
     assert.match(agents, /npm run site -- validate --json/);
     assert.match(agents, /npm run site -- add component <id>/);
+    assert.match(agents, /npm run site -- add ui <id>/);
+    assert.match(agents, /Reusable section presets/);
+    assert.match(agents, /Dynamic routes/);
     assert.match(agents, /Cross-site navigation/);
     assert.match(agents, /navigation:<id>/);
     assert.match(agents, /shell\/default\.astro/);
@@ -52,7 +55,7 @@ test("site spec exposes a stable agent protocol", async () => {
       generated: string[];
     };
 
-    assert.equal(agent.protocolVersion, "1");
+    assert.equal(agent.protocolVersion, "2");
     assert.equal(agent.workflow.inspect, "npm run site -- spec --json");
     assert.equal(agent.workflow.validate, "npm run site -- validate --json");
     assert.equal(agent.workflow.build, "npm run build");

@@ -1,0 +1,10 @@
+specVersion: "0.2"
+description: Reusable final conversion section for marketing pages.
+section:
+  use: cta
+  variant: centered
+  props:
+    title: Change the spec, not the page markup
+    primaryAction:
+      label: View on GitHub
+      href: https://github.com/sitespec/sitespec

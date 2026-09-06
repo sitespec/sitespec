@@ -48,12 +48,23 @@ function loadSchema(name: string): Record<string, unknown> {
   return JSON.parse(readFileSync(schemaUrl(name), "utf8")) as Record<string, unknown>;
 }
 
+function schemaAlias(schema: Record<string, unknown>, id: string): Record<string, unknown> {
+  return { ...schema, $id: id };
+}
+
 export function createAjv(): Ajv2020Instance {
   const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: false });
   addFormats(ajv);
-  ajv.addSchema(loadSchema("types/action.schema.json"));
-  ajv.addSchema(loadSchema("types/image.schema.json"));
-  ajv.addSchema(loadSchema("types/navigation.schema.json"));
+  const action = loadSchema("types/action.schema.json");
+  const image = loadSchema("types/image.schema.json");
+  const navigation = loadSchema("types/navigation.schema.json");
+  ajv.addSchema(action);
+  ajv.addSchema(image);
+  ajv.addSchema(navigation);
+  ajv.addSchema(schemaAlias(action, "urn:site-spec:0.2:type:action"));
+  ajv.addSchema(schemaAlias(image, "urn:site-spec:0.2:type:image"));
+  ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.2:type:navigation"));
+  ajv.addSchema(loadSchema("types/pagination.schema.json"));
   return ajv;
 }
 
@@ -61,13 +72,15 @@ export const baseAjv = createAjv();
 export const validateSiteSchema = baseAjv.compile(loadSchema("site.schema.json"));
 export const validatePageSchema = baseAjv.compile(loadSchema("page.schema.json"));
 export const validateComponentSchema = baseAjv.compile(loadSchema("component.schema.json"));
+export const validateUiSchema = baseAjv.compile(loadSchema("ui.schema.json"));
+export const validateSectionPresetSchema = baseAjv.compile(loadSchema("section-preset.schema.json"));
 export const validateFontsSchema = baseAjv.compile(loadSchema("fonts.schema.json"));
 
 export function compilePropsSchema(schema: Record<string, unknown>): ValidateFunction {
   const ajv = createAjv();
   if (!ajv.validateSchema(schema)) {
     const detail = formatAjvErrors(ajv.errors);
-    throw new Error(detail || "Invalid component props JSON Schema.");
+    throw new Error(detail || "Invalid props JSON Schema.");
   }
   return ajv.compile(schema);
 }

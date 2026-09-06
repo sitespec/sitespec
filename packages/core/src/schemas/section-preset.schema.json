@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.2:section-preset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "section"],
+  "properties": {
+    "specVersion": { "const": "0.2" },
+    "description": { "type": "string", "maxLength": 500 },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["use"],
+      "properties": {
+        "use": { "$ref": "#/$defs/id" },
+        "variant": { "$ref": "#/$defs/id" },
+        "theme": { "$ref": "#/$defs/id" },
+        "props": { "type": "object" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+  }
+}

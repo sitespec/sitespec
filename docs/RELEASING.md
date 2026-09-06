@@ -13,7 +13,7 @@ The Site Spec document version (`specVersion: "0.1"`) is independent from the np
 ## Prerequisites
 
 - Node.js 24 is the canonical local and CI release runtime. Changesets v3 also supports Node.js ^22.11 and >=26, but the SiteSpec release train is tested on Node 24.
-- npm 11.19.1 for the v0.1 release train.
+- npm 11.19.1 for the synchronized SiteSpec release train.
 - The npm scope `@sitespec` must exist and the publisher must be allowed to publish to it.
 - `package-lock.json` must be committed. Generate it with the pinned npm version:
 
@@ -147,4 +147,4 @@ Git tags + GitHub releases
 
 ## Pre-releases
 
-The v0.1 workflow intentionally does not automate a `next` channel yet. Add prerelease automation only when SiteSpec has a real need to test incompatible engine changes against external site repositories.
+The current workflow intentionally does not automate a `next` channel yet. Add prerelease automation only when SiteSpec has a real need to test incompatible engine changes against external site repositories.

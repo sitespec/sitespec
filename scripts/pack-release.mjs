@@ -9,7 +9,7 @@ const outDir = resolve(root, ".release", "packs");
 const packages = [
   ["packages/core", "@sitespec/core", ["package.json", "dist/index.js", "dist/index.d.ts"]],
   ["packages/astro", "@sitespec/astro", ["package.json", "dist/index.js", "dist/index.d.ts"]],
-  ["packages/template", "@sitespec/template", ["package.json", "dist/index.js", "dist/index.d.ts", "template/_gitignore", "template/site.yaml"]],
+  ["packages/template", "@sitespec/template", ["package.json", "dist/index.js", "dist/index.d.ts", "template/_gitignore", "template/site.yaml", "template/ui/container/ui.yaml", "template/ui/button/ui.yaml", "template/sections/final-cta.yaml"]],
   ["packages/cli", "@sitespec/cli", ["package.json", "dist/index.js"]],
   ["packages/create", "@sitespec/create", ["package.json", "dist/index.js"]]
 ];

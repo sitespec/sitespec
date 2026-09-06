@@ -1,5 +1,5 @@
 import { join, relative } from "node:path";
-import type { Diagnostic, Origin, SourceNavigation } from "./types.js";
+import type { Diagnostic, Origin, RouteParams, SourceNavigation } from "./types.js";
 import { fileExists, listFiles, parseDataFile } from "./fs.js";
 import { escapePointer, nearestStrings } from "./diagnostics.js";
 
@@ -12,6 +12,7 @@ interface RefContext {
   pageFile: string;
   siteFile: string;
   navigation: SourceNavigation;
+  params?: RouteParams;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -90,7 +91,7 @@ async function loadContentRef(ref: string, pointer: string, ctx: RefContext): Pr
     ctx.diagnostics.push({
       code: "REFERENCE_CHAINED_UNSUPPORTED", severity: "error", file: relative(ctx.root, file),
       page: ctx.page, section: ctx.section,
-      message: "Content files cannot contain $ref in Site Spec v0.1."
+      message: "Content files cannot contain $ref in SiteSpec."
     });
     return undefined;
   }
@@ -132,6 +133,29 @@ function loadNavigationRef(ref: string, pointer: string, ctx: RefContext): unkno
   return collection;
 }
 
+function loadParamRef(ref: string, pointer: string, ctx: RefContext): unknown {
+  const id = ref.slice("param:".length);
+  const params = ctx.params ?? {};
+  const names = Object.keys(params).sort();
+  if (!(id in params)) {
+    ctx.diagnostics.push({
+      code: "ROUTE_PARAM_REFERENCE_NOT_FOUND",
+      severity: "error",
+      file: ctx.pageFile,
+      page: ctx.page,
+      section: ctx.section,
+      path: pointer,
+      message: `Route parameter "${id}" is not available on this page.`,
+      expected: "declared route parameter",
+      actual: id,
+      allowed: names,
+      suggestions: names.length > 0 ? [{ action: "use-route-param", candidates: names.map(name => `param:${name}`) }] : undefined
+    });
+    return undefined;
+  }
+  return params[id];
+}
+
 export async function resolveRefs(value: unknown, pointer: string, ctx: RefContext): Promise<unknown> {
   if (Array.isArray(value)) {
     return Promise.all(value.map((child, i) => resolveRefs(child, `${pointer}/${i}`, ctx)));
@@ -149,6 +173,7 @@ export async function resolveRefs(value: unknown, pointer: string, ctx: RefConte
     }
     if (value.$ref.startsWith("content:")) return loadContentRef(value.$ref, pointer, ctx);
     if (value.$ref.startsWith("navigation:")) return loadNavigationRef(value.$ref, pointer, ctx);
+    if (value.$ref.startsWith("param:")) return loadParamRef(value.$ref, pointer, ctx);
 
     ctx.diagnostics.push({
       code: "REFERENCE_NAMESPACE_UNSUPPORTED",
@@ -157,8 +182,8 @@ export async function resolveRefs(value: unknown, pointer: string, ctx: RefConte
       page: ctx.page,
       section: ctx.section,
       path: pointer,
-      message: `Unsupported reference "${value.$ref}". v0.1 supports content: and navigation: references.`,
-      expected: "content:<path> or navigation:<collection>",
+      message: `Unsupported reference "${value.$ref}". Supported prop references are content:, navigation:, and param: (for v0.2 dynamic routes).`,
+      expected: "content:<path>, navigation:<collection>, or param:<name>",
       actual: value.$ref
     });
     return undefined;

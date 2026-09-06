@@ -91,7 +91,7 @@ test("design lint rejects primitive token usage and unknown semantic tokens", as
   }
 });
 
-test("semantic tokens may not contain literal design values in v0.1", async () => {
+test("semantic tokens may not contain literal design values", async () => {
   const { temp, root } = await starter("site-spec-design-semantic-literal-");
   try {
     const file = join(root, "design", "tokens.json");

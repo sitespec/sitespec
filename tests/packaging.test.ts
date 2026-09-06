@@ -9,12 +9,6 @@ import { initProject } from "../packages/cli/src/init.ts";
 
 const execFileAsync = promisify(execFile);
 
-async function packageVersion(file: string): Promise<string> {
-  const pkg = JSON.parse(await readFile(join(process.cwd(), file), "utf8")) as { version?: string };
-  assert.ok(pkg.version, `${file} must declare a version`);
-  return pkg.version;
-}
-
 interface SitePackage {
   scripts: Record<string, string>;
   devDependencies: Record<string, string>;
@@ -26,7 +20,8 @@ test("sitespec init creates a standalone npm site pinned to the local engine con
   try {
     await initProject({ directory: root, name: "Acme" });
     const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as SitePackage;
-    assert.equal(pkg.devDependencies["@sitespec/cli"], await packageVersion("packages/cli/package.json"));
+    const cliPackage = JSON.parse(await readFile(join(process.cwd(), "packages/cli/package.json"), "utf8")) as { version: string };
+    assert.equal(pkg.devDependencies["@sitespec/cli"], cliPackage.version);
     assert.equal(pkg.scripts.dev, "sitespec dev");
     assert.equal(pkg.scripts.build, "sitespec build");
     assert.equal(pkg.scripts.validate, "sitespec validate");
@@ -54,7 +49,8 @@ test("@sitespec/create can scaffold without registry access", async () => {
     assert.match(result.stdout, /Created Created Site/);
 
     const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as SitePackage;
-    assert.equal(pkg.devDependencies["@sitespec/cli"], await packageVersion("packages/create/package.json"));
+    const createPackage = JSON.parse(await readFile(join(process.cwd(), "packages/create/package.json"), "utf8")) as { version: string };
+    assert.equal(pkg.devDependencies["@sitespec/cli"], createPackage.version);
     assert.equal((await readFile(join(root, "site.yaml"), "utf8")).includes("name: \"Created Site\""), true);
   } finally {
     await rm(temp, { recursive: true, force: true });
@@ -70,12 +66,15 @@ test("public packages use one synchronized release train", async () => {
     "packages/cli/package.json",
     "packages/create/package.json"
   ];
-  const versions = await Promise.all(packageFiles.map(packageVersion));
-  assert.equal(new Set(versions).size, 1, `public package versions must stay synchronized: ${versions.join(", ")}`);
+  const versions = await Promise.all(packageFiles.map(async file => {
+    const pkg = JSON.parse(await readFile(join(process.cwd(), file), "utf8")) as { version: string };
+    return pkg.version;
+  }));
+  assert.equal(new Set(versions).size, 1);
 });
 
 
-test("public package names and CLI binary match the SiteSpec v0.1 naming contract", async () => {
+test("public package names and CLI binary match the SiteSpec naming contract", async () => {
   const expectations = [
     ["packages/core/package.json", "@sitespec/core"],
     ["packages/astro/package.json", "@sitespec/astro"],

@@ -46,7 +46,7 @@ test("site spec inspection exposes agent capabilities", async () => {
   assert.equal(capabilities.dynamicRoutes, false);
   assert.equal(capabilities.inlineStyles, false);
   assert.equal(capabilities.semanticSiteAssets, true);
-  assert.equal(capabilities.faviconRequired, true);
+  assert.equal(capabilities.localWebFonts, true);
   const components = result.components as Array<{ id: string }>;
   assert.ok(components.some(component => component.id === "hero"));
 });

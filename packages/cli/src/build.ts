@@ -24,7 +24,7 @@ export async function buildProject(rootInput: string): Promise<BuildProjectResul
   await mkdir(siteDir, { recursive: true });
   await writeFile(join(siteDir, "resolved.json"), `${JSON.stringify(validation.site, null, 2)}\n`, "utf8");
 
-  const rendered = await buildAstroSite({ root, site: validation.site, registry: project.registry, outDir });
+  const rendered = await buildAstroSite({ root, site: validation.site, registry: project.registry, uiRegistry: project.uiRegistry, outDir });
   if (rendered.success) await writeBuildState(root, rendered.pages);
   return {
     success: rendered.success,

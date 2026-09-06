@@ -1,4 +1,4 @@
-specVersion: "0.1"
+specVersion: "0.2"
 page:
   id: home
   route: /
@@ -32,7 +32,4 @@ sections:
           text: Production output is plain HTML, CSS and assets.
 
   - id: final-cta
-    use: cta
-    variant: centered
-    props:
-      title: Change the spec, not the page markup
+    $ref: section:final-cta

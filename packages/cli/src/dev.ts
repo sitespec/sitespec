@@ -1,6 +1,6 @@
 import chokidar, { type FSWatcher } from "chokidar";
 import { realpath } from "node:fs/promises";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import { loadProject, validateLoadedProject, type Diagnostic, type ResolvedSite } from "@sitespec/core";
 import { startAstroDevServer, validateAstroComponentContracts } from "@sitespec/astro";
 
@@ -33,6 +33,18 @@ interface DevValidationState {
   diagnostics: Diagnostic[];
 }
 
+const WATCHED_SOURCE_PATHS: string[] = [
+  "site.yaml",
+  "pages",
+  "content",
+  "sections",
+  "components",
+  "ui",
+  "shell",
+  "design",
+  "public"
+];
+
 function hasErrors(diagnostics: Diagnostic[]): boolean {
   return diagnostics.some(diagnostic => diagnostic.severity === "error");
 }
@@ -41,7 +53,7 @@ async function validateForDev(root: string): Promise<DevValidationState> {
   try {
     const project = await loadProject(root);
     const result = await validateLoadedProject(project);
-    const rendererDiagnostics = await validateAstroComponentContracts({ root, registry: project.registry });
+    const rendererDiagnostics = await validateAstroComponentContracts({ root, registry: project.registry, uiRegistry: project.uiRegistry });
     const diagnostics = [...result.diagnostics, ...rendererDiagnostics];
     return {
       valid: result.valid && !!result.site && !hasErrors(rendererDiagnostics),
@@ -60,15 +72,18 @@ async function validateForDev(root: string): Promise<DevValidationState> {
   }
 }
 
-const WATCHED_SOURCE_PATHS = [
-  "site.yaml",
-  "pages",
-  "content",
-  "components",
-  "shell",
-  "design",
-  "public"
-];
+function sourcePath(root: string, absoluteOrRelativePath: string): string {
+  const absolute = isAbsolute(absoluteOrRelativePath)
+    ? absoluteOrRelativePath
+    : resolve(root, absoluteOrRelativePath);
+  return relative(root, absolute).replaceAll("\\", "/");
+}
+
+function isWatchedSourcePath(path: string): boolean {
+  if (path === "site.yaml") return true;
+  return ["pages/", "content/", "sections/", "components/", "ui/", "shell/", "design/", "public/"]
+    .some(prefix => path.startsWith(prefix));
+}
 
 async function waitForWatcherReady(watcher: FSWatcher): Promise<void> {
   await new Promise<void>((resolveReady, rejectReady) => {
@@ -78,21 +93,14 @@ async function waitForWatcherReady(watcher: FSWatcher): Promise<void> {
     };
     const onError = (error: unknown): void => {
       watcher.off("ready", onReady);
-      rejectReady(
-        error instanceof Error ? error : new Error(String(error))
-      );
+      rejectReady(error instanceof Error ? error : new Error(String(error)));
     };
-
     watcher.once("ready", onReady);
     watcher.once("error", onError);
   });
 }
 
 export async function startDev(options: DevProjectOptions): Promise<DevProjectServer> {
-  // Keep validation, SiteSpec source watching and Astro/Vite in the same
-  // physical path namespace. On macOS, /var/... resolves to /private/var/...;
-  // canonicalizing once prevents the CLI and renderer from comparing two
-  // spellings of the same project path.
   const root = await realpath(resolve(options.root));
   const initial = await validateForDev(root);
   const dev = await startAstroDevServer({
@@ -154,8 +162,10 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     }
   };
 
-  const onSourceChange = (): void => {
+  const onSourceChange = (changedPath: string): void => {
     if (closed) return;
+    const path = sourcePath(root, changedPath);
+    if (!isWatchedSourcePath(path)) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       timer = undefined;
@@ -163,30 +173,19 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     }, debounceMs);
   };
 
-  // SiteSpec source watching is deliberately separate from Astro/Vite's
-  // generated-source watcher. Chokidar gives us a cross-platform `ready`
-  // barrier, so startDev() cannot return while the first source edit is still
-  // able to race watcher subscription (observed on GitHub Actions/Linux).
   const sourceWatcher = chokidar.watch(WATCHED_SOURCE_PATHS, {
     cwd: root,
-    persistent: true,
     ignoreInitial: true,
-    atomic: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 50,
-      pollInterval: 10
-    }
+    persistent: true,
+    awaitWriteFinish: { stabilityThreshold: 40, pollInterval: 10 }
   });
-  sourceWatcher.on("all", onSourceChange);
-
+  sourceWatcher.on("all", (_event: string, changedPath: string) => onSourceChange(changedPath));
   try {
     await waitForWatcherReady(sourceWatcher);
   } catch (error) {
     await sourceWatcher.close();
     await dev.stop();
-    throw new Error(
-      `Failed to start SiteSpec source watcher: ${error instanceof Error ? error.message : String(error)}`
-    );
+    throw error;
   }
 
   options.onEvent?.({
@@ -207,7 +206,6 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
       if (closed) return;
       closed = true;
       if (timer) clearTimeout(timer);
-      sourceWatcher.off("all", onSourceChange);
       await sourceWatcher.close();
       await dev.stop();
     }

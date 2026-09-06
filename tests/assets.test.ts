@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { initProject } from "../packages/cli/src/init.ts";
 import { inspectProject, validateProject } from "../packages/core/src/index.ts";
 
-test("sitespec init creates the required v0.1 favicon contract", async () => {
+test("sitespec init creates the required favicon contract", async () => {
   const temp = await mkdtemp(join(tmpdir(), "site-spec-assets-init-"));
   const root = join(temp, "acme");
   try {
@@ -42,7 +42,7 @@ test("missing favicon file is a deterministic asset error", async () => {
   }
 });
 
-test("favicon format is constrained for v0.1", async () => {
+test("favicon format is constrained by the current contract", async () => {
   const temp = await mkdtemp(join(tmpdir(), "site-spec-assets-format-"));
   const root = join(temp, "acme");
   try {
