@@ -155,13 +155,13 @@ add
 
 const designSystemCommand = program
   .command("design-system")
-  .description("Inspect, pack, or install a SiteSpec 0.4 Design System")
+  .description("Inspect, pack, or install a SiteSpec 0.4+ Design System")
   .option("--root <path>", "project root", ".")
   .option("--json", "print machine-readable JSON")
   .action(async (options: { root: string; json?: boolean }) => {
     const result = await inspectDesignSystem(resolve(options.root));
     if (options.json) {
-      console.log(JSON.stringify({ version: "0.4", ...result }, null, 2));
+      console.log(JSON.stringify({ version: "0.5", ...result }, null, 2));
     } else if (result.designSystem) {
       const ds = result.designSystem as {
         id: string; name: string; version: string;
@@ -192,7 +192,7 @@ designSystemCommand
   .action(async (directory: string, options: { root: string; json?: boolean }) => {
     try {
       const result = await packDesignSystem({ root: resolve(options.root), directory });
-      if (options.json) console.log(JSON.stringify({ version: "0.4", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
       else {
         console.log(`Packed Design System ${result.id}@${result.version}`);
         console.log(`  target: ${result.root}`);
@@ -200,7 +200,7 @@ designSystemCommand
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (options.json) console.log(JSON.stringify({ version: "0.4", success: false, error: message }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: message }, null, 2));
       else console.error(`ERROR DESIGN_SYSTEM_PACK_FAILED\n  ${message}`);
       process.exitCode = 2;
     }
@@ -208,7 +208,7 @@ designSystemCommand
 
 designSystemCommand
   .command("install")
-  .description("Copy a portable Design System pack into this SiteSpec 0.4 project")
+  .description("Copy a portable Design System pack into this SiteSpec 0.4+ project")
   .argument("<source>", "Design System pack directory")
   .option("--root <path>", "project root", ".")
   .option("--replace", "replace files owned by the currently installed Design System pack")
@@ -217,7 +217,7 @@ designSystemCommand
   .action(async (source: string, options: { root: string; replace?: boolean; force?: boolean; json?: boolean }) => {
     try {
       const result = await installDesignSystem({ root: resolve(options.root), source, replace: options.replace, force: options.force });
-      if (options.json) console.log(JSON.stringify({ version: "0.4", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
       else {
         console.log(`Installed Design System ${result.id}@${result.version}`);
         console.log(`  root: ${result.root}`);
@@ -226,7 +226,7 @@ designSystemCommand
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (options.json) console.log(JSON.stringify({ version: "0.4", success: false, error: message }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: message }, null, 2));
       else console.error(`ERROR DESIGN_SYSTEM_INSTALL_FAILED\n  ${message}`);
       process.exitCode = 2;
     }

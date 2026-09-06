@@ -11,6 +11,7 @@ import { inspectDesign, validateDesign } from "./design.js";
 import { fileExists } from "./fs.js";
 import { isDynamicRoute, materializeRoute, resolvedPageId, routeParamNames } from "./routes.js";
 import { contentEntryRecord, runContentQuery, validatePaginationRoute } from "./content-query.js";
+import { validateResolvedMedia } from "./media.js";
 
 interface AssetRule {
   label: string;
@@ -223,7 +224,7 @@ function containsPostV01CoreType(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(containsPostV01CoreType);
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[234]:/.test(record.$ref)) return true;
+  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[2345]:/.test(record.$ref)) return true;
   return Object.values(record).some(containsPostV01CoreType);
 }
 
@@ -270,7 +271,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
     if (version === "0.1" || version === "0.2") diagnostics.push({
       code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: collection.file,
       message: `Typed content collections require specVersion "0.3" or newer.`,
-      expected: ["0.3", "0.4"], actual: version,
+      expected: ["0.3", "0.4", "0.5"], actual: version,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
     });
   }
@@ -278,7 +279,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
     for (const page of project.pages) if (page.value.content) diagnostics.push({
       code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: page.file, page: page.value.page.id,
       path: "/content", message: `Content-driven pages and queries require specVersion "0.3" or newer.`,
-      expected: ["0.3", "0.4"], actual: version,
+      expected: ["0.3", "0.4", "0.5"], actual: version,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
     });
   }
@@ -299,7 +300,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
       if (containsPostV01CoreType(component.value.props)) diagnostics.push({
         code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: component.file, component: component.value.component.id,
         path: "/props", message: 'SiteSpec 0.2+ core prop types require specVersion "0.2" or newer.',
-        expected: ["0.2", "0.3", "0.4"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+        expected: ["0.2", "0.3", "0.4", "0.5"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
       });
     }
   }
@@ -319,30 +320,40 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
 async function validateDesignSystemProject(project: LoadedProject, diagnostics: Diagnostic[]): Promise<void> {
   if (!project.site) return;
   const contract = project.designSystem?.value;
-  if (project.site.specVersion === "0.4" && !contract) {
+  if ((project.site.specVersion === "0.4" || project.site.specVersion === "0.5") && !contract) {
     diagnostics.push({
       code: "DESIGN_SYSTEM_CONTRACT_MISSING",
       severity: "error",
       file: "design-system.yaml",
-      message: "SiteSpec 0.4 projects require design-system.yaml.",
+      message: "SiteSpec 0.4+ projects require design-system.yaml.",
       expected: "formal Design System contract",
       suggestions: [{ action: "install-design-system", command: "npm run site -- design-system install <pack> --replace" }]
     });
     return;
   }
-  if (project.site.specVersion !== "0.4" && (contract || project.site.designSystem)) {
+  if (project.site.specVersion !== "0.4" && project.site.specVersion !== "0.5" && (contract || project.site.designSystem)) {
     diagnostics.push({
       code: "V04_FEATURE_REQUIRES_SPEC_VERSION",
       severity: "error",
       file: contract ? "design-system.yaml" : "site.yaml",
-      message: "Design System contracts and site-level Design System selection require specVersion \"0.4\".",
-      expected: "0.4",
+      message: "Design System contracts and site-level Design System selection require specVersion \"0.4\" or newer.",
+      expected: ["0.4", "0.5"],
       actual: project.site.specVersion,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.4" }]
     });
     return;
   }
   if (!contract) return;
+  if (contract.specVersion !== project.site.specVersion) {
+    diagnostics.push({
+      code: "SPEC_VERSION_MISMATCH",
+      severity: "error",
+      file: "design-system.yaml",
+      message: `Design System uses Site Spec ${contract.specVersion}, but site.yaml uses ${project.site.specVersion}.`,
+      expected: project.site.specVersion,
+      actual: contract.specVersion
+    });
+  }
 
   const selectedTheme = project.site.designSystem?.theme ?? contract.themes.default;
   if (!(selectedTheme in contract.themes.items)) diagnostics.push({
@@ -706,7 +717,7 @@ function pageInstances(project: LoadedProject, page: LoadedProject["pages"][numb
     diagnostics.push({
       code: "DYNAMIC_ROUTE_REQUIRES_V02", severity: "error", file: page.file, page: page.value.page.id,
       path: "/page/route", message: "Dynamic route templates require specVersion \"0.2\" or newer.",
-      expected: ["0.2", "0.3", "0.4"], actual: page.value.specVersion
+      expected: ["0.2", "0.3", "0.4", "0.5"], actual: page.value.specVersion
     });
     return [];
   }
@@ -889,6 +900,58 @@ function resolveNavigation(
   return resolved;
 }
 
+
+function validateHreflangClusters(siteUrl: string, pages: ResolvedPage[], diagnostics: Diagnostic[]): void {
+  const normalizedSiteUrl = siteUrl.replace(/\/+$/, "");
+  const byCanonical = new Map(pages.filter(page => page.state === "published").map(page => [page.seo.canonical, page]));
+  const internalPrefix = `${normalizedSiteUrl}/`;
+  for (const page of pages) {
+    if (page.seo.noindex && Object.keys(page.seo.hreflang).length > 0) {
+      diagnostics.push({
+        code: "SEO_HREFLANG_SOURCE_NOINDEX",
+        severity: "error",
+        page: page.id,
+        path: "/seo/hreflang",
+        message: "noindex pages cannot participate in hreflang clusters."
+      });
+    }
+    for (const [language, href] of Object.entries(page.seo.hreflang)) {
+      if (href !== normalizedSiteUrl && !href.startsWith(internalPrefix)) continue;
+      const target = byCanonical.get(href);
+      if (!target) {
+        diagnostics.push({
+          code: "SEO_HREFLANG_TARGET_NOT_FOUND",
+          severity: "error",
+          page: page.id,
+          path: `/seo/hreflang/${language}`,
+          message: `Internal hreflang target ${JSON.stringify(href)} does not match a published canonical page.`,
+          actual: href,
+          allowed: [...byCanonical.keys()].sort()
+        });
+        continue;
+      }
+      if (target.seo.noindex) {
+        diagnostics.push({
+          code: "SEO_HREFLANG_TARGET_NOINDEX",
+          severity: "error",
+          page: page.id,
+          path: `/seo/hreflang/${language}`,
+          message: `hreflang target ${JSON.stringify(href)} is noindex and cannot participate in an indexable language cluster.`
+        });
+      }
+      if (target.id !== page.id && !Object.values(target.seo.hreflang).includes(page.seo.canonical)) {
+        diagnostics.push({
+          code: "SEO_HREFLANG_RETURN_LINK_MISSING",
+          severity: "error",
+          page: target.id,
+          message: `hreflang cluster is not reciprocal: ${target.seo.canonical} does not reference ${page.seo.canonical}.`,
+          expected: page.seo.canonical
+        });
+      }
+    }
+  }
+}
+
 export async function validateLoadedProject(project: LoadedProject): Promise<ValidationResult> {
   const diagnostics = [...project.diagnostics];
   validateGlobalIdentities(project, diagnostics);
@@ -920,28 +983,80 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
       }
     }
     validateInternalLinks(resolvedPages, diagnostics);
+    validateHreflangClusters(project.site.site.url, resolvedPages, diagnostics);
+    diagnostics.push(...await validateResolvedMedia(project.root, project.site.specVersion, resolvedPages));
   }
 
   const navigation = project.site
     ? resolveNavigation(project.site.navigation ?? {}, resolvedPages, diagnostics)
     : {};
 
-  const site: ResolvedSite | undefined = project.site ? {
-    specVersion: project.site.specVersion,
-    site: { ...project.site.site },
+  const sortedPages = resolvedPages.sort((a, b) => a.route.localeCompare(b.route));
+  const sourceSite = project.site;
+  const hasArticles = sortedPages.some(page => page.state === "published" && page.archetype === "article");
+  const isV05 = sourceSite?.specVersion === "0.5";
+  const site: ResolvedSite | undefined = sourceSite ? {
+    specVersion: sourceSite.specVersion,
+    site: { ...sourceSite.site, url: sourceSite.site.url.replace(/\/+$/, "") },
     designSystem: project.designSystem ? {
       id: project.designSystem.value.designSystem.id,
       name: project.designSystem.value.designSystem.name,
       version: project.designSystem.value.designSystem.version,
-      theme: project.site.designSystem?.theme ?? project.designSystem.value.themes.default,
-      shell: project.site.designSystem?.shell ?? project.designSystem.value.shells.default,
-      shellEntry: project.designSystem.value.shells.items[project.site.designSystem?.shell ?? project.designSystem.value.shells.default]?.entry ?? "shell/default.astro"
+      theme: sourceSite.designSystem?.theme ?? project.designSystem.value.themes.default,
+      shell: sourceSite.designSystem?.shell ?? project.designSystem.value.shells.default,
+      shellEntry: project.designSystem.value.shells.items[sourceSite.designSystem?.shell ?? project.designSystem.value.shells.default]?.entry ?? "shell/default.astro"
     } : undefined,
-    brand: { ...(project.site.brand ?? {}) },
-    assets: { ...project.site.assets },
+    brand: { ...(sourceSite.brand ?? {}) },
+    assets: { ...sourceSite.assets },
+    media: {
+      output: sourceSite.media?.output ?? "/_media",
+      widths: [...(sourceSite.media?.widths ?? [320, 640, 960, 1280, 1600])].sort((a, b) => a - b),
+      formats: sourceSite.media?.formats ?? ["avif", "webp"],
+      quality: {
+        avif: sourceSite.media?.quality?.avif ?? 50,
+        webp: sourceSite.media?.quality?.webp ?? 78,
+        jpeg: sourceSite.media?.quality?.jpeg ?? 82,
+        png: sourceSite.media?.quality?.png ?? 85
+      }
+    },
+    seo: {
+      siteName: sourceSite.seo?.siteName ?? sourceSite.site.name,
+      titleTemplate: sourceSite.seo?.titleTemplate,
+      defaultDescription: sourceSite.seo?.defaultDescription,
+      sitemap: { enabled: sourceSite.seo?.sitemap?.enabled ?? true },
+      robots: {
+        index: sourceSite.seo?.robots?.index ?? true,
+        rules: sourceSite.seo?.robots?.rules ?? []
+      },
+      llms: {
+        enabled: sourceSite.seo?.llms?.enabled ?? isV05,
+        description: sourceSite.seo?.llms?.description ?? sourceSite.seo?.defaultDescription
+      },
+      rss: {
+        enabled: sourceSite.seo?.rss?.enabled ?? (isV05 && hasArticles),
+        path: sourceSite.seo?.rss?.path ?? "/rss.xml",
+        title: sourceSite.seo?.rss?.title ?? `${sourceSite.site.name} RSS`,
+        description: sourceSite.seo?.rss?.description ?? sourceSite.seo?.defaultDescription ?? `${sourceSite.site.name} updates.`
+      },
+      socialImages: {
+        generate: sourceSite.seo?.socialImages?.generate ?? isV05,
+        format: sourceSite.seo?.socialImages?.format ?? "png",
+        width: sourceSite.seo?.socialImages?.width ?? 1200,
+        height: sourceSite.seo?.socialImages?.height ?? 630,
+        background: sourceSite.seo?.socialImages?.background ?? "#111111",
+        foreground: sourceSite.seo?.socialImages?.foreground ?? "#ffffff"
+      }
+    },
     navigation,
-    pages: resolvedPages.sort((a, b) => a.route.localeCompare(b.route)),
-    generated: { sitemap: true, robots: true }
+    pages: sortedPages,
+    generated: {
+      sitemap: sourceSite.seo?.sitemap?.enabled ?? true,
+      robots: true,
+      llms: sourceSite.seo?.llms?.enabled ?? isV05,
+      rss: sourceSite.seo?.rss?.enabled ?? (isV05 && hasArticles),
+      socialImages: sortedPages.some(page => page.seo.socialImage?.generated === true),
+      media: isV05
+    }
   } : undefined;
 
   return { valid: !hasErrors(diagnostics), site, diagnostics };

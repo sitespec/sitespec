@@ -52,12 +52,14 @@ test("site spec exposes a stable agent protocol", async () => {
       rules: Record<string, boolean>;
       navigation: Record<string, string>;
       assets: { inspect: string; faviconRequired: boolean };
+      media: { renderer: string; formats: string[] };
+      seo: { generated: string[] };
       design: { inspect: string; model: string };
       designSystem: { inspect: string; inspectPack: string; install: string; pack: string; runtimeDependency: boolean };
       generated: string[];
     };
 
-    assert.equal(agent.protocolVersion, "4");
+    assert.equal(agent.protocolVersion, "5");
     assert.equal(agent.workflow.inspect, "npm run site -- spec --json");
     assert.equal(agent.workflow.validate, "npm run site -- validate --json");
     assert.equal(agent.workflow.build, "npm run build");
@@ -70,6 +72,9 @@ test("site spec exposes a stable agent protocol", async () => {
     assert.equal(agent.rules.faviconRequired, true);
     assert.equal(agent.navigation.inspect, "npm run site -- spec navigation:<collection> --json");
     assert.equal(agent.assets.inspect, "npm run site -- spec assets --json");
+    assert.equal(agent.media.renderer, "@site-generated/components/SiteImage.astro");
+    assert.deepEqual(agent.media.formats, ["avif", "webp"]);
+    assert.ok(agent.seo.generated.includes("llms.txt"));
     assert.equal(agent.design.inspect, "npm run site -- spec design --json");
     assert.match(agent.design.model, /primitive values -> semantic aliases/);
     assert.equal(agent.designSystem.inspect, "npm run site -- spec design-system --json");

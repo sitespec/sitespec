@@ -19,12 +19,12 @@ async function missing(path: string): Promise<boolean> {
   try { await access(path); return false; } catch { return true; }
 }
 
-test("v0.4 starter exposes a first-class Design System contract", async () => {
+test("v0.5 starter exposes a first-class Design System contract", async () => {
   const { temp, root } = await starter("sitespec-v04-ds-contract-");
   try {
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.specVersion, "0.4");
+    assert.equal(validation.site?.specVersion, "0.5");
     assert.equal(validation.site?.designSystem?.id, "sitespec-default");
     assert.equal(validation.site?.designSystem?.theme, "default");
     assert.equal(validation.site?.designSystem?.shell, "default");
@@ -42,7 +42,7 @@ test("v0.4 starter exposes a first-class Design System contract", async () => {
       layout: { convention: string };
     };
     assert.equal(designSystem.id, "sitespec-default");
-    assert.equal(designSystem.contractVersion, "0.4");
+    assert.equal(designSystem.contractVersion, "0.5");
     assert.deepEqual(designSystem.portable, { format: "copy", runtimeDependency: false, install: "sitespec design-system install <pack>", pack: "sitespec design-system pack <directory>" });
     assert.equal(designSystem.tokens.extension, "design/extensions.json");
     assert.deepEqual(designSystem.tokens.rules, { primitive: "additive", semantic: "additive" });
@@ -70,7 +70,7 @@ test("v0.4 starter exposes a first-class Design System contract", async () => {
 });
 
 
-test("v0.4 rejects an exported preset whose section is outside the Design System section library", async () => {
+test("v0.5 rejects an exported preset whose section is outside the Design System section library", async () => {
   const { temp, root } = await starter("sitespec-v04-ds-preset-library-");
   try {
     const contractFile = join(root, "design-system.yaml");
@@ -85,7 +85,7 @@ test("v0.4 rejects an exported preset whose section is outside the Design System
   }
 });
 
-test("v0.4 additive token extensions compile into the site and themes override semantics", async () => {
+test("v0.5 additive token extensions compile into the site and themes override semantics", async () => {
   const { temp, root } = await starter("sitespec-v04-ds-theme-");
   try {
     await writeFile(join(root, "design", "extensions.json"), `${JSON.stringify({
@@ -114,7 +114,7 @@ test("v0.4 additive token extensions compile into the site and themes override s
   }
 });
 
-test("v0.4 token extension policy can lock primitive additions", async () => {
+test("v0.5 token extension policy can lock primitive additions", async () => {
   const { temp, root } = await starter("sitespec-v04-ds-locked-");
   try {
     const contractFile = join(root, "design-system.yaml");
@@ -132,7 +132,7 @@ test("v0.4 token extension policy can lock primitive additions", async () => {
   }
 });
 
-test("v0.4 sites can select a shell pack from the Design System", async () => {
+test("v0.5 sites can select a shell pack from the Design System", async () => {
   const { temp, root } = await starter("sitespec-v04-ds-shell-");
   try {
     await writeFile(join(root, "shell", "minimal.astro"), `---\nconst { site } = Astro.props;\n---\n<div data-shell-pack="minimal" data-site-id={site.id}><slot /></div>\n`, "utf8");
@@ -179,7 +179,7 @@ test("Design System pack validation rejects dependencies on site-owned token ext
   }
 });
 
-test("Design System packs copy source into another v0.4 site without a runtime dependency", async () => {
+test("Design System packs copy source into another v0.5 site without a runtime dependency", async () => {
   const temp = await mkdtemp(join(tmpdir(), "sitespec-v04-ds-pack-"));
   const source = join(temp, "source-site");
   const target = join(temp, "target-site");

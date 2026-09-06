@@ -1,5 +1,12 @@
 # @sitespec/core
 
+## 0.5.0
+
+### Minor Changes
+
+- Add the v0.5 media and SEO contract, validation, hreflang clusters, structured data graphs and generated social metadata.
+- Keep accessibility and remote-dimension checks in the v0.5 media validator so component schemas remain structurally composable, normalize root hreflang URLs, and preserve the v0.1–v0.4 image schema unchanged.
+
 ## 0.4.0
 
 ### Minor Changes

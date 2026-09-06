@@ -58,6 +58,22 @@ test("npm run dev serves source changes, survives invalid specs, and does not cr
     assert.ok((await initial.text()).includes(originalTitle));
     assert.equal(await exists(join(root, "dist")), false);
 
+    const robots = await fetch(new URL("robots.txt", dev.url));
+    assert.equal(robots.status, 200);
+    assert.match(await robots.text(), /Sitemap: https:\/\/acme\.test\/sitemap\.xml/);
+
+    const sitemap = await fetch(new URL("sitemap.xml", dev.url));
+    assert.equal(sitemap.status, 200);
+    assert.match(await sitemap.text(), /<urlset/);
+
+    const llms = await fetch(new URL("llms.txt", dev.url));
+    assert.equal(llms.status, 200);
+    assert.match(await llms.text(), /# Acme/);
+
+    const rss = await fetch(new URL("rss.xml", dev.url));
+    assert.equal(rss.status, 200);
+    assert.match(await rss.text(), /<rss version="2\.0"/);
+
     const updated = original.replace(
       titleLine[0],
       "      title: A live Site Spec development loop"

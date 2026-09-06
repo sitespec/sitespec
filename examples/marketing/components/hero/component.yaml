@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 component:
   id: hero
   role: intro
@@ -31,7 +31,9 @@ props:
       type: string
       maxLength: 240
     primaryAction:
-      $ref: urn:site-spec:0.4:type:action
+      $ref: urn:site-spec:0.5:type:action
+    image:
+      $ref: urn:site-spec:0.5:type:image
 
 rules:
   maxPerPage: 1

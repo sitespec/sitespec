@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 page:
   id: blog
   route: /blog
@@ -24,7 +24,7 @@ sections:
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec 0.4 Content
+      eyebrow: SiteSpec 0.5 Content
       title: Content is part of the site specification
       text: Markdown entries are validated, sorted and paginated by core before components receive their props.
 

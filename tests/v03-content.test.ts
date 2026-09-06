@@ -312,11 +312,11 @@ test("v0.3 reports broken relations with entry provenance", async () => {
   });
 });
 
-test("marketing example exercises v0.3 content on the v0.4 Design System contract", async () => {
+test("marketing example keeps typed content behavior on the v0.5 contract", async () => {
   const root = join(process.cwd(), "examples", "marketing");
   const result = await validateProject(root);
   assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
-  assert.equal(result.site?.specVersion, "0.4");
+  assert.equal(result.site?.specVersion, "0.5");
 
   const routes = result.site!.pages.map(page => page.route);
   for (const route of [

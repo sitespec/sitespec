@@ -83,7 +83,7 @@ export async function inspectDesignSystem(root: string): Promise<DesignSystemIns
       code: "DESIGN_SYSTEM_CONTRACT_MISSING",
       severity: "error",
       file: "design-system.yaml",
-      message: "design-system.yaml was not found. SiteSpec 0.4 Design System packs require this contract."
+      message: "design-system.yaml was not found. SiteSpec 0.4+ Design System packs require this contract."
     });
     return { valid: false, type: "design-system", source: "design-system.yaml", diagnostics: dedupeDiagnostics(diagnostics) };
   }

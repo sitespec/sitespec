@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:site-spec:0.4:design-system",
+  "$id": "urn:site-spec:design-system",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,10 @@
   ],
   "properties": {
     "specVersion": {
-      "const": "0.4"
+      "enum": [
+        "0.4",
+        "0.5"
+      ]
     },
     "designSystem": {
       "type": "object",

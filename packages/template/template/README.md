@@ -1,6 +1,6 @@
 # __SITE_NAME__
 
-SiteSpec v0.4 starter and executable contract showcase.
+SiteSpec v0.5 starter and executable contract showcase.
 
 The starter stays deliberately small while demonstrating both composition and content:
 
@@ -12,9 +12,12 @@ The starter stays deliberately small while demonstrating both composition and co
 - reusable section presets in `sections/*`;
 - deterministic non-content dynamic routes with `page.paths` and `param:<name>`;
 - named navigation collections and `navigation:<id>` references;
-- the `urn:site-spec:0.4:type:pagination` core type;
+- the `urn:site-spec:0.5:type:pagination` core type;
 - self-hosted Inter web fonts declared in `design/fonts.yaml`;
 - semantic favicon, Apple touch icon and default Open Graph image assets;
+- responsive local media rendered through generated AVIF/WebP `srcset` derivatives with crop/focal-point controls;
+- generated per-page social images plus sitemap, robots, `llms.txt`, RSS, canonical, Open Graph/Twitter, and JSON-LD metadata;
+- page-level `structuredData` that resolves through the same content references as section props;
 - selectable shell packs, themes, semantic design tokens, and controlled site token extensions;
 - agent-readable project and content inspection.
 
@@ -30,6 +33,25 @@ The starter stays deliberately small while demonstrating both composition and co
 - `/features/dynamic-routes` — generated from `pages/feature.yaml`.
 - `/features/agent-protocol` — generated from `pages/feature.yaml`.
 
+
+## Production URL
+
+`site.url` in `site.yaml` is part of the production contract, not only a preview setting. Before deployment, replace the generated `.test` origin with the public site URL. SiteSpec uses it for canonical URLs, sitemap entries, RSS, hreflang, Open Graph URLs and `llms.txt`.
+
+## Generated output
+
+Both `npm run dev` and `npm run build` expose the generated metadata files. A production build additionally materializes the complete static output under `dist/`:
+
+```text
+dist/
+  _media/
+  _social/
+  sitemap.xml
+  robots.txt
+  llms.txt
+  rss.xml
+```
+
 ## Inspect the contract
 
 ```bash
@@ -43,6 +65,8 @@ npm run site -- spec shell --json
 npm run site -- spec design --json
 npm run site -- spec fonts --json
 npm run site -- spec assets --json
+npm run site -- spec media --json
+npm run site -- spec seo --json
 npm run site -- spec ui --json
 npm run site -- spec sections --json
 npm run site -- spec navigation:primary --json

@@ -9,11 +9,11 @@ import { resolvedContentEntry } from "./content-query.js";
 
 export function agentProtocol(): Record<string, unknown> {
   return {
-    protocolVersion: "4",
+    protocolVersion: "5",
     bootstrapFiles: ["AGENTS.md", "CLAUDE.md"],
     workflow: {
       inspect: "npm run site -- spec --json",
-      inspectTarget: "npm run site -- spec <page-or-collection-or-entry-or-component-or-ui-or-section-or-navigation-or-shell-or-assets-or-design-or-design-system-or-fonts> --json",
+      inspectTarget: "npm run site -- spec <page-or-collection-or-entry-or-component-or-ui-or-section-or-navigation-or-shell-or-assets-or-media-or-seo-or-design-or-design-system-or-fonts> --json",
       inspectDesignSystem: "npm run site -- spec design-system --json",
       inspectDesignSystemPack: "npm run site -- design-system --json",
       installDesignSystem: "npm run site -- design-system install <pack> --replace",
@@ -27,7 +27,7 @@ export function agentProtocol(): Record<string, unknown> {
       pageLayer: "pages/*.yaml may use registered sections or reusable section:<id> presets only.",
       sectionLayer: "components/* are page-level sections.",
       uiLayer: "ui/* are internal Design System primitives used by sections/shell; Page Spec cannot use them directly.",
-      designSystem: "design-system.yaml declares the portable v0.4 Design System contract: UI and section libraries, shell packs, layout convention, themes, token sources, and extension policy.",
+      designSystem: "design-system.yaml declares the portable v0.4+ Design System contract: UI and section libraries, shell packs, layout convention, themes, token sources, and extension policy.",
       reusableSections: "Store reusable section configuration under sections/*.yaml and reference it with { id, $ref: 'section:<id>' }.",
       dynamicRoutes: "Use /path/[param] with page.paths in specVersion 0.2+, or bind the route to content.entry in specVersion 0.3.",
       content: "Define typed collections under content/<collection>/collection.yaml. Bind detail pages with content.entry and listing data with content.queries; consume values through entry: and query: refs."
@@ -65,6 +65,20 @@ export function agentProtocol(): Record<string, unknown> {
       fileRoot: "public/",
       faviconRequired: true
     },
+    media: {
+      define: "site.yaml#/media + urn:site-spec:0.5:type:image props",
+      sourceRoot: "public/",
+      renderer: "@site-generated/components/SiteImage.astro",
+      generatedRoot: "media.output (default /_media)",
+      formats: ["avif", "webp"],
+      rule: "Declare images in typed props. SiteSpec validates media and generates responsive derivatives; do not hand-author an Astro image pipeline."
+    },
+    seo: {
+      site: "site.yaml#/seo",
+      page: "pages/*.yaml#/seo",
+      generated: ["sitemap.xml", "robots.txt", "llms.txt", "RSS", "per-page social images"],
+      rule: "Canonical, hreflang, Open Graph/Twitter and JSON-LD are resolved by SiteSpec; do not duplicate page head metadata in Astro components."
+    },
     navigation: {
       define: "site.yaml#/navigation/<collection>",
       inspect: "npm run site -- spec navigation:<collection> --json",
@@ -90,6 +104,8 @@ export function agentProtocol(): Record<string, unknown> {
       sharedNavigationInSiteYaml: true,
       siteShellOwnsPersistentUi: true,
       semanticAssetsInSiteYaml: true,
+      mediaPipelineInSiteSpec: true,
+      seoMetadataInSiteSpec: true,
       faviconRequired: true,
       semanticDesignTokensOnly: true,
       rawReusableStylesForbidden: true,
@@ -130,7 +146,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
   const diagnostics = validation.diagnostics;
   const design = (await inspectDesign(root)).design;
   const designSystem = project.designSystem ? (await inspectDesignSystem(root)).designSystem : undefined;
-  const specVersion = project.site?.specVersion ?? "0.4";
+  const specVersion = project.site?.specVersion ?? "0.5";
 
   const components = [...project.registry.values()].map(component => ({
     id: component.id,
@@ -247,6 +263,31 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
     }
   };
 
+  const media = {
+    source: "site.yaml#/media",
+    publicDirectory: "public/",
+    imageType: `urn:site-spec:${specVersion}:type:image`,
+    renderer: "@site-generated/components/SiteImage.astro",
+    config: validation.site?.media ?? project.site?.media
+  };
+
+  const seo = {
+    source: "site.yaml#/seo + pages/*.yaml#/seo",
+    config: validation.site?.seo ?? project.site?.seo,
+    generated: validation.site?.generated,
+    pages: (validation.site?.pages ?? []).map(page => ({
+      id: page.id,
+      route: page.route,
+      locale: page.locale,
+      canonical: page.seo.canonical,
+      hreflang: page.seo.hreflang,
+      noindex: page.seo.noindex,
+      openGraph: page.seo.openGraph,
+      twitter: page.seo.twitter,
+      socialImage: page.seo.socialImage
+    }))
+  };
+
   const base = {
     specVersion,
     valid: validation.valid,
@@ -262,16 +303,22 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
       dynamicRoutes: specVersion !== "0.1",
       routeParamReferences: specVersion !== "0.1",
       paginationCoreType: specVersion !== "0.1",
-      typedContentCollections: specVersion === "0.3" || specVersion === "0.4",
-      markdownEntries: specVersion === "0.3" || specVersion === "0.4",
-      contentRelations: specVersion === "0.3" || specVersion === "0.4",
-      contentQueries: specVersion === "0.3" || specVersion === "0.4",
-      contentPagination: specVersion === "0.3" || specVersion === "0.4",
-      designSystemContract: specVersion === "0.4",
-      designSystemPacks: specVersion === "0.4",
-      shellPacks: specVersion === "0.4",
-      themes: specVersion === "0.4",
-      tokenExtensions: specVersion === "0.4",
+      typedContentCollections: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
+      markdownEntries: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
+      contentRelations: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
+      contentQueries: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
+      contentPagination: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
+      designSystemContract: specVersion === "0.4" || specVersion === "0.5",
+      designSystemPacks: specVersion === "0.4" || specVersion === "0.5",
+      shellPacks: specVersion === "0.4" || specVersion === "0.5",
+      themes: specVersion === "0.4" || specVersion === "0.5",
+      tokenExtensions: specVersion === "0.4" || specVersion === "0.5",
+      mediaPipeline: specVersion === "0.5",
+      responsiveImages: specVersion === "0.5",
+      generatedSocialImages: specVersion === "0.5",
+      hreflang: specVersion === "0.5",
+      llmsTxt: specVersion === "0.5",
+      rss: specVersion === "0.5",
       siteShell: true,
       semanticSiteAssets: true,
       designTokens: true,
@@ -293,6 +340,8 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
     shell,
     designSystem,
     assets,
+    media,
+    seo,
     design,
     navigation,
     content: contentCollections,
@@ -306,6 +355,8 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
   if (!query) return base;
   if (query === "shell") return { specVersion, valid: validation.valid, type: "shell", agent: agentProtocol(), shell, navigation, diagnostics };
   if (query === "assets") return { specVersion, valid: validation.valid, type: "assets", agent: agentProtocol(), assets, diagnostics };
+  if (query === "media") return { specVersion, valid: validation.valid, type: "media", agent: agentProtocol(), media, diagnostics };
+  if (query === "seo") return { specVersion, valid: validation.valid, type: "seo", agent: agentProtocol(), seo, diagnostics };
   if (query === "design") return { specVersion, valid: validation.valid, type: "design", agent: agentProtocol(), design, diagnostics };
   if (query === "design-system") return { specVersion, valid: validation.valid, type: "design-system", agent: agentProtocol(), designSystem, diagnostics };
   if (query === "fonts") return {

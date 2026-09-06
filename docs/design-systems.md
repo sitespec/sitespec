@@ -20,10 +20,10 @@ Page Specs and content remain site-owned. A Design System pack is copied into a 
 
 ## Contract
 
-Every v0.4 project has `design-system.yaml`.
+Every v0.4+ project has `design-system.yaml`; the current format is v0.5.
 
 ```yaml
-specVersion: "0.4"
+specVersion: "0.5"
 
 designSystem:
   id: inappstory
@@ -73,7 +73,7 @@ shells:
         - shell/Footer.astro
 ```
 
-The contract is validated against the v0.4 Design System JSON Schema. Referenced UI primitives, sections, presets, shell files, theme files, and layout tokens must exist.
+The contract is validated against the current v0.5 Design System JSON Schema. Referenced UI primitives, sections, presets, shell files, theme files, and layout tokens must exist.
 
 ## Inspect the Design System
 
@@ -190,7 +190,7 @@ The pack contains only Design System-owned source:
 
 It does not copy `site.yaml`, Page Specs, content, or `design/extensions.json`. After copying, `pack` validates the standalone directory again, so a Design System cannot accidentally depend on site-owned token extensions that will not travel with it.
 
-Install that pack into another v0.4 site:
+Install that pack into another v0.5 site:
 
 ```bash
 npm run site -- design-system install ../inappstory-design-system --replace
@@ -207,7 +207,7 @@ A practical organization-level workflow is:
 1. Build and validate the InAppStory Design System once in a dedicated SiteSpec project.
 2. Set its stable identity and semantic version in `design-system.yaml`, for example `inappstory@1.4.0`.
 3. Export it with `design-system pack`.
-4. Install the copy into each SiteSpec v0.4 website.
+4. Install the copy into each SiteSpec v0.5 website.
 5. Keep per-site visual additions in `design/extensions.json` where the contract allows them.
 6. To adopt a newer InAppStory Design System, install the newer pack with `--replace`, validate the site, and commit the copied source change.
 

@@ -70,6 +70,9 @@ test("defaultOgImage becomes the absolute Open Graph fallback", async () => {
   const root = join(temp, "acme");
   try {
     await initProject({ directory: root, name: "Acme" });
+    const siteFile = join(root, "site.yaml");
+    const site = await readFile(siteFile, "utf8");
+    await writeFile(siteFile, site.replace("  socialImages:\n    generate: true", "  socialImages:\n    generate: false"), "utf8");
     const result = await validateProject(root);
     assert.equal(result.valid, true, JSON.stringify(result.diagnostics, null, 2));
     assert.equal(result.site?.pages[0]?.seo.openGraph.image, "https://acme.test/brand/og-default.png");

@@ -1,4 +1,5 @@
 import type { ErrorObject } from "ajv";
+import { createHash } from "node:crypto";
 import { findOrigin, nearestStrings } from "./diagnostics.js";
 import { resolveRefs } from "./refs.js";
 import { resolvedContentEntry, runContentQuery } from "./content-query.js";
@@ -7,15 +8,15 @@ import type {
   SourceSection, SourceSectionEntry, ResolvedPage, ResolvedSection, ResolvedSeo
 } from "./types.js";
 
-function normalizeCanonical(siteUrl: string, route: string): string {
-  return route === "/" ? siteUrl : `${siteUrl}${route}`;
+function normalizeSiteUrl(siteUrl: string): string {
+  return siteUrl.replace(/\/+$/, "");
 }
 
-function absoluteAsset(siteUrl: string, value?: string): string | undefined {
-  if (!value) return undefined;
-  if (/^https?:\/\//.test(value)) return value;
-  return value.startsWith("/") ? `${siteUrl}${value}` : value;
+function normalizeCanonical(siteUrl: string, route: string): string {
+  const base = normalizeSiteUrl(siteUrl);
+  return route === "/" ? base : `${base}${route}`;
 }
+
 
 function interpolateParams(value: string | undefined, params: RouteParams): string | undefined {
   if (value === undefined) return undefined;
@@ -176,6 +177,34 @@ function propDiagnostics(
   });
 }
 
+function socialImagePath(
+  route: string,
+  title: string,
+  description: string,
+  format: "png" | "jpeg" | "webp",
+  width: number,
+  height: number
+): string {
+  const base = route === "/"
+    ? "home"
+    : route.slice(1).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() || "page";
+  const hash = createHash("sha256")
+    .update(JSON.stringify({ route, title, description, format, width, height }))
+    .digest("hex")
+    .slice(0, 10);
+  const extension = format === "jpeg" ? "jpg" : format;
+  return `/_social/${base}-${hash}.${extension}`;
+}
+
+function resolveSeoUrl(siteUrl: string, value?: string): string | undefined {
+  if (!value) return undefined;
+  const base = normalizeSiteUrl(siteUrl);
+  if (/^https?:\/\//.test(value)) return value === `${base}/` ? base : value;
+  if (value === "/") return base;
+  if (value.startsWith("/")) return `${base}${value}`;
+  return value;
+}
+
 function resolveSeo(
   project: LoadedProject,
   page: LoadedPage,
@@ -187,6 +216,7 @@ function resolveSeo(
 ): ResolvedSeo {
   const site = project.site!;
   const source = page.value.seo ?? {};
+  const pageLocale = page.value.page.locale ?? site.site.locale;
   const rawTitle = interpolateContext(source.title, params, contentEntry);
   if (!rawTitle && resolvedState !== "draft") diagnostics.push({
     code: "SEO_TITLE_MISSING", severity: "error", file: page.file, page: page.value.page.id,
@@ -200,42 +230,128 @@ function resolveSeo(
     code: "SEO_DESCRIPTION_MISSING", severity: "error", file: page.file, page: page.value.page.id,
     path: "/seo/description", message: "Published pages require a description or site.seo.defaultDescription."
   });
-  const seoFields: Array<[string, string | undefined]> = [
+
+  const interpolatedFields: Array<[string, string | undefined]> = [
     ["title", rawTitle],
     ["description", description],
     ["canonical", interpolateContext(source.canonical, params, contentEntry)],
-    ["image", interpolateContext(source.image, params, contentEntry)]
+    ["image", interpolateContext(source.image, params, contentEntry)],
+    ["openGraph.title", interpolateContext(source.openGraph?.title, params, contentEntry)],
+    ["openGraph.description", interpolateContext(source.openGraph?.description, params, contentEntry)],
+    ["openGraph.image", interpolateContext(source.openGraph?.image, params, contentEntry)],
+    ["twitter.title", interpolateContext(source.twitter?.title, params, contentEntry)],
+    ["twitter.description", interpolateContext(source.twitter?.description, params, contentEntry)],
+    ["twitter.image", interpolateContext(source.twitter?.image, params, contentEntry)]
   ];
-  for (const [field, value] of seoFields) {
+  for (const [language, value] of Object.entries(source.hreflang ?? {})) {
+    interpolatedFields.push([`hreflang.${language}`, interpolateContext(value, params, contentEntry)]);
+  }
+  for (const [field, value] of interpolatedFields) {
     const unresolved = unresolvedParamNames(value);
     if (unresolved.length > 0) diagnostics.push({
       code: "ROUTE_PARAM_PLACEHOLDER_NOT_FOUND", severity: "error", file: page.file, page: page.value.page.id,
-      path: `/seo/${field}`, message: `SEO ${field} references route parameter(s) that are not available: ${unresolved.join(", ")}.`,
+      path: `/seo/${field.replaceAll(".", "/")}`, message: `SEO ${field} references route parameter(s) that are not available: ${unresolved.join(", ")}.`,
       expected: Object.keys(params).sort(), actual: unresolved
     });
     const unresolvedEntry = unresolvedEntryNames(value);
     if (unresolvedEntry.length > 0) diagnostics.push({
       code: "CONTENT_ENTRY_PLACEHOLDER_NOT_FOUND", severity: "error", file: page.file, page: page.value.page.id,
-      path: `/seo/${field}`, message: `SEO ${field} references entry field(s) that are not available: ${unresolvedEntry.join(", ")}.`,
+      path: `/seo/${field.replaceAll(".", "/")}`, message: `SEO ${field} references entry field(s) that are not available: ${unresolvedEntry.join(", ")}.`,
       expected: contentEntry ? Object.keys(contentEntry).sort() : "page.content.entry", actual: unresolvedEntry
     });
   }
 
   const canonicalSource = interpolateContext(source.canonical, params, contentEntry);
-  const canonical = canonicalSource ?? normalizeCanonical(site.site.url, route);
+  const canonical = canonicalSource ? resolveSeoUrl(site.site.url, canonicalSource)! : normalizeCanonical(site.site.url, route);
   if (!validCanonical(canonical)) diagnostics.push({
     code: "SEO_CANONICAL_INVALID", severity: "error", file: page.file, page: page.value.page.id,
-    path: "/seo/canonical", message: `Resolved canonical URL ${JSON.stringify(canonical)} must be an absolute http(s) URL.`,
-    expected: "absolute http(s) URL", actual: canonical
+    path: "/seo/canonical", message: `Resolved canonical URL ${JSON.stringify(canonical)} must be an absolute http(s) URL or a site-root path.`,
+    expected: "absolute http(s) URL or /path", actual: canonical
   });
-  const image = absoluteAsset(site.site.url, interpolateContext(source.image, params, contentEntry) ?? site.assets.defaultOgImage);
+
+  const socialConfig = site.seo?.socialImages;
+  const socialFormat = socialConfig?.format ?? "png";
+  const socialWidth = socialConfig?.width ?? 1200;
+  const socialHeight = socialConfig?.height ?? 630;
+  const explicitOgImage = interpolateContext(source.openGraph?.image, params, contentEntry)
+    ?? interpolateContext(source.image, params, contentEntry);
+  const generateSocial = site.specVersion === "0.5"
+    && (source.socialImage?.generate ?? socialConfig?.generate ?? true)
+    && !explicitOgImage;
+  const generatedSocial = generateSocial
+    ? {
+        generated: true as const,
+        path: socialImagePath(route, title, description, socialFormat, socialWidth, socialHeight),
+        width: socialWidth,
+        height: socialHeight,
+        format: socialFormat
+      }
+    : undefined;
+  const image = resolveSeoUrl(
+    site.site.url,
+    explicitOgImage
+      ?? generatedSocial?.path
+      ?? site.assets.defaultOgImage
+  );
+  const ogTitle = interpolateContext(source.openGraph?.title, params, contentEntry) ?? title;
+  const ogDescription = interpolateContext(source.openGraph?.description, params, contentEntry) ?? description;
+  const siteName = source.openGraph?.siteName ?? site.seo?.siteName ?? site.site.name;
+  const ogType = source.openGraph?.type ?? (page.value.page.archetype === "article" ? "article" : "website");
+  const ogLocale = source.openGraph?.locale ?? pageLocale;
+  const twitterImage = resolveSeoUrl(
+    site.site.url,
+    interpolateContext(source.twitter?.image, params, contentEntry)
+      ?? explicitOgImage
+      ?? generatedSocial?.path
+      ?? site.assets.defaultOgImage
+  );
+
+  const hreflang: Record<string, string> = {};
+  for (const [language, value] of Object.entries(source.hreflang ?? {})) {
+    const resolved = resolveSeoUrl(site.site.url, interpolateContext(value, params, contentEntry));
+    if (!resolved || !validCanonical(resolved)) {
+      diagnostics.push({
+        code: "SEO_HREFLANG_URL_INVALID",
+        severity: "error",
+        file: page.file,
+        page: page.value.page.id,
+        path: `/seo/hreflang/${language}`,
+        message: `Resolved hreflang URL for ${language} must be an absolute http(s) URL or a site-root path.`,
+        actual: resolved ?? value
+      });
+      continue;
+    }
+    hreflang[language] = resolved;
+  }
+  if (Object.keys(hreflang).length > 0 && !hreflang[pageLocale]) {
+    hreflang[pageLocale] = canonical;
+  }
+
   return {
     title,
     description,
     canonical,
     image,
-    noindex: source.noindex ?? false,
-    openGraph: { title, description, url: canonical, image }
+    noindex: source.noindex ?? (site.seo?.robots?.index === false),
+    hreflang,
+    openGraph: {
+      type: ogType,
+      title: ogTitle,
+      description: ogDescription,
+      url: canonical,
+      image,
+      imageWidth: generatedSocial?.width,
+      imageHeight: generatedSocial?.height,
+      siteName,
+      locale: ogLocale
+    },
+    twitter: {
+      card: source.twitter?.card ?? (twitterImage ? "summary_large_image" : "summary"),
+      title: interpolateContext(source.twitter?.title, params, contentEntry) ?? ogTitle,
+      description: interpolateContext(source.twitter?.description, params, contentEntry) ?? ogDescription,
+      image: twitterImage
+    },
+    socialImage: generatedSocial
   };
 }
 
@@ -470,21 +586,27 @@ export async function resolvePage(
   }
 
   const seo = resolveSeo(project, page, diagnostics, route, params, resolvedEntry, state);
-  const structuredData = page.value.structuredData
-    ? await resolveRefs(page.value.structuredData.data ?? {}, "/structuredData/data", {
-        root: project.root,
-        diagnostics,
-        provenance: new Map<string, Origin>(),
-        page: page.value.page.id,
-        section: "$structuredData",
-        pageFile: page.file,
-        siteFile: project.siteFile,
-        navigation: project.site.navigation ?? {},
-        params,
-        entry: resolvedEntry,
-        queries
-      }) as Record<string, unknown>
-    : undefined;
+  const structuredSources = page.value.structuredData
+    ? (Array.isArray(page.value.structuredData) ? page.value.structuredData : [page.value.structuredData])
+    : [];
+  const structuredData: Array<{ type: string; data: Record<string, unknown> }> = [];
+  for (let index = 0; index < structuredSources.length; index++) {
+    const sourceStructured = structuredSources[index]!;
+    const resolvedStructured = await resolveRefs(sourceStructured.data ?? {}, `/structuredData/${index}/data`, {
+      root: project.root,
+      diagnostics,
+      provenance: new Map<string, Origin>(),
+      page: page.value.page.id,
+      section: "$structuredData",
+      pageFile: page.file,
+      siteFile: project.siteFile,
+      navigation: project.site.navigation ?? {},
+      params,
+      entry: resolvedEntry,
+      queries
+    }) as Record<string, unknown>;
+    structuredData.push({ type: sourceStructured.type, data: resolvedStructured ?? {} });
+  }
   return {
     page: {
       id: resolvedId,
@@ -494,13 +616,11 @@ export async function resolvePage(
       params,
       archetype: page.value.page.archetype,
       state,
-      locale: project.site.site.locale,
+      locale: page.value.page.locale ?? project.site.site.locale,
       seo,
       sections,
       content: page.value.content ? { entry: resolvedEntry, queries } : undefined,
-      structuredData: page.value.structuredData
-        ? { type: page.value.structuredData.type, data: structuredData ?? {} }
-        : undefined
+      structuredData
     },
     diagnostics
   };

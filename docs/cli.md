@@ -72,7 +72,7 @@ The inspection surface is designed to be stable enough for agents and tooling to
 
 ## Design System commands
 
-Inspect the installed first-class Design System through the `site spec` surface requested by the v0.4 agent contract:
+Inspect the installed first-class Design System through the `site spec` surface requested by the current v0.5 agent contract:
 
 ```bash
 npm run site -- spec design-system --json
@@ -90,7 +90,7 @@ Copy the current Design System into an empty portable pack directory:
 npm run site -- design-system pack ../company-design-system
 ```
 
-Install a pack into a SiteSpec v0.4 project:
+Install a pack into a SiteSpec v0.5 project:
 
 ```bash
 npm run site -- design-system install ../company-design-system --replace

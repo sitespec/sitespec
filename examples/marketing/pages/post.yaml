@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 page:
   id: post
   route: /blog/[slug]
@@ -10,6 +10,20 @@ content:
 seo:
   title: "{entry.title}"
   description: "{entry.description}"
+
+structuredData:
+  type: BlogPosting
+  data:
+    headline:
+      $ref: entry:title
+    description:
+      $ref: entry:description
+    datePublished:
+      $ref: entry:date
+    author:
+      "@type": Person
+      name:
+        $ref: entry:author.name
 
 sections:
   - id: article

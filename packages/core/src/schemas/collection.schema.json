@@ -3,39 +3,73 @@
   "$id": "urn:site-spec:0.3:collection",
   "type": "object",
   "additionalProperties": false,
-  "required": ["specVersion", "collection", "entry"],
+  "required": [
+    "specVersion",
+    "collection",
+    "entry"
+  ],
   "properties": {
-    "specVersion": { "enum": ["0.3", "0.4"] },
+    "specVersion": {
+      "enum": [
+        "0.3",
+        "0.4",
+        "0.5"
+      ]
+    },
     "collection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/id" } }
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        }
+      }
     },
     "entry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema"],
+      "required": [
+        "schema"
+      ],
       "properties": {
-        "schema": { "type": "object" }
+        "schema": {
+          "type": "object"
+        }
       }
     },
     "relations": {
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/field" },
+      "propertyNames": {
+        "$ref": "#/$defs/field"
+      },
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["collection"],
+        "required": [
+          "collection"
+        ],
         "properties": {
-          "collection": { "$ref": "#/$defs/id" },
-          "many": { "type": "boolean" }
+          "collection": {
+            "$ref": "#/$defs/id"
+          },
+          "many": {
+            "type": "boolean"
+          }
         }
       }
     }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-    "field": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$" }
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "field": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+    }
   }
 }

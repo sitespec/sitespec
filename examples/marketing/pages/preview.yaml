@@ -1,0 +1,21 @@
+specVersion: "0.5"
+page:
+  id: preview
+  route: /preview
+  archetype: detail
+
+seo:
+  title: Preview
+  description: Published but non-indexable page demonstrating page-level noindex.
+  noindex: true
+  socialImage:
+    generate: false
+
+sections:
+  - id: intro
+    use: hero
+    variant: centered
+    props:
+      eyebrow: noindex
+      title: Published does not always mean indexable
+      text: This route is rendered in production, carries a robots noindex directive, and is excluded from sitemap.xml and llms.txt.

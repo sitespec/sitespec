@@ -83,7 +83,7 @@ test("a page section can reuse a named navigation collection by reference", asyn
 test("navigation route typos return deterministic repair candidates", async () => {
   const { temp, root } = await starter("site-spec-navigation-route-repair-");
   try {
-    await writeFile(join(root, "pages", "pricing.yaml"), `specVersion: "0.4"\npage:\n  id: pricing\n  route: /pricing\n  archetype: marketing\nseo:\n  title: Pricing\nsections:\n  - id: intro\n    use: hero\n    props:\n      title: Pricing\n`, "utf8");
+    await writeFile(join(root, "pages", "pricing.yaml"), `specVersion: "0.5"\npage:\n  id: pricing\n  route: /pricing\n  archetype: marketing\nseo:\n  title: Pricing\nsections:\n  - id: intro\n    use: hero\n    props:\n      title: Pricing\n`, "utf8");
     const siteFile = join(root, "site.yaml");
     const source = await readFile(siteFile, "utf8");
     await writeFile(siteFile, source.replace("href: /\n", "href: /prcing\n"), "utf8");

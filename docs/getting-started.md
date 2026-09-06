@@ -1,6 +1,6 @@
 # Getting started
 
-This guide creates a SiteSpec v0.4 website and walks through the normal edit → inspect → validate → build workflow.
+This guide creates a SiteSpec v0.5 website and walks through the normal edit → inspect → validate → build workflow.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ shell/*                  user-owned document/site shell
 public/*                 static assets
 ```
 
-The starter contains a small content-driven blog so the v0.4 content path is visible immediately.
+The starter contains a small content-driven blog so the v0.5 content path is visible immediately.
 
 ## 4. Inspect the project contract
 
@@ -94,7 +94,7 @@ A collection lives under `content/<collection>/` and has a `collection.yaml` man
 Example:
 
 ```yaml
-specVersion: "0.4"
+specVersion: "0.5"
 
 collection:
   id: posts
@@ -134,7 +134,7 @@ Read [Content](content.md) for relations, queries, filtering, sorting, paginatio
 A detail page binds a dynamic route to a collection:
 
 ```yaml
-specVersion: "0.4"
+specVersion: "0.5"
 
 page:
   id: post
@@ -185,7 +185,7 @@ pagination: { $ref: "query:posts.pagination" }
 Pages select registered section components; they do not contain Astro markup.
 
 ```yaml
-specVersion: "0.4"
+specVersion: "0.5"
 
 page:
   id: home

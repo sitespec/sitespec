@@ -1,6 +1,6 @@
 {
   "name": "@sitespec/cli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "bin": {
     "sitespec": "./bin/sitespec.js"
@@ -13,9 +13,9 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@sitespec/core": "0.4.0",
-    "@sitespec/astro": "0.4.0",
-    "@sitespec/template": "0.4.0",
+    "@sitespec/core": "0.5.0",
+    "@sitespec/astro": "0.5.0",
+    "@sitespec/template": "0.5.0",
     "commander": "15.0.0",
     "chokidar": "5.0.0"
   },

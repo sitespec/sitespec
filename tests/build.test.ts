@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { initProject } from "../packages/cli/src/init.ts";
@@ -57,7 +57,7 @@ test("sitespec init creates a valid starter project", async () => {
 
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.specVersion, "0.4");
+    assert.equal(validation.site?.specVersion, "0.5");
     assert.equal(validation.site?.pages.length, 9);
     assert.deepEqual(validation.site?.pages.map(page => page.route), [
       "/",
@@ -119,8 +119,14 @@ test("npm run build renders a static Astro site", async () => {
     assert.match(html, /<nav\b[^>]*\baria-label="Footer"[^>]*>/);
     assert.match(html, /<link rel="icon" href="\/brand\/favicon\.svg"\s*\/?>/);
     assert.match(html, /<link rel="apple-touch-icon" href="\/brand\/apple-touch-icon\.png"\s*\/?>/);
-    assert.match(html, /<meta property="og:image" content="https:\/\/acme\.test\/brand\/og-default\.png"\s*\/?>/);
-    assert.doesNotMatch(html, /<script\b/i, "starter build should ship no client JavaScript");
+    assert.match(html, /<meta property="og:image" content="https:\/\/acme\.test\/_social\/home-[a-f0-9]{10}\.png"\s*\/?>/);
+    assert.match(html, /<meta name="twitter:image" content="https:\/\/acme\.test\/_social\/home-[a-f0-9]{10}\.png"\s*\/?>/);
+    assert.match(html, /<script[^>]+type="application\/ld\+json"/);
+    assert.doesNotMatch(html, /<script\b(?![^>]*type="application\/ld\+json")/i, "starter build should ship no executable client JavaScript");
+    assert.match(html, /<picture\b[^>]*>/);
+    assert.match(html, /type="image\/avif"[^>]+srcset="[^"]*\/_media\//);
+    assert.match(html, /type="image\/webp"[^>]+srcset="[^"]*\/_media\//);
+    assert.match(html, /<img[^>]+srcset="[^"]*\/_media\/[^>]+width="[1-9][0-9]*"[^>]+height="[1-9][0-9]*"/);
 
     const favicon = await readFile(join(root, "dist", "brand", "favicon.svg"), "utf8");
     assert.match(favicon, /<svg/);
@@ -142,6 +148,22 @@ test("npm run build renders a static Astro site", async () => {
 
     const robots = await readFile(join(root, "dist", "robots.txt"), "utf8");
     assert.match(robots, /Sitemap: https:\/\/acme\.test\/sitemap\.xml/);
+
+    const llms = await readFile(join(root, "dist", "llms.txt"), "utf8");
+    assert.match(llms, /# Acme/);
+    assert.match(llms, /\[Home — Acme\]\(https:\/\/acme\.test\)/);
+
+    const rss = await readFile(join(root, "dist", "rss.xml"), "utf8");
+    assert.match(rss, /<rss version="2\.0"/);
+    assert.match(rss, /https:\/\/acme\.test\/blog\/content-driven/);
+
+    const socialFiles = await readdir(join(root, "dist", "_social"));
+    assert.ok(socialFiles.some(file => /^home-[a-f0-9]{10}\.png$/.test(file)));
+    const mediaHashes = await readdir(join(root, "dist", "_media"));
+    assert.ok(mediaHashes.length > 0);
+    const mediaFiles = await readdir(join(root, "dist", "_media", mediaHashes[0]!));
+    assert.ok(mediaFiles.some(file => file.endsWith(".avif")));
+    assert.ok(mediaFiles.some(file => file.endsWith(".webp")));
 
     const resolved = JSON.parse(await readFile(join(root, ".site", "resolved.json"), "utf8"));
     assert.equal(resolved.site.id, "acme");
@@ -178,7 +200,7 @@ test("npm run build materializes explicit dynamic routes into static HTML", asyn
   const root = join(temp, "acme");
   try {
     await initProject({ directory: root, name: "Acme" });
-    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.4"
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.5"
 page:
   id: product
   route: /products/[slug]

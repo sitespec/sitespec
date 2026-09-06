@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 page:
   id: blog
   route: /blog
@@ -18,6 +18,8 @@ content:
 seo:
   title: Blog
   description: Published posts sorted and paginated from the posts collection.
+  openGraph:
+    image: /brand/og-default.png
 
 sections:
   - id: intro

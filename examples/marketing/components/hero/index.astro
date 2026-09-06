@@ -1,22 +1,27 @@
 ---
 import Container from "../../ui/container/index.astro";
 import Button from "../../ui/button/index.astro";
+import SiteImage from "@site-generated/components/SiteImage.astro";
 interface Action { label: string; href: string; target?: "self" | "blank" }
-interface HeroProps { eyebrow?: string; title: string; text?: string; primaryAction?: Action }
+interface ImageValue { src: string; alt?: string; decorative?: boolean; width?: number; height?: number; sizes?: string; srcset?: string; sources?: Array<{ type: string; srcset: string }>; loading?: "eager" | "lazy"; decoding?: "async" | "sync" | "auto"; fetchPriority?: "high" | "low" | "auto" }
+interface HeroProps { eyebrow?: string; title: string; text?: string; primaryAction?: Action; image?: ImageValue }
 interface Props { sectionId: string; variant: string; theme: string; props: HeroProps }
 const { sectionId, variant, theme, props } = Astro.props;
 ---
 <section id={sectionId} data-section={sectionId} data-component="hero" data-variant={variant} data-theme={theme}>
   <Container>
-    <div class="copy">
-      {props.eyebrow && <p class="eyebrow">{props.eyebrow}</p>}
-      <h1>{props.title}</h1>
-      {props.text && <p class="lead">{props.text}</p>}
-      {props.primaryAction && (
-        <div class="actions">
-          <Button label={props.primaryAction.label} href={props.primaryAction.href} target={props.primaryAction.target} variant="primary" />
-        </div>
-      )}
+    <div class:list={["hero-grid", { "has-media": props.image }]}>
+      <div class="copy">
+        {props.eyebrow && <p class="eyebrow">{props.eyebrow}</p>}
+        <h1>{props.title}</h1>
+        {props.text && <p class="lead">{props.text}</p>}
+        {props.primaryAction && (
+          <div class="actions">
+            <Button label={props.primaryAction.label} href={props.primaryAction.href} target={props.primaryAction.target} variant="primary" />
+          </div>
+        )}
+      </div>
+      {props.image && <div class="media"><SiteImage image={props.image} /></div>}
     </div>
   </Container>
 </section>
@@ -25,9 +30,14 @@ const { sectionId, variant, theme, props } = Astro.props;
   section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
   section[data-theme="muted"] { background: var(--color-surface-muted); }
   section[data-theme="inverted"] { background: var(--color-surface-inverted); color: var(--color-text-inverted); }
+  .hero-grid { display: block; }
   .copy { max-width: 760px; }
   section[data-variant="centered"] .copy { margin: 0 auto; text-align: center; }
+  section[data-variant="split"] .hero-grid.has-media { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); gap: var(--space-stack-2xl); align-items: center; }
   section[data-variant="split"] .copy { max-width: 620px; }
+  .media { overflow: hidden; border-radius: var(--radius-card); }
+  .media :global(picture), .media :global(img) { display: block; width: 100%; }
+  @media (max-width: 760px) { section[data-variant="split"] .hero-grid.has-media { grid-template-columns: 1fr; } }
   .eyebrow { margin: 0 0 var(--space-stack-sm); font-size: var(--font-size-small); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-accent-default); }
   h1 { margin: 0; font-size: var(--font-size-display); line-height: var(--font-line-height-display); letter-spacing: -.045em; }
   .lead { max-width: 680px; margin: var(--space-stack-lg) 0 0; font-size: var(--font-size-lead); line-height: var(--font-line-height-lead); color: var(--color-text-muted); }

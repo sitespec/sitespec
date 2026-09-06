@@ -1,0 +1,23 @@
+specVersion: "0.5"
+page:
+  id: about-lv
+  route: /lv/about
+  archetype: detail
+  locale: lv
+
+seo:
+  title: Par šo piemēru
+  description: Latviešu lapa savstarpēji saistītā SiteSpec hreflang klasterī.
+  hreflang:
+    en: /about
+    lv: /lv/about
+    x-default: /about
+
+sections:
+  - id: intro
+    use: hero
+    variant: centered
+    props:
+      eyebrow: hreflang
+      title: Viena lapa, divi lokalizēti maršruti
+      text: SiteSpec pārbauda savstarpējās valodu alternatīvas un ģenerē tās lapas metadatos un sitemap.xml.

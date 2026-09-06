@@ -161,12 +161,12 @@ query:posts.items
 query:posts.pagination
 ```
 
-Core prop types use the current v0.4 URNs, for example:
+Core prop types use the current v0.5 URNs, for example:
 
 ```text
-urn:site-spec:0.4:type:action
-urn:site-spec:0.4:type:navigation
-urn:site-spec:0.4:type:pagination
+urn:site-spec:0.5:type:action
+urn:site-spec:0.5:type:navigation
+urn:site-spec:0.5:type:pagination
 ```
 
 References are resolved before final component prop validation.

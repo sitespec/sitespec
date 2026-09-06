@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 page:
   id: features
   route: /features
@@ -6,7 +6,7 @@ page:
 
 seo:
   title: Features
-  description: Inspect the SiteSpec v0.4 composition model through working routes in the starter.
+  description: Inspect the SiteSpec v0.5 composition model through working routes in the starter.
 
 sections:
   - id: intro

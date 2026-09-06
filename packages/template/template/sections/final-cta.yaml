@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 description: Reusable final conversion section for marketing pages.
 section:
   use: cta

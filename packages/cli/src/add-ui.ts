@@ -29,7 +29,7 @@ async function write(root: string, path: string, content: string, files: string[
   files.push(path);
 }
 
-function uiManifest(id: string, role: string, specVersion: "0.2" | "0.3" | "0.4"): string {
+function uiManifest(id: string, role: string, specVersion: "0.2" | "0.3" | "0.4" | "0.5"): string {
   return `specVersion: "${specVersion}"\n\nui:\n  id: ${id}\n  role: ${role}\n\ndescription: ${JSON.stringify(`${id} UI primitive.`)}\n\nvariants:\n  - default\n\nprops:\n  type: object\n  additionalProperties: false\n  properties: {}\n\nruntime:\n  javascript: false\n`;
 }
 

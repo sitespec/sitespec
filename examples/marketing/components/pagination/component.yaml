@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 component:
   id: pagination
   role: utility
@@ -13,7 +13,7 @@ themes:
   - muted
 
 props:
-  $ref: urn:site-spec:0.4:type:pagination
+  $ref: urn:site-spec:0.5:type:pagination
 
 runtime:
   javascript: false

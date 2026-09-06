@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 page:
   id: home
   route: /
@@ -17,19 +17,41 @@ content:
 
 seo:
   title: Home
-  description: SiteSpec v0.4 content showcase with typed collections, relations, filters, and generated routes.
+  description: SiteSpec v0.5 showcase with typed content, Design System, responsive media and generated production SEO.
+  socialImage:
+    generate: true
+
+structuredData:
+  type: WebApplication
+  data:
+    name: SiteSpec
+    applicationCategory: DeveloperApplication
+    operatingSystem: Any
+    description: Specification-driven static website tooling with first-class content, design, media and SEO contracts.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec v0.4 Content
-      title: Build the content model in files, not in component code
-      text: This example uses typed Markdown collections, generic relations, declarative filters, sorting, pagination, draft state, and content-driven routes.
+      eyebrow: SiteSpec v0.5
+      title: One specification from content model to production metadata
+      text: This example exercises typed content, a portable Design System, responsive AVIF/WebP media, canonical metadata, JSON-LD, social images, hreflang, sitemap, robots, llms.txt and RSS without project-owned Astro configuration.
       primaryAction:
         label: Read the blog
         href: /blog
+      image:
+        src: /media/hero.png
+        alt: Abstract SiteSpec media pipeline preview
+        widths: [480, 720, 960, 1280]
+        sizes: "(max-width: 760px) 100vw, 42vw"
+        crop:
+          aspectRatio: "4:3"
+          focalPoint:
+            x: 0.55
+            y: 0.45
+        loading: eager
+        fetchPriority: high
 
   - id: featured
     use: post-list

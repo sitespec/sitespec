@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 site:
   id: __SITE_ID__
   name: "__SITE_NAME__"
@@ -9,6 +9,16 @@ assets:
   favicon: /brand/favicon.svg
   appleTouchIcon: /brand/apple-touch-icon.png
   defaultOgImage: /brand/og-default.png
+
+media:
+  output: /_media
+  widths: [320, 640, 960, 1280, 1600]
+  formats: [avif, webp]
+  quality:
+    avif: 50
+    webp: 78
+    jpeg: 82
+    png: 85
 
 navigation:
   primary:
@@ -44,5 +54,20 @@ navigation:
       target: blank
 
 seo:
+  siteName: "__SITE_NAME__"
   titleTemplate: "%s — __SITE_NAME__"
   defaultDescription: "__SITE_NAME__ website."
+  sitemap:
+    enabled: true
+  robots:
+    index: true
+  llms:
+    enabled: true
+  rss:
+    enabled: true
+    path: /rss.xml
+  socialImages:
+    generate: true
+    format: png
+    width: 1200
+    height: 630

@@ -1,5 +1,12 @@
 # @sitespec/astro
 
+## 0.5.0
+
+### Minor Changes
+
+- Add responsive AVIF/WebP image generation, focal cropping, social images, richer head metadata, sitemap/hreflang, robots, llms.txt and RSS generation.
+- Materialize generated sitemap, robots, llms.txt and RSS files in the dev public directory so development and production expose the same metadata endpoints.
+
 ## 0.4.0
 
 ### Minor Changes

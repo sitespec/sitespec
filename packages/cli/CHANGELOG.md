@@ -1,5 +1,11 @@
 # @sitespec/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- Accept SiteSpec 0.5 projects and expose v0.5 media/SEO capabilities through inspection.
+
 ## 0.4.0
 
 ### Minor Changes

@@ -1,18 +1,33 @@
-specVersion: "0.4"
+specVersion: "0.5"
 site:
   id: marketing-example
-  name: "SiteSpec Content Example"
+  name: "SiteSpec v0.5 Example"
   url: https://example.test
   locale: en
 
 assets:
   favicon: /brand/favicon.svg
+  appleTouchIcon: /brand/apple-touch-icon.png
+  defaultOgImage: /brand/og-default.png
+
+media:
+  output: /_media
+  widths: [320, 640, 960, 1280, 1600]
+  formats: [avif, webp]
+  quality:
+    avif: 50
+    webp: 78
+    jpeg: 82
+    png: 85
 
 navigation:
   primary:
     - id: home
       label: Home
       href: /
+    - id: about
+      label: About
+      href: /about
     - id: blog
       label: Blog
       href: /blog
@@ -24,5 +39,27 @@ navigation:
       href: /blog/category/product
 
 seo:
-  titleTemplate: "%s — SiteSpec Content Example"
-  defaultDescription: "Executable SiteSpec v0.4 Design System and content example."
+  siteName: "SiteSpec v0.5 Example"
+  titleTemplate: "%s — SiteSpec v0.5 Example"
+  defaultDescription: "Executable SiteSpec v0.5 reference for content, Design System, media and SEO."
+  sitemap:
+    enabled: true
+  robots:
+    index: true
+    rules:
+      - userAgent: "*"
+        allow: [/]
+        disallow: [/preview]
+  llms:
+    enabled: true
+    description: "Executable SiteSpec v0.5 reference site covering content, Design System, media and SEO."
+  rss:
+    enabled: true
+    path: /rss.xml
+    title: SiteSpec v0.5 Example
+    description: Published articles from the SiteSpec v0.5 reference site.
+  socialImages:
+    generate: true
+    format: png
+    width: 1200
+    height: 630

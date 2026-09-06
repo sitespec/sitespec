@@ -1,5 +1,12 @@
 # @sitespec/template
 
+## 0.5.0
+
+### Minor Changes
+
+- Upgrade the default starter to SiteSpec 0.5 with a real responsive hero image and production media/SEO defaults.
+- Keep the v0.5 starter valid under its own Design System lint by using semantic spacing tokens in the split hero.
+
 ## 0.4.0
 
 ### Minor Changes

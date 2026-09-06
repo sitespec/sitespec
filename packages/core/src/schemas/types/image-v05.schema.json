@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.5:type:image",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "src"
+  ],
+  "properties": {
+    "src": {
+      "type": "string",
+      "minLength": 1
+    },
+    "alt": {
+      "type": "string"
+    },
+    "decorative": {
+      "type": "boolean"
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sizes": {
+      "type": "string",
+      "minLength": 1
+    },
+    "widths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 64,
+        "maximum": 8192
+      }
+    },
+    "formats": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "avif",
+          "webp"
+        ]
+      }
+    },
+    "quality": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "loading": {
+      "enum": [
+        "eager",
+        "lazy"
+      ]
+    },
+    "decoding": {
+      "enum": [
+        "async",
+        "sync",
+        "auto"
+      ]
+    },
+    "fetchPriority": {
+      "enum": [
+        "high",
+        "low",
+        "auto"
+      ]
+    },
+    "crop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aspectRatio"
+      ],
+      "properties": {
+        "aspectRatio": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$"
+        },
+        "focalPoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

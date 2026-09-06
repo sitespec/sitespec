@@ -1,0 +1,23 @@
+specVersion: "0.5"
+page:
+  id: about-en
+  route: /about
+  archetype: detail
+  locale: en
+
+seo:
+  title: About this example
+  description: English page in a reciprocal SiteSpec hreflang cluster.
+  hreflang:
+    en: /about
+    lv: /lv/about
+    x-default: /about
+
+sections:
+  - id: intro
+    use: hero
+    variant: centered
+    props:
+      eyebrow: hreflang
+      title: One page, two locale-specific routes
+      text: SiteSpec validates reciprocal internal language alternates and emits them into page head metadata and sitemap.xml.

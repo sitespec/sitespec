@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 page:
   id: home
   route: /
@@ -6,19 +6,31 @@ page:
 
 seo:
   title: Home
-  description: A compact SiteSpec v0.4 starter demonstrating composition and typed content end to end.
+  description: A compact SiteSpec v0.5 starter demonstrating composition and typed content end to end.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec 0.4
+      eyebrow: SiteSpec 0.5
       title: The specification and content are the source of truth
       text: This starter demonstrates a first-class Design System with themes, reusable sections and UI primitives alongside typed Markdown content, content-driven routes, local fonts, semantic assets and agent inspection.
       primaryAction:
         label: Explore the content example
         href: /blog
+      image:
+        src: /media/hero.png
+        alt: Abstract SiteSpec media pipeline preview
+        widths: [480, 720, 960]
+        sizes: "(max-width: 760px) 100vw, 42vw"
+        crop:
+          aspectRatio: "4:3"
+          focalPoint:
+            x: 0.5
+            y: 0.5
+        loading: eager
+        fetchPriority: high
 
   - id: features
     use: feature-grid

@@ -119,7 +119,7 @@ export async function packDesignSystem(options: PackDesignSystemOptions): Promis
 async function removeManagedDesignSystem(root: string): Promise<void> {
   const loaded = await loadDesignSystemContract(root);
   const manifest = loaded.designSystem?.value;
-  if (!manifest) throw new Error("--replace requires an existing valid design-system.yaml. Use --force only when intentionally overwriting an unmanaged v0.4 design system.");
+  if (!manifest) throw new Error("--replace requires an existing valid design-system.yaml. Use --force only when intentionally overwriting an unmanaged v0.4+ design system.");
 
   for (const id of manifest.libraries.ui) await rm(join(root, "ui", id), { recursive: true, force: true });
   for (const id of manifest.libraries.sections) await rm(join(root, "components", id), { recursive: true, force: true });
@@ -145,7 +145,7 @@ interface ManagedDesignSystemPaths {
 async function managedDesignSystemPaths(root: string): Promise<ManagedDesignSystemPaths> {
   const loaded = await loadDesignSystemContract(root);
   const manifest = loaded.designSystem?.value;
-  if (!manifest) throw new Error("--replace requires an existing valid design-system.yaml. Use --force only when intentionally overwriting an unmanaged v0.4 design system.");
+  if (!manifest) throw new Error("--replace requires an existing valid design-system.yaml. Use --force only when intentionally overwriting an unmanaged v0.4+ design system.");
 
   const exact = new Set<string>([
     "design-system.yaml",
@@ -194,7 +194,7 @@ export async function installDesignSystem(options: InstallDesignSystemOptions): 
   const source = resolve(options.source);
   if (!(await exists(join(root, "site.yaml")))) throw new Error(`site.yaml was not found in ${root}.`);
   const specVersion = await readProjectSpecVersion(root);
-  if (specVersion !== "0.4") throw new Error(`Design System packs require a SiteSpec 0.4 project; ${root} uses ${specVersion}. Upgrade the project contract first.`);
+  if (specVersion !== "0.4" && specVersion !== "0.5") throw new Error(`Design System packs require a SiteSpec 0.4+ project; ${root} uses ${specVersion}. Upgrade the project contract first.`);
 
   const inspection = await inspectDesignSystem(source);
   if (!inspection.valid) throw packError(inspection.diagnostics);

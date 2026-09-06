@@ -70,10 +70,14 @@ export function createAjv(): Ajv2020Instance {
   ajv.addSchema(schemaAlias(action, "urn:site-spec:0.4:type:action"));
   ajv.addSchema(schemaAlias(image, "urn:site-spec:0.4:type:image"));
   ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.4:type:navigation"));
+  ajv.addSchema(schemaAlias(action, "urn:site-spec:0.5:type:action"));
+  ajv.addSchema(loadSchema("types/image-v05.schema.json"));
+  ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.5:type:navigation"));
   const pagination = loadSchema("types/pagination.schema.json");
   ajv.addSchema(pagination);
   ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.3:type:pagination"));
   ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.4:type:pagination"));
+  ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.5:type:pagination"));
   return ajv;
 }
 

@@ -1,6 +1,6 @@
 import type { ValidateFunction } from "ajv";
 
-export type SpecVersion = "0.1" | "0.2" | "0.3" | "0.4";
+export type SpecVersion = "0.1" | "0.2" | "0.3" | "0.4" | "0.5";
 export type Archetype = "marketing" | "article" | "listing" | "detail" | "legal" | "blank";
 export type PageState = "draft" | "published";
 export type ContentStatus = PageState;
@@ -47,6 +47,40 @@ export interface SourceNavigationItem {
 
 export type SourceNavigation = Record<string, SourceNavigationItem[]>;
 
+export type MediaFormat = "avif" | "webp";
+export type SocialImageFormat = "png" | "jpeg" | "webp";
+
+export interface SourceRobotsRule {
+  userAgent: string;
+  allow?: string[];
+  disallow?: string[];
+}
+
+export interface SourceSiteSeo {
+  titleTemplate?: string;
+  defaultDescription?: string;
+  siteName?: string;
+  sitemap?: { enabled?: boolean };
+  robots?: { index?: boolean; rules?: SourceRobotsRule[] };
+  llms?: { enabled?: boolean; description?: string };
+  rss?: { enabled?: boolean; path?: string; title?: string; description?: string };
+  socialImages?: {
+    generate?: boolean;
+    format?: SocialImageFormat;
+    width?: number;
+    height?: number;
+    background?: string;
+    foreground?: string;
+  };
+}
+
+export interface SourceMediaConfig {
+  output?: string;
+  widths?: number[];
+  formats?: MediaFormat[];
+  quality?: { avif?: number; webp?: number; jpeg?: number; png?: number };
+}
+
 export interface SourceSite {
   specVersion: SpecVersion;
   site: { id: string; name: string; url: string; locale: string };
@@ -54,7 +88,8 @@ export interface SourceSite {
   brand?: { logo?: string; logoDark?: string };
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
   navigation?: SourceNavigation;
-  seo?: { titleTemplate?: string; defaultDescription?: string };
+  media?: SourceMediaConfig;
+  seo?: SourceSiteSeo;
   quality?: {
     accessibility?: "AA";
     performance?: { lighthouse?: number; javascriptKb?: number };
@@ -83,7 +118,7 @@ export interface SourceContentRelation {
 }
 
 export interface CollectionManifest {
-  specVersion: "0.3" | "0.4";
+  specVersion: "0.3" | "0.4" | "0.5";
   collection: { id: string };
   entry: { schema: Record<string, unknown> };
   relations?: Record<string, SourceContentRelation>;
@@ -152,6 +187,35 @@ export interface SourcePageContent {
   queries?: Record<string, SourceContentQuery>;
 }
 
+export interface SourceStructuredData {
+  type: string;
+  data?: Record<string, unknown>;
+}
+
+export interface SourcePageSeo {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  image?: string;
+  noindex?: boolean;
+  hreflang?: Record<string, string>;
+  openGraph?: {
+    title?: string;
+    description?: string;
+    image?: string;
+    type?: string;
+    siteName?: string;
+    locale?: string;
+  };
+  twitter?: {
+    card?: "summary" | "summary_large_image";
+    title?: string;
+    description?: string;
+    image?: string;
+  };
+  socialImage?: { generate?: boolean };
+}
+
 export interface SourcePage {
   specVersion: SpecVersion;
   page: {
@@ -159,25 +223,17 @@ export interface SourcePage {
     route: string;
     archetype: Archetype;
     state?: PageState;
+    locale?: string;
     paths?: RouteParams[];
   };
-  seo?: {
-    title?: string;
-    description?: string;
-    canonical?: string;
-    image?: string;
-    noindex?: boolean;
-  };
-  structuredData?: {
-    type: "Organization" | "WebSite" | "WebPage" | "Article" | "Product" | "FAQPage" | "BreadcrumbList";
-    data?: Record<string, unknown>;
-  };
+  seo?: SourcePageSeo;
+  structuredData?: SourceStructuredData | SourceStructuredData[];
   content?: SourcePageContent;
   sections: SourceSectionEntry[];
 }
 
 export interface SectionPresetManifest {
-  specVersion: "0.2" | "0.3" | "0.4";
+  specVersion: "0.2" | "0.3" | "0.4" | "0.5";
   description?: string;
   section: Omit<SourceSection, "id">;
 }
@@ -199,7 +255,7 @@ export interface ComponentManifest {
 }
 
 export interface UiManifest {
-  specVersion: "0.2" | "0.3" | "0.4";
+  specVersion: "0.2" | "0.3" | "0.4" | "0.5";
   ui: { id: string; role: UiRole };
   description?: string;
   variants?: string[];
@@ -235,7 +291,7 @@ export interface LoadedSectionPreset { file: string; id: string; value: SectionP
 export type DesignSystemExtensionMode = "locked" | "additive";
 
 export interface DesignSystemManifest {
-  specVersion: "0.4";
+  specVersion: "0.4" | "0.5";
   designSystem: {
     id: string;
     name: string;
@@ -323,18 +379,39 @@ export interface ResolvedSection {
   preset?: string;
 }
 
+export interface ResolvedSocialImage {
+  generated: boolean;
+  path: string;
+  width: number;
+  height: number;
+  format: SocialImageFormat;
+}
+
 export interface ResolvedSeo {
   title: string;
   description: string;
   canonical: string;
   image?: string;
   noindex: boolean;
+  hreflang: Record<string, string>;
   openGraph: {
+    type: string;
     title: string;
     description: string;
     url: string;
     image?: string;
+    imageWidth?: number;
+    imageHeight?: number;
+    siteName: string;
+    locale: string;
   };
+  twitter: {
+    card: "summary" | "summary_large_image";
+    title: string;
+    description: string;
+    image?: string;
+  };
+  socialImage?: ResolvedSocialImage;
 }
 
 export interface ResolvedPage {
@@ -352,7 +429,7 @@ export interface ResolvedPage {
     entry?: Record<string, unknown>;
     queries: Record<string, ResolvedContentQuery>;
   };
-  structuredData?: { type: string; data: Record<string, unknown> };
+  structuredData: Array<{ type: string; data: Record<string, unknown> }>;
 }
 
 export interface ResolvedContentPagination {
@@ -381,9 +458,32 @@ export interface ResolvedSite {
   };
   brand: { logo?: string; logoDark?: string };
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
+  media: {
+    output: string;
+    widths: number[];
+    formats: MediaFormat[];
+    quality: { avif: number; webp: number; jpeg: number; png: number };
+  };
+  seo: {
+    siteName: string;
+    titleTemplate?: string;
+    defaultDescription?: string;
+    sitemap: { enabled: boolean };
+    robots: { index: boolean; rules: SourceRobotsRule[] };
+    llms: { enabled: boolean; description?: string };
+    rss: { enabled: boolean; path: string; title: string; description: string };
+    socialImages: {
+      generate: boolean;
+      format: SocialImageFormat;
+      width: number;
+      height: number;
+      background: string;
+      foreground: string;
+    };
+  };
   navigation: ResolvedNavigation;
   pages: ResolvedPage[];
-  generated: { sitemap: true; robots: true };
+  generated: { sitemap: boolean; robots: boolean; llms: boolean; rss: boolean; socialImages: boolean; media: boolean };
 }
 
 export interface ValidationResult {

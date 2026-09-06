@@ -1,4 +1,4 @@
-specVersion: "0.4"
+specVersion: "0.5"
 ui:
   id: container
   role: layout
