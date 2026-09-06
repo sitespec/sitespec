@@ -1,8 +1,8 @@
-specVersion: "0.2"
+specVersion: "0.3"
 site:
-  id: __SITE_ID__
-  name: "__SITE_NAME__"
-  url: https://__SITE_ID__.test
+  id: marketing-example
+  name: "SiteSpec Content Example"
+  url: https://example.test
   locale: en
 
 assets:
@@ -13,7 +13,16 @@ navigation:
     - id: home
       label: Home
       href: /
+    - id: blog
+      label: Blog
+      href: /blog
+    - id: engineering
+      label: Engineering
+      href: /blog/category/engineering
+    - id: product
+      label: Product
+      href: /blog/category/product
 
 seo:
-  titleTemplate: "%s — __SITE_NAME__"
-  defaultDescription: "__SITE_NAME__ website."
+  titleTemplate: "%s — SiteSpec Content Example"
+  defaultDescription: "Executable SiteSpec v0.3 content example."

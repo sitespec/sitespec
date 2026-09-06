@@ -49,7 +49,7 @@ test("site spec can inspect a navigation collection directly", async () => {
     const navigation = result.navigation as { id: string; reference: string; items: Array<{ id: string; href: string }> };
     assert.equal(navigation.id, "primary");
     assert.equal(navigation.reference, "navigation:primary");
-    assert.deepEqual(navigation.items.map(item => item.id), ["home", "features", "examples"]);
+    assert.deepEqual(navigation.items.map(item => item.id), ["home", "features", "blog"]);
     const usage = result.usage as { shell: string; componentProp: { $ref: string } };
     assert.equal(usage.shell, "navigation.primary");
     assert.equal(usage.componentProp.$ref, "navigation:primary");
@@ -73,7 +73,7 @@ test("a page section can reuse a named navigation collection by reference", asyn
     assert.deepEqual(items, [
       { id: "home", label: "Home", href: "/" },
       { id: "features", label: "Features", href: "/features" },
-      { id: "examples", label: "Examples", href: "/examples" }
+      { id: "blog", label: "Blog", href: "/blog" }
     ]);
   } finally {
     await rm(temp, { recursive: true, force: true });
@@ -83,7 +83,7 @@ test("a page section can reuse a named navigation collection by reference", asyn
 test("navigation route typos return deterministic repair candidates", async () => {
   const { temp, root } = await starter("site-spec-navigation-route-repair-");
   try {
-    await writeFile(join(root, "pages", "pricing.yaml"), `specVersion: "0.2"\npage:\n  id: pricing\n  route: /pricing\n  archetype: marketing\nseo:\n  title: Pricing\nsections:\n  - id: intro\n    use: hero\n    props:\n      title: Pricing\n`, "utf8");
+    await writeFile(join(root, "pages", "pricing.yaml"), `specVersion: "0.3"\npage:\n  id: pricing\n  route: /pricing\n  archetype: marketing\nseo:\n  title: Pricing\nsections:\n  - id: intro\n    use: hero\n    props:\n      title: Pricing\n`, "utf8");
     const siteFile = join(root, "site.yaml");
     const source = await readFile(siteFile, "utf8");
     await writeFile(siteFile, source.replace("href: /\n", "href: /prcing\n"), "utf8");

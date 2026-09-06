@@ -36,7 +36,7 @@ export interface DesignFontFamily {
 }
 
 interface SourceDesignFonts {
-  specVersion: "0.1" | "0.2";
+  specVersion: "0.1" | "0.2" | "0.3";
   fonts: Record<string, {
     family: string;
     sources: Array<{

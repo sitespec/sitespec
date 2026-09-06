@@ -33,7 +33,7 @@ test("sitespec init creates the local-font design contract", async () => {
   const { temp, root } = await starter("site-spec-fonts-init-");
   try {
     const fonts = await readFile(join(root, "design", "fonts.yaml"), "utf8");
-    assert.match(fonts, /specVersion: "0\.2"/);
+    assert.match(fonts, /specVersion: "0\.3"/);
     assert.match(fonts, /family: Inter/);
     assert.match(fonts, /src: \/fonts\/Inter-Regular\.woff2/);
     const result = await inspectProject(root, "fonts");

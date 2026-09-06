@@ -1,8 +1,9 @@
 import type { ErrorObject } from "ajv";
 import { findOrigin, nearestStrings } from "./diagnostics.js";
 import { resolveRefs } from "./refs.js";
+import { resolvedContentEntry, runContentQuery } from "./content-query.js";
 import type {
-  Diagnostic, LoadedPage, LoadedProject, Origin, RegisteredComponent, RouteParams,
+  ContentEntry, Diagnostic, LoadedPage, LoadedProject, Origin, RegisteredComponent, ResolvedContentQuery, RouteParams,
   SourceSection, SourceSectionEntry, ResolvedPage, ResolvedSection, ResolvedSeo
 } from "./types.js";
 
@@ -21,9 +22,45 @@ function interpolateParams(value: string | undefined, params: RouteParams): stri
   return value.replace(/\{([a-z][a-z0-9-]*)\}/g, (match, name: string) => params[name] ?? match);
 }
 
+function valueAtPath(value: unknown, path: string): unknown {
+  let current = value;
+  for (const part of path.split(".")) {
+    if (!part) return undefined;
+    if (Array.isArray(current)) {
+      const index = Number(part);
+      current = Number.isInteger(index) ? current[index] : undefined;
+    } else if (current && typeof current === "object") {
+      current = (current as Record<string, unknown>)[part];
+    } else return undefined;
+  }
+  return current;
+}
+
+function interpolateContext(
+  value: string | undefined,
+  params: RouteParams,
+  entry?: Record<string, unknown>
+): string | undefined {
+  const withParams = interpolateParams(value, params);
+  if (withParams === undefined) return undefined;
+  return withParams.replace(/\{entry\.([A-Za-z_][A-Za-z0-9_.-]*)\}/g, (match, path: string) => {
+    const resolved = entry ? valueAtPath(entry, path) : undefined;
+    return typeof resolved === "string" || typeof resolved === "number" || typeof resolved === "boolean"
+      ? String(resolved)
+      : match;
+  });
+}
+
 function unresolvedParamNames(value: string | undefined): string[] {
   if (!value) return [];
   return [...value.matchAll(/\{([a-z][a-z0-9-]*)\}/g)].map(match => match[1]!).filter((name, index, all) => all.indexOf(name) === index);
+}
+
+function unresolvedEntryNames(value: string | undefined): string[] {
+  if (!value) return [];
+  return [...value.matchAll(/\{entry\.([A-Za-z_][A-Za-z0-9_.-]*)\}/g)]
+    .map(match => match[1]!)
+    .filter((name, index, all) => all.indexOf(name) === index);
 }
 
 function validCanonical(value: string): boolean {
@@ -144,28 +181,30 @@ function resolveSeo(
   page: LoadedPage,
   diagnostics: Diagnostic[],
   route: string,
-  params: RouteParams
+  params: RouteParams,
+  contentEntry?: Record<string, unknown>,
+  resolvedState: "draft" | "published" = page.value.page.state ?? "published"
 ): ResolvedSeo {
   const site = project.site!;
   const source = page.value.seo ?? {};
-  const rawTitle = interpolateParams(source.title, params);
-  if (!rawTitle && page.value.page.state !== "draft") diagnostics.push({
+  const rawTitle = interpolateContext(source.title, params, contentEntry);
+  if (!rawTitle && resolvedState !== "draft") diagnostics.push({
     code: "SEO_TITLE_MISSING", severity: "error", file: page.file, page: page.value.page.id,
     path: "/seo/title", message: "Published pages require seo.title."
   });
   const title = rawTitle
     ? site.seo?.titleTemplate?.replace("%s", rawTitle) ?? rawTitle
     : "";
-  const description = interpolateParams(source.description, params) ?? site.seo?.defaultDescription ?? "";
-  if (!description && page.value.page.state !== "draft") diagnostics.push({
+  const description = interpolateContext(source.description, params, contentEntry) ?? site.seo?.defaultDescription ?? "";
+  if (!description && resolvedState !== "draft") diagnostics.push({
     code: "SEO_DESCRIPTION_MISSING", severity: "error", file: page.file, page: page.value.page.id,
     path: "/seo/description", message: "Published pages require a description or site.seo.defaultDescription."
   });
   const seoFields: Array<[string, string | undefined]> = [
     ["title", rawTitle],
     ["description", description],
-    ["canonical", interpolateParams(source.canonical, params)],
-    ["image", interpolateParams(source.image, params)]
+    ["canonical", interpolateContext(source.canonical, params, contentEntry)],
+    ["image", interpolateContext(source.image, params, contentEntry)]
   ];
   for (const [field, value] of seoFields) {
     const unresolved = unresolvedParamNames(value);
@@ -174,16 +213,22 @@ function resolveSeo(
       path: `/seo/${field}`, message: `SEO ${field} references route parameter(s) that are not available: ${unresolved.join(", ")}.`,
       expected: Object.keys(params).sort(), actual: unresolved
     });
+    const unresolvedEntry = unresolvedEntryNames(value);
+    if (unresolvedEntry.length > 0) diagnostics.push({
+      code: "CONTENT_ENTRY_PLACEHOLDER_NOT_FOUND", severity: "error", file: page.file, page: page.value.page.id,
+      path: `/seo/${field}`, message: `SEO ${field} references entry field(s) that are not available: ${unresolvedEntry.join(", ")}.`,
+      expected: contentEntry ? Object.keys(contentEntry).sort() : "page.content.entry", actual: unresolvedEntry
+    });
   }
 
-  const canonicalSource = interpolateParams(source.canonical, params);
+  const canonicalSource = interpolateContext(source.canonical, params, contentEntry);
   const canonical = canonicalSource ?? normalizeCanonical(site.site.url, route);
   if (!validCanonical(canonical)) diagnostics.push({
     code: "SEO_CANONICAL_INVALID", severity: "error", file: page.file, page: page.value.page.id,
     path: "/seo/canonical", message: `Resolved canonical URL ${JSON.stringify(canonical)} must be an absolute http(s) URL.`,
     expected: "absolute http(s) URL", actual: canonical
   });
-  const image = absoluteAsset(site.site.url, interpolateParams(source.image, params) ?? site.assets.defaultOgImage);
+  const image = absoluteAsset(site.site.url, interpolateContext(source.image, params, contentEntry) ?? site.assets.defaultOgImage);
   return {
     title,
     description,
@@ -234,13 +279,43 @@ function resolveSectionSource(
 export async function resolvePage(
   project: LoadedProject,
   page: LoadedPage,
-  options: { route?: string; params?: RouteParams; id?: string } = {}
+  options: {
+    route?: string;
+    baseRoute?: string;
+    params?: RouteParams;
+    id?: string;
+    contentEntry?: ContentEntry;
+    queryPages?: Record<string, number>;
+  } = {}
 ): Promise<{ page?: ResolvedPage; diagnostics: Diagnostic[] }> {
   const diagnostics: Diagnostic[] = [];
   if (!project.site) return { diagnostics };
   const params = options.params ?? {};
   const route = options.route ?? page.value.page.route;
+  const baseRoute = options.baseRoute ?? route;
   const resolvedId = options.id ?? page.value.page.id;
+  const resolvedEntry = options.contentEntry
+    ? resolvedContentEntry(project.contentRegistry, options.contentEntry)
+    : undefined;
+  const queries: Record<string, ResolvedContentQuery> = {};
+  for (const [queryId, query] of Object.entries(page.value.content?.queries ?? {})) {
+    const run = runContentQuery({
+      registry: project.contentRegistry,
+      queryId,
+      query,
+      contextEntry: options.contentEntry,
+      currentPage: options.queryPages?.[queryId] ?? 1,
+      firstHref: baseRoute,
+      params
+    });
+    diagnostics.push(...run.diagnostics.map(diagnostic => ({
+      ...diagnostic,
+      file: diagnostic.file ?? page.file,
+      page: diagnostic.page ?? page.value.page.id,
+      path: diagnostic.path ?? `/content/queries/${queryId}`
+    })));
+    if (run.result) queries[queryId] = run.result;
+  }
   const seenSectionIds = new Set<string>();
   const sections: ResolvedSection[] = [];
   const counts = new Map<string, number>();
@@ -355,7 +430,7 @@ export async function resolvePage(
     const props = await resolveRefs(source.props ?? {}, "", {
       root: project.root, diagnostics, provenance, page: page.value.page.id,
       section: source.id, pageFile: page.file, siteFile: project.siteFile,
-      navigation: project.site.navigation ?? {}, params
+      navigation: project.site.navigation ?? {}, params, entry: resolvedEntry, queries
     }) as Record<string, unknown>;
 
     if (!component.validateProps(props)) {
@@ -381,7 +456,7 @@ export async function resolvePage(
     });
   }
 
-  const state = page.value.page.state ?? "published";
+  const state = (page.value.page.state === "draft" || options.contentEntry?.status === "draft") ? "draft" : "published";
   if (state === "published" && page.value.page.archetype !== "blank") {
     const headingCount = sections.filter(s => project.registry.get(s.component)?.manifest.semantics?.pageHeading).length;
     if (headingCount === 0) diagnostics.push({
@@ -394,7 +469,22 @@ export async function resolvePage(
     });
   }
 
-  const seo = resolveSeo(project, page, diagnostics, route, params);
+  const seo = resolveSeo(project, page, diagnostics, route, params, resolvedEntry, state);
+  const structuredData = page.value.structuredData
+    ? await resolveRefs(page.value.structuredData.data ?? {}, "/structuredData/data", {
+        root: project.root,
+        diagnostics,
+        provenance: new Map<string, Origin>(),
+        page: page.value.page.id,
+        section: "$structuredData",
+        pageFile: page.file,
+        siteFile: project.siteFile,
+        navigation: project.site.navigation ?? {},
+        params,
+        entry: resolvedEntry,
+        queries
+      }) as Record<string, unknown>
+    : undefined;
   return {
     page: {
       id: resolvedId,
@@ -407,8 +497,9 @@ export async function resolvePage(
       locale: project.site.site.locale,
       seo,
       sections,
+      content: page.value.content ? { entry: resolvedEntry, queries } : undefined,
       structuredData: page.value.structuredData
-        ? { type: page.value.structuredData.type, data: page.value.structuredData.data ?? {} }
+        ? { type: page.value.structuredData.type, data: structuredData ?? {} }
         : undefined
     },
     diagnostics

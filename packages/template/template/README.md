@@ -1,46 +1,49 @@
 # __SITE_NAME__
 
-SiteSpec v0.2 project and executable composition-model showcase.
+SiteSpec v0.3 starter and executable contract showcase.
 
-The starter intentionally demonstrates the v0.2 contract instead of shipping a large component gallery:
+The starter stays deliberately small while demonstrating both composition and content:
 
+- typed Markdown collections in `content/*`;
+- content-driven detail routes with `content.entry` and `entry:` references;
+- declarative listing queries with sorting and pagination through `query:` references;
 - formal UI primitives in `ui/*`;
 - reusable section presets in `sections/*`;
-- deterministic dynamic routes with `page.paths`;
-- route-parameter references with `param:<name>`;
+- deterministic non-content dynamic routes with `page.paths` and `param:<name>`;
 - named navigation collections and `navigation:<id>` references;
-- the `urn:site-spec:0.2:type:pagination` core type;
-- self-hosted Inter web fonts declared in `design/fonts.yaml` (OFL-1.1; no runtime Google Fonts request);
+- the `urn:site-spec:0.3:type:pagination` core type;
+- self-hosted Inter web fonts declared in `design/fonts.yaml`;
 - semantic favicon, Apple touch icon and default Open Graph image assets;
 - user-owned Site Shell and semantic design tokens;
-- agent-readable project inspection.
+- agent-readable project and content inspection.
 
 ## Starter routes
 
-- `/` — overview of the composition model.
-- `/features` — links to the generated dynamic feature routes.
+- `/` — overview of the composition and content model.
+- `/blog` — query-driven Markdown listing, page 1.
+- `/blog/page/2` — generated from the same paginated content query.
+- `/blog/content-driven` — generated from `content/posts/content-driven.md`.
+- `/blog/hello-sitespec` — generated from `content/posts/hello-sitespec.md`.
+- `/features` — links to the explicit dynamic feature routes.
 - `/features/composition` — generated from `pages/feature.yaml`.
 - `/features/dynamic-routes` — generated from `pages/feature.yaml`.
 - `/features/agent-protocol` — generated from `pages/feature.yaml`.
-- `/examples` — pagination example, page 1.
-- `/examples/page/2` — pagination example, page 2.
-- `/examples/page/3` — pagination example, page 3.
 
 ## Inspect the contract
 
 ```bash
 npm run site -- spec --json
-npm run site -- spec /features/composition --json
+npm run site -- spec content --json
+npm run site -- spec collection:posts --json
+npm run site -- spec entry:posts/content-driven --json
+npm run site -- spec /blog/content-driven --json
 npm run site -- spec shell --json
 npm run site -- spec design --json
 npm run site -- spec fonts --json
 npm run site -- spec assets --json
 npm run site -- spec ui --json
 npm run site -- spec sections --json
-npm run site -- spec section:final-cta --json
 npm run site -- spec navigation:primary --json
-npm run site -- spec navigation:features --json
-npm run site -- spec navigation:project --json
 npm run site -- validate --json
 ```
 

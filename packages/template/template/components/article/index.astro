@@ -1,0 +1,29 @@
+---
+import Container from "../../ui/container/index.astro";
+interface MarkdownBody { format: "markdown"; source: string; html: string }
+interface ArticleProps { title: string; description?: string; date?: string; body: MarkdownBody }
+interface Props { sectionId: string; variant: string; theme: string; props: ArticleProps }
+const { sectionId, variant, theme, props } = Astro.props;
+---
+<section id={sectionId} data-section={sectionId} data-component="article" data-variant={variant} data-theme={theme}>
+  <Container>
+    <article>
+      {props.date && <time datetime={props.date}>{props.date}</time>}
+      <h1>{props.title}</h1>
+      {props.description && <p class="lead">{props.description}</p>}
+      <div class="body" set:html={props.body.html}></div>
+    </article>
+  </Container>
+</section>
+
+<style>
+  section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
+  article { max-width: var(--size-content); }
+  time { display: block; margin-bottom: var(--space-stack-sm); color: var(--color-text-muted); font-size: var(--font-size-small); }
+  h1 { margin: 0; font-size: var(--font-size-display); line-height: var(--font-line-height-display); letter-spacing: -.045em; }
+  .lead { margin: var(--space-stack-lg) 0 0; font-size: var(--font-size-lead); line-height: var(--font-line-height-lead); color: var(--color-text-muted); }
+  .body { margin-top: var(--space-stack-2xl); line-height: var(--font-line-height-body); }
+  .body :global(h2) { margin: var(--space-stack-2xl) 0 var(--space-stack-md); font-size: var(--font-size-heading); }
+  .body :global(p), .body :global(ul), .body :global(ol), .body :global(blockquote), .body :global(pre) { margin: 0 0 var(--space-stack-lg); }
+  .body :global(a) { text-underline-offset: .18em; }
+</style>

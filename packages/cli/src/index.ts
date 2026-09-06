@@ -181,8 +181,8 @@ program
 
 program
   .command("spec")
-  .description("Inspect the site, design, composition, a page, component, UI primitive, or navigation collection")
-  .argument("[query]", "page id, route, component id, ui:<id>, section:<id>, navigation:<id>, shell, assets, design, or fonts")
+  .description("Inspect the site, content, design, composition, a page, component, UI primitive, or navigation collection")
+  .argument("[query]", "page id/route, content, collection:<id>, entry:<collection>/<id>, component id, ui:<id>, section:<id>, navigation:<id>, shell, assets, design, or fonts")
   .option("--json", "print machine-readable JSON")
   .option("--root <path>", "project root", ".")
   .action(async (query: string | undefined, options: { json?: boolean; root: string }) => {
@@ -208,6 +208,37 @@ program
         console.log("\nGenerated routes");
         for (const item of page.generatedRoutes) console.log(`  ${item.route}`);
       }
+      return;
+    }
+    if (result.type === "content-index") {
+      const collections = result.collections as Array<{ id: string; counts: { total: number; published: number; draft: number } }>;
+      console.log(`Content collections  ${collections.length}\n`);
+      for (const collection of collections) {
+        console.log(`${collection.id.padEnd(20)} ${String(collection.counts.total).padStart(4)} entries  ${collection.counts.published} published  ${collection.counts.draft} draft`);
+      }
+      return;
+    }
+    if (result.type === "content-collection") {
+      const collection = result.collection as {
+        id: string; source: string; counts: { total: number; published: number; draft: number };
+        relations: Record<string, { collection: string; many?: boolean }>;
+        entries: Array<{ id: string; status: string; href?: string; format: string }>;
+      };
+      console.log(`${collection.id}\nsource: ${collection.source}\nentries: ${collection.counts.total}\npublished: ${collection.counts.published}\ndraft: ${collection.counts.draft}`);
+      const relations = Object.entries(collection.relations);
+      if (relations.length > 0) {
+        console.log("\nRelations");
+        for (const [field, relation] of relations) console.log(`${field.padEnd(20)} -> ${relation.collection}${relation.many ? "[]" : ""}`);
+      }
+      if (collection.entries.length > 0) {
+        console.log("\nEntries");
+        for (const entry of collection.entries) console.log(`${entry.id.padEnd(24)} ${entry.status.padEnd(10)} ${entry.format.padEnd(8)} ${entry.href ?? ""}`);
+      }
+      return;
+    }
+    if (result.type === "content-entry") {
+      const entry = result.entry as Record<string, unknown> & { collection: string; id: string; status: string; source: string; href?: string };
+      console.log(`${entry.collection}/${entry.id}\nsource: ${entry.source}\nstatus: ${entry.status}${entry.href ? `\nroute: ${entry.href}` : ""}`);
       return;
     }
     if (result.type === "component") {
@@ -273,6 +304,7 @@ source: ${design.source}`);
     const site = result.site as { name?: string; url?: string } | undefined;
     const pages = result.pages as Array<{ route: string; id: string; archetype: string }>;
     const components = result.components as Array<{ id: string; variants: string[] }>;
+    const content = (result.content ?? []) as Array<{ id: string; counts: { total: number } }>;
     const ui = (result.ui ?? []) as Array<{ id: string; role: string }>;
     const presets = (result.sectionPresets ?? []) as Array<{ id: string }>;
     const navigation = result.navigation as Array<{ id: string; items: unknown[] }>;
@@ -281,11 +313,16 @@ source: ${design.source}`);
     console.log(`Components  ${components.length}`);
     console.log(`UI          ${ui.length}`);
     console.log(`Presets     ${presets.length}`);
+    console.log(`Collections ${content.length}`);
     console.log(`Navigation  ${navigation.length}\n`);
     console.log("Pages");
     for (const page of pages) console.log(`${page.route.padEnd(18)} ${page.id.padEnd(16)} ${page.archetype}`);
     console.log("\nComponents");
     for (const component of components) console.log(`${component.id.padEnd(20)} ${component.variants.join(", ")}`);
+    if (content.length > 0) {
+      console.log("\nContent");
+      for (const collection of content) console.log(`${collection.id.padEnd(20)} ${collection.counts.total} entry(s)`);
+    }
     if (navigation.length > 0) {
       console.log("\nNavigation");
       for (const collection of navigation) console.log(`${collection.id.padEnd(20)} ${collection.items.length} item(s)`);

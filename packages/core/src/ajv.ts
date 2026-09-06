@@ -64,7 +64,12 @@ export function createAjv(): Ajv2020Instance {
   ajv.addSchema(schemaAlias(action, "urn:site-spec:0.2:type:action"));
   ajv.addSchema(schemaAlias(image, "urn:site-spec:0.2:type:image"));
   ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.2:type:navigation"));
-  ajv.addSchema(loadSchema("types/pagination.schema.json"));
+  ajv.addSchema(schemaAlias(action, "urn:site-spec:0.3:type:action"));
+  ajv.addSchema(schemaAlias(image, "urn:site-spec:0.3:type:image"));
+  ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.3:type:navigation"));
+  const pagination = loadSchema("types/pagination.schema.json");
+  ajv.addSchema(pagination);
+  ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.3:type:pagination"));
   return ajv;
 }
 
@@ -75,6 +80,7 @@ export const validateComponentSchema = baseAjv.compile(loadSchema("component.sch
 export const validateUiSchema = baseAjv.compile(loadSchema("ui.schema.json"));
 export const validateSectionPresetSchema = baseAjv.compile(loadSchema("section-preset.schema.json"));
 export const validateFontsSchema = baseAjv.compile(loadSchema("fonts.schema.json"));
+export const validateCollectionSchema = baseAjv.compile(loadSchema("collection.schema.json"));
 
 export function compilePropsSchema(schema: Record<string, unknown>): ValidateFunction {
   const ajv = createAjv();

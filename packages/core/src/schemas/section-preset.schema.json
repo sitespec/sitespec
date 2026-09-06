@@ -3,23 +3,47 @@
   "$id": "urn:site-spec:0.2:section-preset",
   "type": "object",
   "additionalProperties": false,
-  "required": ["specVersion", "section"],
+  "required": [
+    "specVersion",
+    "section"
+  ],
   "properties": {
-    "specVersion": { "const": "0.2" },
-    "description": { "type": "string", "maxLength": 500 },
+    "specVersion": {
+      "enum": [
+        "0.2",
+        "0.3"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
     "section": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["use"],
+      "required": [
+        "use"
+      ],
       "properties": {
-        "use": { "$ref": "#/$defs/id" },
-        "variant": { "$ref": "#/$defs/id" },
-        "theme": { "$ref": "#/$defs/id" },
-        "props": { "type": "object" }
+        "use": {
+          "$ref": "#/$defs/id"
+        },
+        "variant": {
+          "$ref": "#/$defs/id"
+        },
+        "theme": {
+          "$ref": "#/$defs/id"
+        },
+        "props": {
+          "type": "object"
+        }
       }
     }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    }
   }
 }

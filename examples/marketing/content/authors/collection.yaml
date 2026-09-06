@@ -1,0 +1,11 @@
+specVersion: "0.3"
+collection:
+  id: authors
+entry:
+  schema:
+    type: object
+    additionalProperties: false
+    required: [name, bio]
+    properties:
+      name: { type: string }
+      bio: { type: string }

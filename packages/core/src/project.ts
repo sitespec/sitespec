@@ -5,6 +5,7 @@ import { fileExists, listFiles, parseDataFile } from "./fs.js";
 import { buildRegistry } from "./registry.js";
 import { buildUiRegistry } from "./ui-registry.js";
 import { loadSectionPresets } from "./section-presets.js";
+import { loadContentCollections, validateContentRelations } from "./content.js";
 import type { Diagnostic, LoadedPage, LoadedProject, SourcePage, SourceSite } from "./types.js";
 
 export async function loadProject(root: string): Promise<LoadedProject> {
@@ -51,6 +52,10 @@ export async function loadProject(root: string): Promise<LoadedProject> {
   const loadedPresets = await loadSectionPresets(root);
   diagnostics.push(...loadedPresets.diagnostics);
 
+  const loadedContent = await loadContentCollections(root);
+  diagnostics.push(...loadedContent.diagnostics);
+  diagnostics.push(...validateContentRelations(loadedContent.collections));
+
   const pages: LoadedPage[] = [];
   for (const file of await listFiles(join(root, "pages"), [".yaml", ".yml"])) {
     const parsed = await parseDataFile<SourcePage>(root, file);
@@ -78,6 +83,8 @@ export async function loadProject(root: string): Promise<LoadedProject> {
     ui: builtUi.ui,
     uiRegistry: builtUi.registry,
     sectionPresets: loadedPresets.presets,
+    contentCollections: loadedContent.collections,
+    contentRegistry: loadedContent.registry,
     diagnostics
   };
 }

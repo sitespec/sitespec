@@ -1,8 +1,9 @@
 import type { ValidateFunction } from "ajv";
 
-export type SpecVersion = "0.1" | "0.2";
+export type SpecVersion = "0.1" | "0.2" | "0.3";
 export type Archetype = "marketing" | "article" | "listing" | "detail" | "legal" | "blank";
 export type PageState = "draft" | "published";
+export type ContentStatus = PageState;
 export type ComponentRole = "intro" | "content" | "proof" | "conversion" | "utility";
 export type UiRole = "layout" | "action" | "content" | "navigation" | "feedback" | "media" | "typography";
 export type DiagnosticSeverity = "error" | "warning" | "info";
@@ -75,6 +76,81 @@ export interface SourceSectionReference {
 export type SourceSectionEntry = SourceSection | SourceSectionReference;
 export type RouteParams = Record<string, string>;
 
+export interface SourceContentRelation {
+  collection: string;
+  many?: boolean;
+}
+
+export interface CollectionManifest {
+  specVersion: "0.3";
+  collection: { id: string };
+  entry: { schema: Record<string, unknown> };
+  relations?: Record<string, SourceContentRelation>;
+}
+
+export interface ContentBody {
+  format: "markdown";
+  source: string;
+  html: string;
+}
+
+export interface ContentEntry {
+  collection: string;
+  id: string;
+  slug: string;
+  date?: string;
+  status: ContentStatus;
+  data: Record<string, unknown>;
+  body?: ContentBody;
+  source: string;
+  href?: string;
+}
+
+export interface LoadedContentCollection {
+  file: string;
+  dir: string;
+  value: CollectionManifest;
+  entries: ContentEntry[];
+  validateEntry: ValidateFunction;
+}
+
+export type ContentFilterOperator = "eq" | "ne" | "in" | "contains" | "gt" | "gte" | "lt" | "lte";
+export type SourceContentFilterValue = string | number | boolean | null | string[] | number[] | { $ref: string };
+
+export interface SourceContentFilter {
+  field: string;
+  eq?: SourceContentFilterValue;
+  ne?: SourceContentFilterValue;
+  in?: SourceContentFilterValue;
+  contains?: SourceContentFilterValue;
+  gt?: SourceContentFilterValue;
+  gte?: SourceContentFilterValue;
+  lt?: SourceContentFilterValue;
+  lte?: SourceContentFilterValue;
+}
+
+export interface SourceContentSort {
+  field: string;
+  order?: "asc" | "desc";
+}
+
+export interface SourceContentPagination {
+  size: number;
+  route: string;
+}
+
+export interface SourceContentQuery {
+  collection: string;
+  filter?: SourceContentFilter[];
+  sort?: SourceContentSort[];
+  paginate?: SourceContentPagination;
+}
+
+export interface SourcePageContent {
+  entry?: string;
+  queries?: Record<string, SourceContentQuery>;
+}
+
 export interface SourcePage {
   specVersion: SpecVersion;
   page: {
@@ -95,11 +171,12 @@ export interface SourcePage {
     type: "Organization" | "WebSite" | "WebPage" | "Article" | "Product" | "FAQPage" | "BreadcrumbList";
     data?: Record<string, unknown>;
   };
+  content?: SourcePageContent;
   sections: SourceSectionEntry[];
 }
 
 export interface SectionPresetManifest {
-  specVersion: "0.2";
+  specVersion: "0.2" | "0.3";
   description?: string;
   section: Omit<SourceSection, "id">;
 }
@@ -121,7 +198,7 @@ export interface ComponentManifest {
 }
 
 export interface UiManifest {
-  specVersion: "0.2";
+  specVersion: "0.2" | "0.3";
   ui: { id: string; role: UiRole };
   description?: string;
   variants?: string[];
@@ -164,6 +241,8 @@ export interface LoadedProject {
   ui: LoadedUiPrimitive[];
   uiRegistry: Map<string, RegisteredUiPrimitive>;
   sectionPresets: LoadedSectionPreset[];
+  contentCollections: LoadedContentCollection[];
+  contentRegistry: Map<string, LoadedContentCollection>;
   diagnostics: Diagnostic[];
 }
 
@@ -217,7 +296,24 @@ export interface ResolvedPage {
   locale: string;
   seo: ResolvedSeo;
   sections: ResolvedSection[];
+  content?: {
+    entry?: Record<string, unknown>;
+    queries: Record<string, ResolvedContentQuery>;
+  };
   structuredData?: { type: string; data: Record<string, unknown> };
+}
+
+export interface ResolvedContentPagination {
+  currentPage: number;
+  totalPages: number;
+  previousHref?: string;
+  nextHref?: string;
+  pages: Array<{ page: number; href: string; current: boolean }>;
+}
+
+export interface ResolvedContentQuery {
+  items: Record<string, unknown>[];
+  pagination?: ResolvedContentPagination;
 }
 
 export interface ResolvedSite {

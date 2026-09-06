@@ -25,6 +25,12 @@ test("sitespec init creates a valid starter project", async () => {
     assert.ok(initialized.files.includes("public/fonts/Inter-Regular.woff2"));
     assert.ok(initialized.files.includes("public/fonts/LICENSE.txt"));
     assert.ok(initialized.files.includes("components/pagination/component.yaml"));
+    assert.ok(initialized.files.includes("components/post-list/component.yaml"));
+    assert.ok(initialized.files.includes("components/article/component.yaml"));
+    assert.ok(initialized.files.includes("content/posts/collection.yaml"));
+    assert.ok(initialized.files.includes("content/posts/content-driven.md"));
+    assert.ok(initialized.files.includes("pages/blog.yaml"));
+    assert.ok(initialized.files.includes("pages/post.yaml"));
     assert.ok(initialized.files.includes("pages/feature.yaml"));
 
     const header = await readFile(join(root, "shell", "Header.astro"), "utf8");
@@ -40,8 +46,8 @@ test("sitespec init creates a valid starter project", async () => {
     assert.match(footer, /padding-block: var\(--space-stack-xl\);/);
 
     const home = await readFile(join(root, "pages", "home.yaml"), "utf8");
-    assert.match(home, /label: Explore the v0\.2 features/);
-    assert.match(home, /href: \/features/);
+    assert.match(home, /label: Explore the content example/);
+    assert.match(home, /href: \/blog/);
 
     const agents = await readFile(join(root, "AGENTS.md"), "utf8");
     assert.match(agents, /Shell layout convention/);
@@ -49,12 +55,14 @@ test("sitespec init creates a valid starter project", async () => {
 
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.pages.length, 8);
+    assert.equal(validation.site?.specVersion, "0.3");
+    assert.equal(validation.site?.pages.length, 9);
     assert.deepEqual(validation.site?.pages.map(page => page.route), [
       "/",
-      "/examples",
-      "/examples/page/2",
-      "/examples/page/3",
+      "/blog",
+      "/blog/content-driven",
+      "/blog/hello-sitespec",
+      "/blog/page/2",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
@@ -87,9 +95,10 @@ test("npm run build renders a static Astro site", async () => {
     assert.equal(result.success, true, JSON.stringify(result.diagnostics, null, 2));
     assert.deepEqual(result.pages, [
       "/",
-      "/examples",
-      "/examples/page/2",
-      "/examples/page/3",
+      "/blog",
+      "/blog/content-driven",
+      "/blog/hello-sitespec",
+      "/blog/page/2",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
@@ -121,10 +130,10 @@ test("npm run build renders a static Astro site", async () => {
     assert.match(fontsCss, /font-family: "Inter";/);
     assert.match(fontsCss, /url\("\/fonts\/Inter-Regular\.woff2"\) format\("woff2"\)/);
 
-    const examplesPage2 = await readFile(join(root, "dist", "examples", "page", "2", "index.html"), "utf8");
-    assert.match(examplesPage2, /Page 2 of 3/);
-    assert.match(examplesPage2, /href="\/examples" rel="prev"/);
-    assert.match(examplesPage2, /href="\/examples\/page\/3" rel="next"/);
+    const blogPage2 = await readFile(join(root, "dist", "blog", "page", "2", "index.html"), "utf8");
+    assert.match(blogPage2, /Page 2 of 2/);
+    assert.match(blogPage2, /href="\/blog" rel="prev"/);
+    assert.match(blogPage2, /Hello from SiteSpec content/);
 
     const sitemap = await readFile(join(root, "dist", "sitemap.xml"), "utf8");
     assert.match(sitemap, /https:\/\/acme\.test/);
@@ -147,9 +156,10 @@ test("npm run build renders a static Astro site", async () => {
     assert.match(buildState.sourceHash, /^[a-f0-9]{64}$/);
     assert.deepEqual(buildState.pages, [
       "/",
-      "/examples",
-      "/examples/page/2",
-      "/examples/page/3",
+      "/blog",
+      "/blog/content-driven",
+      "/blog/hello-sitespec",
+      "/blog/page/2",
       "/features",
       "/features/agent-protocol",
       "/features/composition",
@@ -161,12 +171,12 @@ test("npm run build renders a static Astro site", async () => {
 });
 
 
-test("npm run build materializes v0.2 dynamic routes into static HTML", async () => {
+test("npm run build materializes explicit dynamic routes into static HTML", async () => {
   const temp = await mkdtemp(join(tmpdir(), "site-spec-build-dynamic-"));
   const root = join(temp, "acme");
   try {
     await initProject({ directory: root, name: "Acme" });
-    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.2"
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.3"
 page:
   id: product
   route: /products/[slug]

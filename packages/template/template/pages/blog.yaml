@@ -1,0 +1,41 @@
+specVersion: "0.3"
+page:
+  id: blog
+  route: /blog
+  archetype: listing
+
+content:
+  queries:
+    posts:
+      collection: posts
+      sort:
+        - field: date
+          order: desc
+      paginate:
+        size: 1
+        route: /blog/page/[page]
+
+seo:
+  title: Blog
+  description: Typed Markdown content queried and paginated entirely through SiteSpec.
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: SiteSpec 0.3 Content
+      title: Content is part of the site specification
+      text: Markdown entries are validated, sorted and paginated by core before components receive their props.
+
+  - id: posts
+    use: post-list
+    props:
+      title: Latest posts
+      items:
+        $ref: query:posts.items
+
+  - id: pagination
+    use: pagination
+    props:
+      $ref: query:posts.pagination

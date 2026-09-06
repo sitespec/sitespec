@@ -641,10 +641,20 @@ function rebaseSitePath(value: string, basePath: string): string {
   return value === "/" ? `${basePath}/` : `${basePath}${value}`;
 }
 
+function rebaseGeneratedHtml(value: string, basePath: string): string {
+  if (!basePath) return value;
+  return value.replace(/\b(href|src)="(\/[^"\s]*)"/g, (_match, attribute: string, path: string) => {
+    return `${attribute}="${rebaseSitePath(path, basePath)}"`;
+  });
+}
+
 function rebaseRenderValue(value: unknown, basePath: string): unknown {
   if (Array.isArray(value)) return value.map(item => rebaseRenderValue(item, basePath));
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => {
+    if (key === "html" && typeof child === "string") {
+      return [key, rebaseGeneratedHtml(child, basePath)];
+    }
     if ((key === "href" || key.endsWith("Href") || key === "src") && typeof child === "string") {
       return [key, rebaseSitePath(child, basePath)];
     }

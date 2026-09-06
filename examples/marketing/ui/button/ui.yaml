@@ -1,4 +1,4 @@
-specVersion: "0.2"
+specVersion: "0.3"
 ui:
   id: button
   role: action

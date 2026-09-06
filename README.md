@@ -1,23 +1,28 @@
 # SiteSpec
 
-SiteSpec is a deterministic, Git-native contract for building websites with people and AI agents.
+SiteSpec is a deterministic, Git-native contract for building content-driven static websites with people and AI agents.
 
-A SiteSpec project keeps the website structure, routes, navigation, assets, design system, section composition, and component contracts in versioned source files. The current renderer turns that contract into a static Astro site.
+The source of truth is the repository: specs, content, design tokens, component contracts, and the Site Shell. `@sitespec/core` resolves that contract and the current Astro renderer produces static output. A runtime CMS is not required.
 
-SiteSpec does not require Figma or a separate design-handoff step. Visual decisions can live directly in semantic design tokens, UI primitives, components, section presets, and the site shell. External design tools can still be used when useful, but they are not part of the required build workflow and are not the source of truth.
+Figma and other design applications are optional; a separate design-handoff step is not part of the required workflow.
 
-## Why SiteSpec exists
+## Current format
 
-Traditional website work often spreads the same decisions across design files, tickets, CMS configuration, component code, and implementation notes. SiteSpec keeps the executable website contract in one repository so that humans, agents, validation, and the renderer operate on the same source.
+The current document format is `specVersion: "0.3"`.
 
-The core goals are:
+It supports:
 
-- deterministic output from explicit source files;
-- machine-readable contracts instead of implicit conventions;
-- controlled composition rather than arbitrary page generation;
-- a design system that can be inspected and validated;
-- static output that does not depend on a runtime CMS;
-- an agent-readable project model with repair-oriented diagnostics.
+- Page Specs, archetypes, SEO, static routes, and controlled section composition;
+- typed Markdown/YAML/JSON content collections with schemas and draft state;
+- generic relations between entries and collections;
+- declarative filtering, deterministic sorting, and pagination;
+- content-driven detail and taxonomy routes;
+- `entry:` and `query:` references resolved before component validation;
+- section presets, registered components, UI primitives, design tokens, local fonts, and a user-owned Site Shell;
+- source/output validation and agent inspection through `site spec`;
+- static Astro build, preview, and GitHub Pages deployment.
+
+Content, relations, queries, routes, and final props are resolved in core. Astro is the rendering layer, not a second content runtime.
 
 ## Quick start
 
@@ -29,130 +34,74 @@ cd acme
 npm run dev
 ```
 
-The generated project is a standalone website repository. It pins the SiteSpec CLI in `package-lock.json` so developers, agents, and CI use the same engine version.
-
 Useful commands:
 
 ```bash
-npm run dev
 npm run validate
 npm run build
 npm run preview
 
 npm run site -- spec --json
-npm run site -- spec design --json
-npm run site -- spec sections --json
-npm run site -- add component comparison-table
-npm run site -- add ui badge
+npm run site -- spec content --json
+npm run site -- spec collection:posts --json
+npm run site -- spec entry:posts/hello-world --json
 ```
 
-## Project shape
-
-A generated website contains website-owned source files:
-
-```text
-acme/
-├── site.yaml
-├── pages/
-├── content/
-├── sections/
-├── components/
-├── ui/
-├── shell/
-├── design/
-├── public/
-├── AGENTS.md
-├── CLAUDE.md
-├── package.json
-└── package-lock.json
-```
-
-A minimal Page Spec looks like this:
+A content-driven page can be as small as:
 
 ```yaml
-specVersion: "0.2"
+specVersion: "0.3"
 
 page:
-  id: home
-  route: /
-  archetype: marketing
+  id: post
+  route: /blog/[slug]
+  archetype: article
+
+content:
+  entry: posts
 
 seo:
-  title: Home
+  title: "{entry.title}"
 
 sections:
-  - id: intro
-    use: hero
+  - id: article
+    use: article
     props:
-      title: The specification is the source of truth
-
-  - id: final-cta
-    $ref: section:final-cta
+      title: { $ref: "entry:title" }
+      body: { $ref: "entry:body" }
 ```
 
-Pages select registered sections and pass validated data. Astro markup remains inside the component and shell implementations rather than inside Page Spec.
-
-## What the v0.2 format covers
-
-SiteSpec v0.2 includes:
-
-- `site.yaml` for global site metadata, SEO defaults, semantic assets, and named navigation collections;
-- Page Specs with archetypes, composition rules, SEO, and deterministic dynamic route expansion;
-- reusable configured sections via `section:<id>` references;
-- registered section components with JSON Schema prop contracts;
-- internal UI primitives that pages cannot compose directly;
-- semantic design tokens and local web-font declarations;
-- `navigation:<id>`, `param:<name>`, and content references;
-- shared core prop types such as navigation, actions, images, and pagination;
-- a user-owned Site Shell;
-- source and rendered-output validation;
-- agent inspection through `npm run site -- spec ... --json`;
-- static Astro build, preview, and GitHub Pages deployment support.
-
-The engine remains compatible with existing `specVersion: "0.1"` projects. The default starter uses `specVersion: "0.2"`.
+Entries live under `content/posts/`. SiteSpec validates them, generates concrete routes, resolves relations/references, and passes final props to registered components.
 
 ## Documentation
 
-Start with the documentation index:
-
-- [Documentation](docs/index.md)
 - [Getting started](docs/getting-started.md)
 - [Core concepts](docs/concepts.md)
+- [Content](docs/content.md)
+- [CLI reference](docs/cli.md)
+- [Documentation index](docs/index.md)
 
-Project maintenance documents:
+Project maintenance: [release process](docs/RELEASING.md) · [changelog](CHANGELOG.md)
 
-- [Migrating from specVersion 0.1 to 0.2](docs/MIGRATING-0.2.md)
-- [Release process](docs/RELEASING.md)
-- [Changelog](CHANGELOG.md)
-
-## Repository
-
-This repository is the SiteSpec engine monorepo:
-
-```text
-packages/
-├── core/       @sitespec/core
-├── astro/      @sitespec/astro
-├── template/   @sitespec/template
-├── cli/        @sitespec/cli
-└── create/     @sitespec/create
-
-examples/
-└── marketing/  local workspace playground
-```
-
-For core development:
+## Repository development
 
 ```bash
 npm install
+npm run build
 npm test
 ```
 
-For the release workflow, use `npm run release:check` and follow [`docs/RELEASING.md`](docs/RELEASING.md).
+Run the full v0.3 content example:
+
+```bash
+npm run dev -w @sitespec/example-marketing
+```
+
+The monorepo contains `@sitespec/core`, `@sitespec/astro`, `@sitespec/template`, `@sitespec/cli`, `@sitespec/create`, and `examples/marketing`.
 
 ## Status
 
-SiteSpec is an early-stage project. The document format is versioned independently from npm package releases. Schemas and validation are the machine-readable source of truth; documentation explains how to use that contract.
+SiteSpec is early-stage. JSON Schemas and validation are the machine-readable source of truth; the documentation describes the current supported contract.
 
 ## License
 

@@ -1,0 +1,39 @@
+specVersion: "0.3"
+page:
+  id: tag
+  route: /blog/tag/[slug]
+  archetype: listing
+
+content:
+  entry: tags
+  queries:
+    posts:
+      collection: posts
+      filter:
+        - field: tags
+          contains:
+            $ref: entry:id
+      sort:
+        - field: date
+          order: desc
+
+seo:
+  title: "{entry.name}"
+  description: "{entry.description}"
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Tag
+      title:
+        $ref: entry:name
+      text:
+        $ref: entry:description
+
+  - id: posts
+    use: post-list
+    props:
+      items:
+        $ref: query:posts.items

@@ -1,35 +1,43 @@
-specVersion: "0.2"
+specVersion: "0.3"
 page:
   id: home
   route: /
   archetype: marketing
 
+content:
+  queries:
+    featured:
+      collection: posts
+      filter:
+        - field: featured
+          eq: true
+      sort:
+        - field: date
+          order: desc
+
 seo:
   title: Home
+  description: SiteSpec v0.3 content showcase with typed collections, relations, filters, and generated routes.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: Site Spec
-      title: A website that stays coherent as it evolves
-      text: Pages are composed from typed, validated sections instead of arbitrary markup.
+      eyebrow: SiteSpec v0.3 Content
+      title: Build the content model in files, not in component code
+      text: This example uses typed Markdown collections, generic relations, declarative filters, sorting, pagination, draft state, and content-driven routes.
       primaryAction:
-        label: View on GitHub
-        href: https://github.com/sitespec/sitespec
+        label: Read the blog
+        href: /blog
 
-  - id: features
-    use: feature-grid
+  - id: featured
+    use: post-list
+    theme: muted
     props:
-      title: Built for people and AI
+      title: Featured posts — filtered in Page Spec
       items:
-        - title: Deterministic
-          text: Validation decides whether a change is allowed.
-        - title: Composable
-          text: Pages can use only registered sections.
-        - title: Static
-          text: Production output is plain HTML, CSS and assets.
+        $ref: query:featured.items
 
   - id: final-cta
     $ref: section:final-cta

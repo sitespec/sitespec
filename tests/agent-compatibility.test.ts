@@ -55,7 +55,7 @@ test("site spec exposes a stable agent protocol", async () => {
       generated: string[];
     };
 
-    assert.equal(agent.protocolVersion, "2");
+    assert.equal(agent.protocolVersion, "3");
     assert.equal(agent.workflow.inspect, "npm run site -- spec --json");
     assert.equal(agent.workflow.validate, "npm run site -- validate --json");
     assert.equal(agent.workflow.build, "npm run build");

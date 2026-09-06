@@ -1,4 +1,4 @@
-specVersion: "0.2"
+specVersion: "0.3"
 page:
   id: feature
   route: /features/[slug]
@@ -10,7 +10,7 @@ page:
 
 seo:
   title: "Feature: {slug}"
-  description: "A generated SiteSpec v0.2 feature page for {slug}."
+  description: "A generated SiteSpec v0.3 feature page for {slug}."
 
 sections:
   - id: intro

@@ -1,4 +1,4 @@
-specVersion: "0.2"
+specVersion: "0.3"
 site:
   id: __SITE_ID__
   name: "__SITE_NAME__"
@@ -18,9 +18,9 @@ navigation:
     - id: features
       label: Features
       href: /features
-    - id: examples
-      label: Examples
-      href: /examples
+    - id: blog
+      label: Blog
+      href: /blog
 
   features:
     - id: composition

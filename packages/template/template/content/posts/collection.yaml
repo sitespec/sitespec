@@ -1,0 +1,16 @@
+specVersion: "0.3"
+collection:
+  id: posts
+
+entry:
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+      - title
+      - description
+    properties:
+      title:
+        type: string
+      description:
+        type: string

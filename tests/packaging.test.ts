@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
@@ -37,6 +37,24 @@ test("sitespec init creates a standalone npm site pinned to the local engine con
     await rm(temp, { recursive: true, force: true });
   }
 });
+
+test("@sitespec/cli ships a stable executable shim before dist exists", async () => {
+  const packageRoot = join(process.cwd(), "packages", "cli");
+  const pkg = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as {
+    bin?: Record<string, string>;
+    files?: string[];
+  };
+  assert.deepEqual(pkg.bin, { sitespec: "./bin/sitespec.js" });
+  assert.equal(pkg.files?.includes("bin"), true);
+
+  const shimFile = join(packageRoot, "bin", "sitespec.js");
+  const shim = await readFile(shimFile, "utf8");
+  const mode = (await stat(shimFile)).mode & 0o777;
+  assert.match(shim, /^#!\/usr\/bin\/env node/);
+  assert.match(shim, /\.\.\/dist\/index\.js/);
+  assert.notEqual(mode & 0o111, 0);
+});
+
 
 test("@sitespec/create can scaffold without registry access", async () => {
   const temp = await mkdtemp(join(tmpdir(), "sitespec-create-package-"));
@@ -86,7 +104,7 @@ test("public package names and CLI binary match the SiteSpec naming contract", a
   for (const [file, expectedName] of expectations) {
     const pkg = JSON.parse(await readFile(join(process.cwd(), file), "utf8")) as { name: string; bin?: Record<string, string> };
     assert.equal(pkg.name, expectedName);
-    if (expectedName === "@sitespec/cli") assert.deepEqual(pkg.bin, { sitespec: "./dist/index.js" });
+    if (expectedName === "@sitespec/cli") assert.deepEqual(pkg.bin, { sitespec: "./bin/sitespec.js" });
   }
 
   const createSource = await readFile(join(process.cwd(), "packages", "create", "src", "index.ts"), "utf8");

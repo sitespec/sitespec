@@ -1,7 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import type {
-  Diagnostic, LoadedProject, ResolvedNavigation, ResolvedPage, ResolvedSite,
+  ContentEntry, Diagnostic, LoadedProject, ResolvedNavigation, ResolvedPage, ResolvedSite,
   SourceNavigation, ValidationResult
 } from "./types.js";
 import { hasErrors, nearestStrings } from "./diagnostics.js";
@@ -9,6 +9,7 @@ import { loadProject } from "./project.js";
 import { resolvePage } from "./resolver.js";
 import { validateDesign } from "./design.js";
 import { isDynamicRoute, materializeRoute, resolvedPageId, routeParamNames } from "./routes.js";
+import { contentEntryRecord, runContentQuery, validatePaginationRoute } from "./content-query.js";
 
 interface AssetRule {
   label: string;
@@ -217,12 +218,12 @@ function validateGlobalIdentities(project: LoadedProject, diagnostics: Diagnosti
   }
 }
 
-function containsV02CoreType(value: unknown): boolean {
-  if (Array.isArray(value)) return value.some(containsV02CoreType);
+function containsPostV01CoreType(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsPostV01CoreType);
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  if (typeof record.$ref === "string" && record.$ref.startsWith("urn:site-spec:0.2:")) return true;
-  return Object.values(record).some(containsV02CoreType);
+  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[23]:/.test(record.$ref)) return true;
+  return Object.values(record).some(containsPostV01CoreType);
 }
 
 function containsReferencePrefix(value: unknown, prefix: string): boolean {
@@ -250,6 +251,36 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
       expected: version, actual: component.value.specVersion
     });
   }
+  for (const primitive of project.ui) {
+    if (primitive.value.specVersion !== version && version !== "0.1") diagnostics.push({
+      code: "SPEC_VERSION_MISMATCH", severity: "error", file: primitive.file,
+      message: `UI primitive uses Site Spec ${primitive.value.specVersion}, but site.yaml uses ${version}.`,
+      expected: version, actual: primitive.value.specVersion
+    });
+  }
+  for (const preset of project.sectionPresets) {
+    if (preset.value.specVersion !== version && version !== "0.1") diagnostics.push({
+      code: "SPEC_VERSION_MISMATCH", severity: "error", file: preset.file,
+      message: `Section preset uses Site Spec ${preset.value.specVersion}, but site.yaml uses ${version}.`,
+      expected: version, actual: preset.value.specVersion
+    });
+  }
+  for (const collection of project.contentCollections) {
+    if (version !== "0.3") diagnostics.push({
+      code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: collection.file,
+      message: `Typed content collections require specVersion "0.3".`,
+      expected: "0.3", actual: version,
+      suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
+    });
+  }
+  if (version !== "0.3") {
+    for (const page of project.pages) if (page.value.content) diagnostics.push({
+      code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/content", message: `Content-driven pages and queries require specVersion "0.3".`,
+      expected: "0.3", actual: version,
+      suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
+    });
+  }
   if (version === "0.1") {
     for (const page of project.pages) {
       if (page.value.sections.some(section => "$ref" in section)) diagnostics.push({
@@ -264,10 +295,10 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
       });
     }
     for (const component of project.components) {
-      if (containsV02CoreType(component.value.props)) diagnostics.push({
+      if (containsPostV01CoreType(component.value.props)) diagnostics.push({
         code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: component.file, component: component.value.component.id,
-        path: "/props", message: 'SiteSpec 0.2 core prop types require specVersion "0.2".',
-        expected: "0.2", actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+        path: "/props", message: 'SiteSpec 0.2+ core prop types require specVersion "0.2" or newer.',
+        expected: ["0.2", "0.3"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
       });
     }
   }
@@ -326,36 +357,218 @@ function validateSectionPresetDefinitions(project: LoadedProject, diagnostics: D
   }
 }
 
-function pageInstances(project: LoadedProject, page: LoadedProject["pages"][number], diagnostics: Diagnostic[]): Array<{ route: string; params: Record<string, string>; id: string }> {
+function validateContentPageDefinitions(project: LoadedProject, diagnostics: Diagnostic[]): void {
+  for (const page of project.pages) {
+    const content = page.value.content;
+    if (!content) continue;
+    if (content.entry && !project.contentRegistry.has(content.entry)) diagnostics.push({
+      code: "CONTENT_PAGE_COLLECTION_NOT_FOUND", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/content/entry", message: `Content collection "${content.entry}" was not found.`,
+      expected: [...project.contentRegistry.keys()].sort(), actual: content.entry
+    });
+    for (const [queryId, query] of Object.entries(content.queries ?? {})) {
+      if (!project.contentRegistry.has(query.collection)) diagnostics.push({
+        code: "CONTENT_QUERY_COLLECTION_NOT_FOUND", severity: "error", file: page.file, page: page.value.page.id,
+        path: `/content/queries/${queryId}/collection`,
+        message: `Content query "${queryId}" targets unknown collection "${query.collection}".`,
+        expected: [...project.contentRegistry.keys()].sort(), actual: query.collection
+      });
+      for (const filter of query.filter ?? []) {
+        for (const value of Object.values(filter)) {
+          if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+          const ref = (value as { $ref?: unknown }).$ref;
+          if (typeof ref === "string" && ref.startsWith("entry:") && !content.entry) diagnostics.push({
+            code: "CONTENT_QUERY_ENTRY_CONTEXT_REQUIRED", severity: "error", file: page.file, page: page.value.page.id,
+            path: `/content/queries/${queryId}/filter`,
+            message: `Query filter reference "${ref}" requires page.content.entry.`,
+            expected: "content.entry", actual: ref
+          });
+        }
+      }
+      for (const diagnostic of validatePaginationRoute(queryId, query, routeParamNames(page.value.page.route))) {
+        diagnostics.push({ ...diagnostic, file: page.file, page: page.value.page.id });
+      }
+    }
+  }
+}
+
+interface PageInstance {
+  route: string;
+  baseRoute: string;
+  params: Record<string, string>;
+  id: string;
+  contentEntry?: ContentEntry;
+  queryPages?: Record<string, number>;
+}
+
+function contentEntryParams(entry: ContentEntry, names: string[]): { params: Record<string, string>; invalid: string[] } {
+  const record = contentEntryRecord(entry);
+  const params: Record<string, string> = {};
+  const invalid: string[] = [];
+  for (const name of names) {
+    const value = record[name];
+    if (typeof value !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) invalid.push(name);
+    else params[name] = value;
+  }
+  return { params, invalid };
+}
+
+function prepareContentEntryHrefs(project: LoadedProject, diagnostics: Diagnostic[]): void {
+  const primary = new Map<string, LoadedProject["pages"][number]>();
+  for (const page of project.pages) {
+    const collectionId = page.value.content?.entry;
+    if (!collectionId) continue;
+    const existing = primary.get(collectionId);
+    if (existing) {
+      diagnostics.push({
+        code: "CONTENT_ENTRY_PAGE_DUPLICATE", severity: "error", file: page.file, page: page.value.page.id,
+        path: "/content/entry",
+        message: `Collection "${collectionId}" is already materialized by page "${existing.value.page.id}". v0.3 allows one canonical entry page per collection.`,
+        expected: "one entry page per collection", actual: [existing.value.page.id, page.value.page.id]
+      });
+      continue;
+    }
+    primary.set(collectionId, page);
+  }
+
+  for (const [collectionId, page] of primary) {
+    const collection = project.contentRegistry.get(collectionId);
+    if (!collection) continue;
+    const names = routeParamNames(page.value.page.route);
+    for (const entry of collection.entries) {
+      const resolved = contentEntryParams(entry, names);
+      if (resolved.invalid.length === 0 && names.length > 0) entry.href = materializeRoute(page.value.page.route, resolved.params);
+    }
+  }
+}
+
+function expandPaginationInstances(
+  project: LoadedProject,
+  page: LoadedProject["pages"][number],
+  bases: PageInstance[],
+  diagnostics: Diagnostic[]
+): PageInstance[] {
+  const paginated = Object.entries(page.value.content?.queries ?? {}).filter(([, query]) => !!query.paginate);
+  if (paginated.length === 0) return bases;
+  if (paginated.length > 1) {
+    diagnostics.push({
+      code: "CONTENT_PAGINATION_MULTIPLE_QUERIES", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/content/queries",
+      message: "A page may materialize routes from only one paginated content query.",
+      actual: paginated.map(([id]) => id)
+    });
+    return bases;
+  }
+
+  const [queryId, query] = paginated[0]!;
+  const out: PageInstance[] = [];
+  for (const base of bases) {
+    const run = runContentQuery({
+      registry: project.contentRegistry,
+      queryId,
+      query,
+      contextEntry: base.contentEntry,
+      currentPage: 1,
+      firstHref: base.route,
+      params: base.params
+    });
+    out.push({ ...base, queryPages: { [queryId]: 1 } });
+    if (!query.paginate) continue;
+    for (let currentPage = 2; currentPage <= run.totalPages; currentPage++) {
+      const params = { ...base.params, page: String(currentPage) };
+      out.push({
+        route: materializeRoute(query.paginate.route, params),
+        baseRoute: base.route,
+        params,
+        id: `${base.id}--page-${currentPage}`,
+        contentEntry: base.contentEntry,
+        queryPages: { [queryId]: currentPage }
+      });
+    }
+  }
+  return out;
+}
+
+function pageInstances(project: LoadedProject, page: LoadedProject["pages"][number], diagnostics: Diagnostic[]): PageInstance[] {
   const template = page.value.page.route;
   const names = routeParamNames(template);
   const paths = page.value.page.paths;
+  const collectionId = page.value.content?.entry;
+  let bases: PageInstance[] = [];
+
+  if (collectionId) {
+    if (paths) diagnostics.push({
+      code: "CONTENT_ENTRY_PATHS_FORBIDDEN", severity: "error", file: page.file, page: page.value.page.id,
+      path: "/page/paths", message: "page.paths cannot be combined with content.entry; collection entries materialize the route."
+    });
+    if (names.length === 0) {
+      diagnostics.push({
+        code: "CONTENT_ENTRY_DYNAMIC_ROUTE_REQUIRED", severity: "error", file: page.file, page: page.value.page.id,
+        path: "/page/route", message: "A content.entry page requires at least one [param] route segment."
+      });
+      return [];
+    }
+    const collection = project.contentRegistry.get(collectionId);
+    if (!collection) return [];
+    const seenRoutes = new Set<string>();
+    for (const entry of collection.entries) {
+      const resolved = contentEntryParams(entry, names);
+      if (resolved.invalid.length > 0) {
+        diagnostics.push({
+          code: "CONTENT_ROUTE_FIELD_INVALID", severity: "error", file: entry.source, page: page.value.page.id,
+          message: `Entry cannot materialize route "${template}" because route field(s) are missing or invalid: ${resolved.invalid.join(", ")}.`,
+          expected: names, actual: resolved.invalid,
+          details: { collection: collectionId, entry: entry.id }
+        });
+        continue;
+      }
+      const route = materializeRoute(template, resolved.params);
+      if (seenRoutes.has(route)) {
+        diagnostics.push({
+          code: "CONTENT_ROUTE_DUPLICATE", severity: "error", file: entry.source, page: page.value.page.id,
+          message: `Content entries materialize duplicate route "${route}".`, actual: route
+        });
+        continue;
+      }
+      seenRoutes.add(route);
+      entry.href = route;
+      bases.push({
+        route,
+        baseRoute: route,
+        params: resolved.params,
+        id: resolvedPageId(page.value.page.id, names, resolved.params),
+        contentEntry: entry
+      });
+    }
+    return expandPaginationInstances(project, page, bases, diagnostics);
+  }
+
   if (names.length === 0) {
     if (paths) diagnostics.push({
       code: "STATIC_ROUTE_PATHS_FORBIDDEN", severity: "error", file: page.file, page: page.value.page.id,
       path: "/page/paths", message: "page.paths is only valid for dynamic route templates containing [param] segments."
     });
-    return [{ route: template, params: {}, id: page.value.page.id }];
+    bases = [{ route: template, baseRoute: template, params: {}, id: page.value.page.id }];
+    return expandPaginationInstances(project, page, bases, diagnostics);
   }
 
-  if (page.value.specVersion !== "0.2" || project.site?.specVersion !== "0.2") {
+  if (page.value.specVersion === "0.1" || project.site?.specVersion === "0.1") {
     diagnostics.push({
       code: "DYNAMIC_ROUTE_REQUIRES_V02", severity: "error", file: page.file, page: page.value.page.id,
-      path: "/page/route", message: "Dynamic route templates require specVersion \"0.2\".",
-      expected: "0.2", actual: page.value.specVersion
+      path: "/page/route", message: "Dynamic route templates require specVersion \"0.2\" or newer.",
+      expected: ["0.2", "0.3"], actual: page.value.specVersion
     });
     return [];
   }
   if (!paths?.length) {
     diagnostics.push({
       code: "DYNAMIC_ROUTE_PATHS_REQUIRED", severity: "error", file: page.file, page: page.value.page.id,
-      path: "/page/paths", message: `Dynamic route "${template}" requires at least one explicit path parameter set.`,
+      path: "/page/paths", message: `Dynamic route "${template}" requires page.paths or content.entry.`,
       expected: names
     });
     return [];
   }
 
-  const instances: Array<{ route: string; params: Record<string, string>; id: string }> = [];
   const seenRoutes = new Set<string>();
   for (let index = 0; index < paths.length; index++) {
     const params = paths[index]!;
@@ -382,9 +595,9 @@ function pageInstances(project: LoadedProject, page: LoadedProject["pages"][numb
       continue;
     }
     seenRoutes.add(route);
-    instances.push({ route, params, id: resolvedPageId(page.value.page.id, names, params) });
+    bases.push({ route, baseRoute: route, params, id: resolvedPageId(page.value.page.id, names, params) });
   }
-  return instances;
+  return expandPaginationInstances(project, page, bases, diagnostics);
 }
 
 function validateInternalLinks(pages: ResolvedPage[], diagnostics: Diagnostic[]): void {
@@ -531,6 +744,8 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
   validateGlobalIdentities(project, diagnostics);
   validateSpecVersions(project, diagnostics);
   validateSectionPresetDefinitions(project, diagnostics);
+  validateContentPageDefinitions(project, diagnostics);
+  prepareContentEntryHrefs(project, diagnostics);
   await validateSiteAssets(project, diagnostics);
   diagnostics.push(...await validateDesign(project.root));
 

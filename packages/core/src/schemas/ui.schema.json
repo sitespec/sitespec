@@ -3,33 +3,71 @@
   "$id": "urn:site-spec:0.2:ui",
   "type": "object",
   "additionalProperties": false,
-  "required": ["specVersion", "ui", "props"],
+  "required": [
+    "specVersion",
+    "ui",
+    "props"
+  ],
   "properties": {
-    "specVersion": { "const": "0.2" },
+    "specVersion": {
+      "enum": [
+        "0.2",
+        "0.3"
+      ]
+    },
     "ui": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "role"],
+      "required": [
+        "id",
+        "role"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "role": { "enum": ["layout", "action", "content", "navigation", "feedback", "media", "typography"] }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "role": {
+          "enum": [
+            "layout",
+            "action",
+            "content",
+            "navigation",
+            "feedback",
+            "media",
+            "typography"
+          ]
+        }
       }
     },
-    "description": { "type": "string", "maxLength": 500 },
+    "description": {
+      "type": "string",
+      "maxLength": 500
+    },
     "variants": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "$ref": "#/$defs/id" }
+      "items": {
+        "$ref": "#/$defs/id"
+      }
     },
-    "props": { "type": "object" },
+    "props": {
+      "type": "object"
+    },
     "runtime": {
       "type": "object",
       "additionalProperties": false,
-      "properties": { "javascript": { "type": "boolean" } }
+      "properties": {
+        "javascript": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    }
   }
 }

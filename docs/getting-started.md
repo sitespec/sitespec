@@ -1,12 +1,10 @@
 # Getting started
 
-This guide creates a standalone SiteSpec website, shows where its source lives, and walks through the basic inspect → edit → validate → build loop.
+This guide creates a SiteSpec v0.3 website and walks through the normal edit → inspect → validate → build workflow.
 
 ## Requirements
 
 Use Node.js 22 or newer and npm.
-
-Check your local versions:
 
 ```bash
 node --version
@@ -15,21 +13,14 @@ npm --version
 
 ## 1. Create a site
 
-Run the official project initializer:
-
 ```bash
 npm create @sitespec@latest acme
-```
-
-Then enter the project:
-
-```bash
 cd acme
 ```
 
-The initializer copies the default SiteSpec template, installs dependencies by default, initializes Git when available, and pins the SiteSpec CLI through the generated lockfile.
+The initializer copies the current starter, installs dependencies by default, initializes Git when available, and pins the SiteSpec CLI through the generated lockfile.
 
-If you need a non-interfering scaffold for automation or testing, the initializer also supports:
+For automation or fixture generation without install/Git side effects:
 
 ```bash
 npm create @sitespec@latest acme -- --no-install --no-git
@@ -41,36 +32,25 @@ npm create @sitespec@latest acme -- --no-install --no-git
 npm run dev
 ```
 
-Development mode resolves the SiteSpec source into the local Astro workspace, validates changes, and uses Astro HMR for the rendered site. Generated `.site/` files are build artifacts; do not edit them manually.
+Development mode resolves the SiteSpec source into the generated Astro workspace, validates changes, and uses Astro HMR for the rendered site.
 
-## 3. Inspect the project contract
+Generated directories are disposable:
 
-SiteSpec exposes the resolved project model as JSON:
-
-```bash
-npm run site -- spec --json
+```text
+.site/   generated SiteSpec/Astro workspace
+dist/    production output
 ```
 
-Useful focused inspections include:
+Do not edit either directory directly.
 
-```bash
-npm run site -- spec design --json
-npm run site -- spec fonts --json
-npm run site -- spec assets --json
-npm run site -- spec ui --json
-npm run site -- spec sections --json
-npm run site -- spec navigation:primary --json
-```
+## 3. Understand the source tree
 
-The default v0.2 starter is intentionally a working composition-model example, so these commands return real data instead of empty placeholder contracts.
-
-## 4. Understand the source tree
-
-The main website-owned sources are:
+The website-owned source is:
 
 ```text
 site.yaml               global site contract
-pages/*.yaml            route and page composition
+pages/*.yaml            routes and page composition
+content/*                typed content collections and entries
 sections/*.yaml         reusable configured section presets
 components/*            public section components
 ui/*                    internal UI primitives
@@ -78,19 +58,130 @@ design/tokens.json      primitive and semantic design tokens
 design/fonts.yaml       local web-font declarations
 shell/*                  user-owned document/site shell
 public/*                 static assets
-content/*                content sources
 ```
 
-`site.yaml`, Page Specs, section presets, and component contracts describe the website. Astro files implement the markup for registered components, UI primitives, and the shell.
+The starter contains a small content-driven blog so the v0.3 content path is visible immediately.
 
-## 5. Edit a page
+## 4. Inspect the project contract
 
-Open `pages/home.yaml`. A page selects registered section components and passes data that must satisfy each component's prop schema.
+Inspect the whole resolved project:
 
-A small example:
+```bash
+npm run site -- spec --json
+```
+
+Useful focused inspections:
+
+```bash
+npm run site -- spec design --json
+npm run site -- spec sections --json
+npm run site -- spec content --json
+npm run site -- spec collection:posts --json
+npm run site -- spec entry:posts/hello-world --json
+npm run site -- spec navigation:primary --json
+```
+
+Inspection is intended for both people and agents. It exposes resolved pages, registered capabilities, content collections, relations, entries, canonical routes, and diagnostics without requiring source-file scraping.
+
+## 5. Edit content
+
+A collection lives under `content/<collection>/` and has a `collection.yaml` manifest.
+
+Example:
 
 ```yaml
-specVersion: "0.2"
+specVersion: "0.3"
+
+collection:
+  id: posts
+
+entry:
+  schema:
+    type: object
+    additionalProperties: false
+    required: [title, description]
+    properties:
+      title: { type: string }
+      description: { type: string }
+```
+
+A Markdown entry uses YAML frontmatter:
+
+```md
+---
+slug: hello-world
+date: 2026-09-06
+status: published
+title: Hello world
+description: First post.
+---
+
+# Hello world
+
+Content lives in Markdown.
+```
+
+SiteSpec validates the entry against the collection schema and exposes Markdown as `entry:body`.
+
+Read [Content](content.md) for relations, queries, filtering, sorting, pagination, draft behavior, and canonical entry links.
+
+## 6. Edit a content-driven page
+
+A detail page binds a dynamic route to a collection:
+
+```yaml
+specVersion: "0.3"
+
+page:
+  id: post
+  route: /blog/[slug]
+  archetype: article
+
+content:
+  entry: posts
+
+seo:
+  title: "{entry.title}"
+  description: "{entry.description}"
+
+sections:
+  - id: article
+    use: article
+    props:
+      title: { $ref: "entry:title" }
+      body: { $ref: "entry:body" }
+```
+
+Each published or draft entry creates a resolved detail route in development. Production rendering omits draft pages.
+
+A listing page can query the same collection:
+
+```yaml
+content:
+  queries:
+    posts:
+      collection: posts
+      sort:
+        - field: date
+          order: desc
+      paginate:
+        size: 10
+        route: /blog/page/[page]
+```
+
+Component props can then consume:
+
+```yaml
+items: { $ref: "query:posts.items" }
+pagination: { $ref: "query:posts.pagination" }
+```
+
+## 7. Edit page composition
+
+Pages select registered section components; they do not contain Astro markup.
+
+```yaml
+specVersion: "0.3"
 
 page:
   id: home
@@ -99,7 +190,6 @@ page:
 
 seo:
   title: Home
-  description: Example SiteSpec home page.
 
 sections:
   - id: intro
@@ -107,64 +197,68 @@ sections:
     props:
       eyebrow: SiteSpec
       title: The specification is the source of truth
-      text: Page composition lives in a validated, inspectable contract.
 
   - id: final-cta
     $ref: section:final-cta
 ```
 
-The page does not contain Astro markup. `use: hero` points to a registered component, while `$ref: section:final-cta` reuses an already configured section preset.
+`use: hero` points to a registered component. `$ref: section:final-cta` reuses a configured section preset.
 
-## 6. Validate before building
-
-Run validation directly:
+## 8. Validate
 
 ```bash
 npm run validate
 ```
 
-For structured diagnostics suitable for agents and tooling:
+For structured diagnostics:
 
 ```bash
 npm run site -- validate --json
 ```
 
-Validation covers the source contract, references, component props, composition rules, assets, design usage, routes, and other deterministic project constraints.
+Validation covers source schemas, content schemas and relations, references, component props, composition rules, assets, design usage, routes, and deterministic project constraints.
 
-## 7. Build and preview
-
-Create the production static output:
+## 9. Build and preview
 
 ```bash
 npm run build
-```
-
-Then preview that build:
-
-```bash
 npm run preview
 ```
 
-`dist/` is generated output and should not be treated as website source.
+The output in `dist/` is static and does not require a SiteSpec or CMS runtime.
 
-## 8. Add controlled building blocks
+## 10. Add controlled building blocks
 
-Create a new public section component:
+Create a public section component:
 
 ```bash
 npm run site -- add component comparison-table
 ```
 
-Create a new internal UI primitive:
+Create an internal UI primitive:
 
 ```bash
 npm run site -- add ui badge
 ```
 
-SiteSpec generates the required contract files and refuses to overwrite an existing registered item.
+SiteSpec creates the required contract files and refuses to overwrite an existing registered item.
+
+## 11. Explore the full example
+
+The repository includes `examples/marketing`, which exercises the broader Content API: posts, authors, categories, tags, relations, filters, sorting, pagination, draft state, and content-driven taxonomy routes.
+
+From the repository root:
+
+```bash
+npm install
+npm run build
+npm run dev -w @sitespec/example-marketing
+```
+
+See [CLI reference](cli.md) for details about running workspace examples and the CLI shim.
 
 ## Next
 
-Read [Core concepts](concepts.md) for the boundaries between Site, Page, section presets, components, UI primitives, design tokens, and the Site Shell.
-
-For an existing v0.1 project, see [Migrating from specVersion 0.1 to 0.2](MIGRATING-0.2.md).
+- [Core concepts](concepts.md)
+- [Content](content.md)
+- [CLI reference](cli.md)

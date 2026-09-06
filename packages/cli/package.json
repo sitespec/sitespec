@@ -3,10 +3,11 @@
   "version": "0.2.2",
   "type": "module",
   "bin": {
-    "sitespec": "./dist/index.js"
+    "sitespec": "./bin/sitespec.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json"

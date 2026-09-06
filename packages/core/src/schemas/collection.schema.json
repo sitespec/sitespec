@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:site-spec:0.3:collection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specVersion", "collection", "entry"],
+  "properties": {
+    "specVersion": { "const": "0.3" },
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/id" } }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema"],
+      "properties": {
+        "schema": { "type": "object" }
+      }
+    },
+    "relations": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/field" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["collection"],
+        "properties": {
+          "collection": { "$ref": "#/$defs/id" },
+          "many": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "field": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$" }
+  }
+}

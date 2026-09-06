@@ -12,7 +12,8 @@
     "specVersion": {
       "enum": [
         "0.1",
-        "0.2"
+        "0.2",
+        "0.3"
       ]
     },
     "page": {
@@ -121,6 +122,26 @@
           }
         ]
       }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "entry": {
+          "$ref": "#/$defs/id"
+        },
+        "queries": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/contentQuery"
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -175,6 +196,151 @@
         "$ref": {
           "type": "string",
           "pattern": "^section:[a-z][a-z0-9-]*(?:/[a-z][a-z0-9-]*)*$"
+        }
+      }
+    },
+    "contentValue": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "$ref"
+          ],
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "pattern": "^entry:[A-Za-z_][A-Za-z0-9_.-]*$"
+            }
+          }
+        }
+      ]
+    },
+    "contentFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+        },
+        "eq": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "ne": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "in": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "contains": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "gt": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "gte": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "lt": {
+          "$ref": "#/$defs/contentValue"
+        },
+        "lte": {
+          "$ref": "#/$defs/contentValue"
+        }
+      },
+      "minProperties": 2,
+      "maxProperties": 2
+    },
+    "contentQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection"
+      ],
+      "properties": {
+        "collection": {
+          "$ref": "#/$defs/id"
+        },
+        "filter": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentFilter"
+          }
+        },
+        "sort": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+              },
+              "order": {
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            }
+          }
+        },
+        "paginate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size",
+            "route"
+          ],
+          "properties": {
+            "size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "route": {
+              "$ref": "#/$defs/route"
+            }
+          }
         }
       }
     }

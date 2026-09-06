@@ -1,0 +1,11 @@
+specVersion: "0.3"
+collection:
+  id: tags
+entry:
+  schema:
+    type: object
+    additionalProperties: false
+    required: [name, description]
+    properties:
+      name: { type: string }
+      description: { type: string }

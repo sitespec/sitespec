@@ -1,0 +1,25 @@
+specVersion: "0.3"
+page:
+  id: post
+  route: /blog/[slug]
+  archetype: article
+
+content:
+  entry: posts
+
+seo:
+  title: "{entry.title}"
+  description: "{entry.description}"
+
+sections:
+  - id: article
+    use: article
+    props:
+      title:
+        $ref: entry:title
+      description:
+        $ref: entry:description
+      date:
+        $ref: entry:date
+      body:
+        $ref: entry:body

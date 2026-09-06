@@ -1,232 +1,319 @@
 # Core concepts
 
-SiteSpec is an executable website contract. It is not a visual page builder, a component gallery, or a replacement syntax for HTML.
+SiteSpec is a contract layer for static websites. The project source declares what the site is, which content exists, which routes are generated, how pages are composed, which design vocabulary is allowed, and which component contracts must be satisfied.
 
-The contract describes what a website is allowed to contain, how pages are composed, which data components accept, how design decisions are referenced, and which routes and global resources exist. The renderer implements that contract as a website.
+The current renderer turns the resolved contract into a static Astro site.
 
 ## One source of truth
 
-A SiteSpec project keeps website decisions in versioned source files that both people and tools can inspect.
+A SiteSpec project keeps website decisions in versioned source files that people, agents, validation, and the renderer can all inspect.
 
-This avoids a required chain such as:
+A separate design-handoff chain is not required:
 
 ```text
-design file → handoff notes → implementation interpretation → website
+design tokens + UI + components + content + Page Specs
+                          ↓
+                  resolved SiteSpec
+                          ↓
+                    static website
 ```
 
-SiteSpec instead allows the executable project to carry the design and composition decisions directly:
+Figma and other design applications remain optional tools. If they are used, the SiteSpec project still owns the executable decisions required to build the site.
+
+## The current project model
+
+Two main flows meet at Page Specs.
+
+Composition and design:
 
 ```text
-design tokens
-    ↓
+semantic design tokens
+        ↓
 UI primitives
-    ↓
+        ↓
 section components
-    ↓
+        ↓
 section presets
-    ↓
+        ↓
 Page Specs
-    ↓
-static website
 ```
 
-Figma and other design applications are therefore optional tools, not a required stage or canonical source. If they are used, the SiteSpec contract still owns the decisions required to build the website.
-
-## The composition model
-
-The main layers are deliberately separate.
+Content:
 
 ```text
-Site
-  ↓
-Page
-  ↓
-Section preset / Section component
-  ↓
-UI primitive
-  ↓
-Semantic design tokens
+typed collections
+        ↓
+entries + relations
+        ↓
+queries / entry binding
+        ↓
+Page Specs
 ```
 
-The Site Shell surrounds the resolved page and consumes the same site-wide design and navigation vocabulary.
+The Site Shell surrounds the resolved page and uses the same site-wide navigation, assets, UI primitives, and semantic design vocabulary.
 
-### Site
+## Site
 
-`site.yaml` owns global information that should not be repeated on individual pages, including:
+`site.yaml` owns information that should not be repeated on individual pages:
 
 - site identity and canonical URL;
 - locale;
 - default SEO values;
-- semantic assets such as favicon and default Open Graph image;
+- semantic assets;
 - named navigation collections.
 
-A page can reference these shared resources instead of copying them.
+Pages and the shell can reference these resources instead of copying them.
 
-### Page
+## Content collections
+
+Typed collections live under `content/<collection>/` and are declared by `collection.yaml`.
+
+A collection owns:
+
+- an entry JSON Schema;
+- Markdown, YAML, or JSON entries;
+- optional generic relations to other collections.
+
+SiteSpec owns entry metadata such as `id`, `slug`, `date`, `status`, Markdown `body`, and resolved canonical `href`.
+
+Authors, categories, tags, brands, clients, documentation sections, and similar concepts are ordinary collections. The core does not need special code for each domain type.
+
+See [Content](content.md) for the full current content contract.
+
+## Page
 
 A Page Spec in `pages/*.yaml` owns a route and its composition.
 
 It decides:
 
-- which registered sections appear;
-- their stable section IDs;
-- variants and themes;
-- validated props or references;
-- page archetype and state;
+- page ID and route;
+- archetype and page state;
 - page-level SEO;
-- explicit path values for deterministic dynamic routes.
+- which registered sections appear;
+- their stable IDs, variants, themes, and props;
+- reusable section references;
+- optional explicit dynamic paths;
+- optional content entry binding;
+- optional named content queries.
 
 A Page Spec does not own arbitrary Astro markup.
 
-### Section component
+## Section component
 
 A registered component under `components/<id>/` is a public page-composition building block.
 
-Its `component.yaml` declares the contract: accepted props, variants, themes, semantics, composition rules, and runtime policy. Its `index.astro` owns the implementation.
+Its `component.yaml` declares accepted props, variants, themes, semantics, composition rules, and runtime policy. Its `index.astro` owns the markup implementation.
 
-This separation lets SiteSpec validate a page before relying on the rendered markup.
+This lets SiteSpec validate the page contract before rendering.
 
-### Section preset
+## Section preset
 
 A section preset under `sections/` stores reusable configured section data.
-
-Instead of duplicating the same component, variant, theme, and props on several pages, a page can reference:
 
 ```yaml
 - id: final-cta
   $ref: section:final-cta
 ```
 
-The preset reuses configuration. The component still owns the rendering contract.
+The preset reuses configuration. The registered component still owns the rendering contract.
 
-### UI primitive
+## UI primitive
 
 UI primitives live under `ui/<id>/` and form the internal design-system layer.
 
-Components and the Site Shell can compose them, but Page Specs cannot use UI primitives directly. This keeps page composition at a stable semantic level instead of exposing every low-level visual building block as public page API.
+Components and the Site Shell can compose them, but Page Specs cannot use UI primitives directly. Page composition therefore stays at a stable semantic level rather than exposing every low-level visual primitive as public page API.
 
-### Design tokens
+## Design tokens and fonts
 
 `design/tokens.json` separates primitive values from semantic aliases.
 
-Primitive tokens hold raw decisions such as concrete spacing or color values. Semantic tokens describe purpose, such as a text color, surface color, or body font. Components and shell code should consume the semantic vocabulary rather than embedding arbitrary raw design values.
+Primitive tokens hold concrete values. Semantic tokens describe purpose: text color, surface color, spacing role, body font, and similar decisions. Components and shell code should consume the semantic vocabulary instead of embedding arbitrary raw values.
 
-`design/fonts.yaml` describes local web fonts. SiteSpec can generate the corresponding `@font-face` declarations while keeping remote font stylesheets outside the contract.
+`design/fonts.yaml` declares local web fonts. SiteSpec generates the corresponding font-face wiring while keeping the font files and design choices in the project source.
 
-### Site Shell
+## Site Shell
 
-`shell/` is user-owned application chrome around page sections: document structure, header, footer, and other global layout concerns.
+`shell/` is the user-owned application chrome around resolved page sections: document structure, header, footer, and other global layout concerns.
 
-The shell can consume site navigation, assets, UI primitives, and semantic design tokens while remaining separate from Page Spec composition.
+The shell can consume site navigation, semantic assets, UI primitives, and design tokens while remaining separate from Page Spec composition.
 
-## References instead of duplication
+## References
 
-SiteSpec uses explicit references when data belongs to another part of the project.
+References connect explicit parts of the project without introducing runtime lookup logic.
 
-Important v0.2 examples include:
+Current examples include:
 
 ```text
 section:final-cta
 navigation:primary
 param:slug
+entry:title
+entry:author
+query:posts.items
+query:posts.pagination
 ```
 
-Core prop types also have stable URNs, for example:
+Core prop types have stable v0.3 URNs, for example:
 
 ```text
-urn:site-spec:0.2:type:navigation
-urn:site-spec:0.2:type:pagination
+urn:site-spec:0.3:type:action
+urn:site-spec:0.3:type:navigation
+urn:site-spec:0.3:type:pagination
 ```
 
-References are resolved before a component receives its final validated props. The goal is deterministic reuse, not runtime indirection.
+References are resolved before final component prop validation.
 
-## Deterministic dynamic routes
+## Static route generation
 
-A dynamic route template does not imply a runtime database lookup.
+SiteSpec supports two explicit sources for dynamic routes.
 
-For example:
+### Declared paths
+
+For non-content dynamic pages, `page.paths` enumerates the static route parameters:
 
 ```yaml
 page:
   id: feature
   route: /features/[slug]
+  archetype: detail
   paths:
     - slug: composition
-    - slug: dynamic-routes
     - slug: agent-protocol
 ```
 
-The project explicitly declares every concrete path that will be generated. Sections can use `param:slug`, and SEO strings can interpolate `{slug}`.
+Sections can consume `param:slug`.
 
-This gives SiteSpec dynamic route composition while preserving static, inspectable output.
+### Content-driven paths
+
+For content detail or taxonomy pages, bind the route to a collection:
+
+```yaml
+page:
+  id: post
+  route: /blog/[slug]
+  archetype: article
+
+content:
+  entry: posts
+```
+
+SiteSpec materializes the route from each entry and makes the current resolved entry available through `entry:` references.
+
+A content query can also generate pagination routes:
+
+```yaml
+paginate:
+  size: 10
+  route: /blog/page/[page]
+```
+
+Page 1 stays at the Page Spec's base route; subsequent pages use the pagination route.
+
+All of these routes are determined during resolution. They do not depend on a runtime database lookup.
+
+## Content queries
+
+Pages can request collection data declaratively with `content.queries`.
+
+The core performs:
+
+- published-entry selection;
+- filtering;
+- deterministic sorting;
+- pagination;
+- relation resolution;
+- canonical entry-link resolution.
+
+The component only receives final data such as `query:posts.items` or `query:posts.pagination`.
+
+Query logic therefore stays in the SiteSpec contract rather than being duplicated inside Astro components.
+
+## Draft state
+
+Pages and entries support `draft` and `published` state.
+
+Draft content remains available for development and inspection. Normal collection queries exclude draft entries, and production rendering omits draft pages.
+
+This keeps preview behavior in the static content model without requiring a CMS runtime.
 
 ## Contracts before implementation
 
-SiteSpec validates both source intent and rendered output.
+SiteSpec validates source intent before rendering and can validate the rendered output afterwards.
 
-At the source level it can validate things such as:
+Source validation includes areas such as:
 
 - document schemas;
+- content entry schemas;
+- content relations;
 - component prop schemas;
-- allowed variants and themes;
-- composition rules;
+- allowed variants, themes, and archetypes;
+- section composition rules;
 - references and internal links;
-- route expansion;
+- route generation and pagination;
 - semantic assets;
 - design-token usage;
 - component runtime policy.
 
-After the static build, rendered HTML can be checked for implementation contracts such as stable section identity and heading semantics.
-
-The point is not to remove implementation code. The point is to make the boundary between declared intent and implementation testable.
+Rendered HTML can then be checked for implementation contracts such as stable section identity and heading semantics.
 
 ## Agent-readable by default
 
-The project model is intentionally inspectable without scraping source files heuristically.
-
-For example:
+The resolved model is inspectable through the CLI:
 
 ```bash
 npm run site -- spec --json
-npm run site -- spec design --json
-npm run site -- spec sections --json
+npm run site -- spec content --json
+npm run site -- spec collection:posts --json
+npm run site -- spec entry:posts/typed-relations --json
 npm run site -- validate --json
 ```
 
-The inspection output exposes the resolved project and agent capabilities, while diagnostics include structured information intended to support repair rather than only human-readable error strings.
+Diagnostics carry structured fields and repair-oriented context instead of only free-form error strings.
 
 Generated projects also include `AGENTS.md` and `CLAUDE.md` so tools can discover the project-local workflow.
 
-## Source versus generated output
+## Core and renderer boundary
 
-The user-owned project source is the contract. Generated directories are disposable results of resolving and building that source.
-
-In particular:
+Content behavior belongs to `@sitespec/core`:
 
 ```text
-.site/   generated SiteSpec/Astro workspace and build metadata
+content files
+    ↓
+collections + schemas
+    ↓
+relations + queries
+    ↓
+routes + refs + final props
+    ↓
+ResolvedSite
+```
+
+`@sitespec/astro` consumes the resolved model and renders static output.
+
+| SiteSpec core owns | Astro implementation owns |
+| --- | --- |
+| collections and entry validation | component markup |
+| relations and content queries | rendering validated props |
+| routes and pagination | generated Astro page modules |
+| page composition | framework implementation inside registered components |
+| semantic tokens and font declarations | CSS consuming those tokens |
+| navigation and semantic assets | rendered shell/header/footer |
+
+There is deliberately no second content-query system inside the renderer.
+
+## Source versus generated output
+
+The user-owned project source is the contract. Generated directories are disposable:
+
+```text
+.site/   generated SiteSpec/Astro workspace and metadata
 dist/    production static output
 ```
 
-Do not manually edit either directory to make a lasting website change. Edit the SiteSpec project source instead.
-
-## SiteSpec and Astro
-
-The current vertical implementation uses `@sitespec/astro` to render resolved SiteSpec projects as static Astro sites.
-
-The boundary is intentional:
-
-| SiteSpec owns | Astro implementation owns |
-| --- | --- |
-| routes and explicit path expansion | generated page modules and static rendering |
-| page composition | component markup |
-| component prop contracts | how validated props become HTML |
-| semantic tokens and font declarations | CSS that consumes those tokens |
-| navigation and semantic assets | rendered header/footer/document markup |
-| composition and runtime rules | framework-level implementation details inside those rules |
-
-SiteSpec is therefore the contract layer; Astro is the current rendering layer.
+Make lasting changes in the SiteSpec source, not in generated files.
 
 ## What to read next
 
-Return to the [documentation index](index.md), or use [Getting started](getting-started.md) to work through the basic project workflow.
+- [Getting started](getting-started.md)
+- [Content](content.md)
+- [CLI reference](cli.md)

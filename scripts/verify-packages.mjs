@@ -48,8 +48,8 @@ for (const { pkg } of loaded) {
 }
 
 const cli = loaded.find(({ pkg }) => pkg.name === "@sitespec/cli")?.pkg;
-if (JSON.stringify(cli?.bin) !== JSON.stringify({ sitespec: "./dist/index.js" })) {
-  throw new Error(`@sitespec/cli: expected binary {\"sitespec\":\"./dist/index.js\"}`);
+if (JSON.stringify(cli?.bin) !== JSON.stringify({ sitespec: "./bin/sitespec.js" })) {
+  throw new Error(`@sitespec/cli: expected binary {\"sitespec\":\"./bin/sitespec.js\"}`);
 }
 const create = loaded.find(({ pkg }) => pkg.name === "@sitespec/create")?.pkg;
 if (JSON.stringify(create?.bin) !== JSON.stringify({ "create-sitespec": "./dist/index.js" })) {

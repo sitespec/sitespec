@@ -1,4 +1,4 @@
-specVersion: "0.2"
+specVersion: "0.3"
 page:
   id: home
   route: /
@@ -6,37 +6,37 @@ page:
 
 seo:
   title: Home
-  description: A compact SiteSpec v0.2 site that demonstrates the composition model end to end.
+  description: A compact SiteSpec v0.3 starter demonstrating composition and typed content end to end.
 
 sections:
   - id: intro
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec 0.2
-      title: The specification is the source of truth
-      text: This starter demonstrates pages, reusable sections, UI primitives, dynamic routes, typed data, local fonts, semantic assets and agent inspection without a separate design handoff.
+      eyebrow: SiteSpec 0.3
+      title: The specification and content are the source of truth
+      text: This starter demonstrates typed Markdown content, content-driven routes and pagination alongside reusable sections, UI primitives, dynamic routes, local fonts, semantic assets and agent inspection.
       primaryAction:
-        label: Explore the v0.2 features
-        href: /features
+        label: Explore the content example
+        href: /blog
 
   - id: features
     use: feature-grid
     props:
-      title: One small site, the complete v0.2 composition model
+      title: One small site, the SiteSpec composition and content model
       items:
+        - title: Typed content
+          text: Markdown entries under content/posts are validated against a collection schema before they can feed pages.
+        - title: Content-driven routes
+          text: pages/post.yaml binds /blog/[slug] to the posts collection, so entries materialize static detail routes automatically.
+        - title: Declarative queries
+          text: The blog listing sorts and paginates posts in Page Spec; Astro components only render the resolved props.
         - title: UI primitives
           text: Section implementations compose formal button and container primitives that Page Spec cannot use directly.
-        - title: Section presets
-          text: The final CTA is configured once and referenced across multiple pages with section:final-cta.
         - title: Dynamic routes
-          text: One /features/[slug] Page Spec expands into three deterministic static routes declared in page.paths.
-        - title: Route parameters
-          text: Dynamic sections read the current slug through param:slug while SEO strings interpolate the same value.
-        - title: Typed pagination
-          text: Three static examples pages pass pagination objects validated by the v0.2 pagination core type.
+          text: The feature example still demonstrates explicit page.paths and param:slug for non-content route expansion.
         - title: Agent protocol
-          text: The CLI exposes capabilities, routes, components, UI primitives, assets, fonts and navigation as inspectable JSON.
+          text: The CLI exposes routes, collections, entries, components, UI primitives, assets, fonts and navigation as inspectable JSON.
 
   - id: explore
     use: navigation-list

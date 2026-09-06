@@ -1,0 +1,53 @@
+specVersion: "0.3"
+component:
+  id: article
+  role: content
+
+description: Render a Markdown content entry as an article.
+
+variants:
+  - default
+
+themes:
+  - default
+
+props:
+  type: object
+  additionalProperties: false
+  required:
+    - title
+    - body
+  properties:
+    title:
+      type: string
+      maxLength: 120
+    description:
+      type: string
+      maxLength: 240
+    date:
+      type: string
+    body:
+      type: object
+      additionalProperties: false
+      required:
+        - format
+        - source
+        - html
+      properties:
+        format:
+          const: markdown
+        source:
+          type: string
+        html:
+          type: string
+
+runtime:
+  javascript: false
+
+rules:
+  allowedArchetypes:
+    - article
+    - detail
+
+semantics:
+  pageHeading: true

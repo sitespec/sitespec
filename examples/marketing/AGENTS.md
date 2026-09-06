@@ -48,7 +48,7 @@ Each primitive owns `ui/<id>/ui.yaml` plus `ui/<id>/index.astro`. UI primitive s
 
 ## Dynamic routes
 
-Site Spec v0.2 supports explicit static expansion of route templates. Define full path parameter sets in `page.paths`:
+Site Spec v0.3 supports explicit static expansion of route templates. Define full path parameter sets in `page.paths`:
 
 ```yaml
 page:
@@ -61,6 +61,20 @@ page:
 ```
 
 Inside section props, the current path value is available with `{ $ref: param:slug }`. SEO title/description/canonical/image strings may use `{slug}` placeholders. Dynamic routes remain deterministic: every production path must be declared in `page.paths`; no network or runtime route discovery is allowed.
+
+## Typed content
+
+SiteSpec v0.3 content lives under `content/<collection>/`. A typed collection has a `collection.yaml` manifest and Markdown, YAML, or JSON entries. Keep content selection in Page Spec rather than in Astro components.
+
+For content work:
+
+1. Inspect `npm run site -- spec content --json` and the relevant `collection:<id>` / `entry:<collection>/<id>`.
+2. Define entry fields in `collection.yaml`; use generic `relations` for authors, categories, tags, brands, or other linked collections.
+3. Bind a detail route with `content.entry` and consume values through `entry:<field>`. Do not also maintain `page.paths` for that route.
+4. Define listing selection under `content.queries`; use declarative filters, sorting, and pagination, then pass `query:<id>.items` / `query:<id>.pagination` to components.
+5. Keep Markdown/content loading, relation resolution, filtering, sorting, and pagination out of Astro implementations. Components render resolved props only.
+6. Use `status: draft` for unpublished entries. Normal content queries include only published entries.
+
 
 ## Adding a section component
 
@@ -86,12 +100,12 @@ The site-wide design language lives in `design/tokens.json`. Before changing vis
 npm run site -- spec design --json
 ```
 
-The v0.2 design model has two layers:
+The v0.3 design model has two layers:
 
 - `primitive` contains literal design decisions such as brand colors, spacing values, typography values, and radii.
 - `semantic` aliases primitive tokens and defines the stable vocabulary used by UI code.
 
-Components and `shell/*.astro` may use semantic CSS variables such as `var(--color-text-default)` and `var(--space-section)`. Do not use `var(--primitive-...)` directly. Do not hardcode reusable colors, spacing, font size/family/line-height, border radius, or box shadows in components or shell. In v0.2, do not use inline `style=`, local CSS custom-property definitions, or imported component/shell stylesheets; keep validated styles in Astro `<style>` blocks.
+Components and `shell/*.astro` may use semantic CSS variables such as `var(--color-text-default)` and `var(--space-section)`. Do not use `var(--primitive-...)` directly. Do not hardcode reusable colors, spacing, font size/family/line-height, border radius, or box shadows in components or shell. In v0.3, do not use inline `style=`, local CSS custom-property definitions, or imported component/shell stylesheets; keep validated styles in Astro `<style>` blocks.
 
 For styling tasks:
 
@@ -104,7 +118,7 @@ For styling tasks:
 
 ## Local web fonts
 
-Local font faces are declared in `design/fonts.yaml`. Font files live under `public/fonts/`. Remote font stylesheets are not part of the v0.2 contract.
+Local font faces are declared in `design/fonts.yaml`. Font files live under `public/fonts/`. Remote font stylesheets are not part of the v0.3 contract.
 
 Before adding or changing a web font:
 
@@ -163,13 +177,13 @@ props:
     $ref: navigation:primary
 ```
 
-The component prop contract should accept `urn:site-spec:0.2:type:navigation`. Prefer the existing `navigation-list` section for simple in-page navigation. Never duplicate a cross-site menu into page YAML or component source. Inspect a collection with `npm run site -- spec navigation:<id> --json`.
+The component prop contract should accept `urn:site-spec:0.3:type:navigation`. Prefer the existing `navigation-list` section for simple in-page navigation. Never duplicate a cross-site menu into page YAML or component source. Inspect a collection with `npm run site -- spec navigation:<id> --json`.
 
 ## Global assets
 
 Site-level semantic assets are declared once in `site.yaml` under `assets` and stored as real files under `public/`.
 
-For Site Spec v0.2:
+For Site Spec v0.3:
 
 - `assets.favicon` is required.
 - `assets.appleTouchIcon` is optional.

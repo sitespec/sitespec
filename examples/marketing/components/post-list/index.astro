@@ -1,0 +1,36 @@
+---
+import Container from "../../ui/container/index.astro";
+interface Author { id: string; name: string; href: string }
+interface PostItem { id: string; title: string; description: string; href: string; date?: string; author: Author }
+interface PostListProps { title?: string; items: PostItem[] }
+interface Props { sectionId: string; variant: string; theme: string; props: PostListProps }
+const { sectionId, variant, theme, props } = Astro.props;
+---
+<section id={sectionId} data-section={sectionId} data-component="post-list" data-variant={variant} data-theme={theme}>
+  <Container>
+    {props.title && <h2>{props.title}</h2>}
+    <div class="list">
+      {props.items.map((item) => (
+        <article>
+          <div class="meta">
+            {item.date && <time datetime={item.date}>{item.date}</time>}
+            <span>by <a href={item.author.href}>{item.author.name}</a></span>
+          </div>
+          <h3><a href={item.href}>{item.title}</a></h3>
+          <p>{item.description}</p>
+        </article>
+      ))}
+    </div>
+  </Container>
+</section>
+<style>
+  section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
+  section[data-theme="muted"] { background: var(--color-surface-muted); }
+  h2 { margin: 0 0 var(--space-stack-xl); font-size: var(--font-size-heading); letter-spacing: -.035em; }
+  .list { display: grid; gap: var(--space-stack-md); }
+  article { padding: var(--space-stack-xl); border: 1px solid var(--color-border-default); border-radius: var(--radius-card); background: var(--color-surface-card); }
+  .meta { display: flex; flex-wrap: wrap; gap: var(--space-stack-sm); margin-bottom: var(--space-stack-sm); color: var(--color-text-muted); font-size: var(--font-size-small); }
+  h3 { margin: 0; font-size: var(--font-size-subheading); }
+  h3 a, .meta a { color: inherit; text-underline-offset: .18em; }
+  p { max-width: var(--size-content); margin: var(--space-stack-sm) 0 0; color: var(--color-text-muted); line-height: var(--font-line-height-body); }
+</style>

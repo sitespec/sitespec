@@ -1,0 +1,39 @@
+specVersion: "0.3"
+page:
+  id: category
+  route: /blog/category/[slug]
+  archetype: listing
+
+content:
+  entry: categories
+  queries:
+    posts:
+      collection: posts
+      filter:
+        - field: categories
+          contains:
+            $ref: entry:id
+      sort:
+        - field: date
+          order: desc
+
+seo:
+  title: "{entry.name}"
+  description: "{entry.description}"
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Category
+      title:
+        $ref: entry:name
+      text:
+        $ref: entry:description
+
+  - id: posts
+    use: post-list
+    props:
+      items:
+        $ref: query:posts.items

@@ -29,8 +29,8 @@ async function write(root: string, path: string, content: string, files: string[
   files.push(path);
 }
 
-function uiManifest(id: string, role: string): string {
-  return `specVersion: "0.2"\n\nui:\n  id: ${id}\n  role: ${role}\n\ndescription: ${JSON.stringify(`${id} UI primitive.`)}\n\nvariants:\n  - default\n\nprops:\n  type: object\n  additionalProperties: false\n  properties: {}\n\nruntime:\n  javascript: false\n`;
+function uiManifest(id: string, role: string, specVersion: "0.2" | "0.3"): string {
+  return `specVersion: "${specVersion}"\n\nui:\n  id: ${id}\n  role: ${role}\n\ndescription: ${JSON.stringify(`${id} UI primitive.`)}\n\nvariants:\n  - default\n\nprops:\n  type: object\n  additionalProperties: false\n  properties: {}\n\nruntime:\n  javascript: false\n`;
 }
 
 function uiAstro(id: string): string {
@@ -45,8 +45,8 @@ export async function addUi(options: AddUiOptions): Promise<AddUiResult> {
   if (!ROLES.has(role)) throw new Error(`Invalid UI role "${role}". Use one of: ${[...ROLES].join(", ")}.`);
   if (!(await fileExists(join(root, "site.yaml")))) throw new Error(`site.yaml was not found in ${root}.`);
   const specVersion = await readProjectSpecVersion(root);
-  if (specVersion !== "0.2") {
-    throw new Error(`UI primitives require specVersion: "0.2". Upgrade site.yaml before running sitespec add ui.`);
+  if (specVersion === "0.1") {
+    throw new Error(`UI primitives require specVersion: "0.2" or newer. Upgrade site.yaml before running sitespec add ui.`);
   }
 
   const dir = join(root, "ui", id);
@@ -58,7 +58,7 @@ export async function addUi(options: AddUiOptions): Promise<AddUiResult> {
   }
 
   const files: string[] = [];
-  await write(root, `ui/${id}/ui.yaml`, uiManifest(id, role), files);
+  await write(root, `ui/${id}/ui.yaml`, uiManifest(id, role, specVersion), files);
   await write(root, `ui/${id}/index.astro`, uiAstro(id), files);
   return { root, id, role, files };
 }

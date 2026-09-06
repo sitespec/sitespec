@@ -1,4 +1,4 @@
-specVersion: "0.2"
+specVersion: "0.3"
 component:
   id: navigation-list
   role: utility
@@ -23,4 +23,4 @@ props:
       type: string
       maxLength: 80
     items:
-      $ref: urn:site-spec:0.2:type:navigation
+      $ref: urn:site-spec:0.3:type:navigation

@@ -1,5 +1,5 @@
 import { join, relative } from "node:path";
-import type { Diagnostic, Origin, RouteParams, SourceNavigation } from "./types.js";
+import type { Diagnostic, Origin, ResolvedContentQuery, RouteParams, SourceNavigation } from "./types.js";
 import { fileExists, listFiles, parseDataFile } from "./fs.js";
 import { escapePointer, nearestStrings } from "./diagnostics.js";
 
@@ -13,6 +13,8 @@ interface RefContext {
   siteFile: string;
   navigation: SourceNavigation;
   params?: RouteParams;
+  entry?: Record<string, unknown>;
+  queries?: Record<string, ResolvedContentQuery>;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -156,6 +158,71 @@ function loadParamRef(ref: string, pointer: string, ctx: RefContext): unknown {
   return params[id];
 }
 
+function valueAtPath(value: unknown, path: string): unknown {
+  if (!path) return value;
+  let current = value;
+  for (const part of path.split(".")) {
+    if (!part) return undefined;
+    if (Array.isArray(current)) {
+      const index = Number(part);
+      current = Number.isInteger(index) ? current[index] : undefined;
+    } else if (isPlainObject(current)) {
+      current = current[part];
+    } else return undefined;
+  }
+  return current;
+}
+
+function loadEntryRef(ref: string, pointer: string, ctx: RefContext): unknown {
+  const path = ref.slice("entry:".length);
+  if (!ctx.entry) {
+    ctx.diagnostics.push({
+      code: "CONTENT_ENTRY_REFERENCE_UNAVAILABLE", severity: "error", file: ctx.pageFile,
+      page: ctx.page, section: ctx.section, path: pointer,
+      message: `Entry reference "${ref}" is only available on a page with content.entry.`,
+      expected: "page.content.entry", actual: ref
+    });
+    return undefined;
+  }
+  const value = valueAtPath(ctx.entry, path);
+  if (value === undefined) {
+    ctx.diagnostics.push({
+      code: "CONTENT_ENTRY_REFERENCE_NOT_FOUND", severity: "error", file: ctx.pageFile,
+      page: ctx.page, section: ctx.section, path: pointer,
+      message: `Entry field "${path}" was not found.`, actual: ref,
+      allowed: Object.keys(ctx.entry).sort()
+    });
+  }
+  return value;
+}
+
+function loadQueryRef(ref: string, pointer: string, ctx: RefContext): unknown {
+  const logical = ref.slice("query:".length);
+  const [id, ...rest] = logical.split(".");
+  const query = id ? ctx.queries?.[id] : undefined;
+  if (!id || !query) {
+    const allowed = Object.keys(ctx.queries ?? {}).sort();
+    ctx.diagnostics.push({
+      code: "CONTENT_QUERY_REFERENCE_NOT_FOUND", severity: "error", file: ctx.pageFile,
+      page: ctx.page, section: ctx.section, path: pointer,
+      message: `Content query "${id ?? logical}" is not available on this page.`,
+      expected: "declared page.content.queries entry", actual: id ?? logical, allowed
+    });
+    return undefined;
+  }
+  const path = rest.join(".");
+  const value = valueAtPath(query, path);
+  if (path && value === undefined) {
+    ctx.diagnostics.push({
+      code: "CONTENT_QUERY_REFERENCE_FIELD_NOT_FOUND", severity: "error", file: ctx.pageFile,
+      page: ctx.page, section: ctx.section, path: pointer,
+      message: `Query reference "${ref}" does not resolve to a value.`, actual: ref,
+      allowed: ["items", "pagination"]
+    });
+  }
+  return value;
+}
+
 export async function resolveRefs(value: unknown, pointer: string, ctx: RefContext): Promise<unknown> {
   if (Array.isArray(value)) {
     return Promise.all(value.map((child, i) => resolveRefs(child, `${pointer}/${i}`, ctx)));
@@ -174,6 +241,8 @@ export async function resolveRefs(value: unknown, pointer: string, ctx: RefConte
     if (value.$ref.startsWith("content:")) return loadContentRef(value.$ref, pointer, ctx);
     if (value.$ref.startsWith("navigation:")) return loadNavigationRef(value.$ref, pointer, ctx);
     if (value.$ref.startsWith("param:")) return loadParamRef(value.$ref, pointer, ctx);
+    if (value.$ref.startsWith("entry:")) return loadEntryRef(value.$ref, pointer, ctx);
+    if (value.$ref.startsWith("query:")) return loadQueryRef(value.$ref, pointer, ctx);
 
     ctx.diagnostics.push({
       code: "REFERENCE_NAMESPACE_UNSUPPORTED",
@@ -182,8 +251,8 @@ export async function resolveRefs(value: unknown, pointer: string, ctx: RefConte
       page: ctx.page,
       section: ctx.section,
       path: pointer,
-      message: `Unsupported reference "${value.$ref}". Supported prop references are content:, navigation:, and param: (for v0.2 dynamic routes).`,
-      expected: "content:<path>, navigation:<collection>, or param:<name>",
+      message: `Unsupported reference "${value.$ref}". Supported prop references are content:, navigation:, param:, entry:, and query:.`,
+      expected: "content:<path>, navigation:<collection>, param:<name>, entry:<field>, or query:<id>.<field>",
       actual: value.$ref
     });
     return undefined;

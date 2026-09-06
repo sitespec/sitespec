@@ -1,0 +1,39 @@
+specVersion: "0.3"
+page:
+  id: author
+  route: /blog/author/[slug]
+  archetype: listing
+
+content:
+  entry: authors
+  queries:
+    posts:
+      collection: posts
+      filter:
+        - field: author
+          eq:
+            $ref: entry:id
+      sort:
+        - field: date
+          order: desc
+
+seo:
+  title: "{entry.name}"
+  description: "{entry.bio}"
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Author
+      title:
+        $ref: entry:name
+      text:
+        $ref: entry:bio
+
+  - id: posts
+    use: post-list
+    props:
+      items:
+        $ref: query:posts.items

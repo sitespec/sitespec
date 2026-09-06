@@ -1,0 +1,40 @@
+specVersion: "0.3"
+page:
+  id: blog
+  route: /blog
+  archetype: listing
+
+content:
+  queries:
+    posts:
+      collection: posts
+      sort:
+        - field: date
+          order: desc
+      paginate:
+        size: 2
+        route: /blog/page/[page]
+
+seo:
+  title: Blog
+  description: Published posts sorted and paginated from the posts collection.
+
+sections:
+  - id: intro
+    use: hero
+    variant: split
+    props:
+      eyebrow: Query example
+      title: Published entries become a static listing
+      text: Draft entries are excluded automatically. Sorting and pagination are resolved by core before rendering.
+
+  - id: posts
+    use: post-list
+    props:
+      items:
+        $ref: query:posts.items
+
+  - id: pagination
+    use: pagination
+    props:
+      $ref: query:posts.pagination
