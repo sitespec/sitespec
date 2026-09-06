@@ -1,5 +1,16 @@
 # @sitespec/astro
 
+## 0.3.0
+
+### Minor Changes
+
+- cbd722e: Add SiteSpec 0.3 typed content collections, Markdown entries, relations, content-driven routes, declarative filtering/sorting/pagination, draft handling, entry/query references, content inspection, and base-path rebasing for rendered Markdown links.
+
+### Patch Changes
+
+- Updated dependencies [cbd722e]
+  - @sitespec/core@0.3.0
+
 ## 0.2.2
 
 ### Patch Changes

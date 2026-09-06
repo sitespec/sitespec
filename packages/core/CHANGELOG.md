@@ -1,5 +1,11 @@
 # @sitespec/core
 
+## 0.3.0
+
+### Minor Changes
+
+- cbd722e: Add SiteSpec 0.3 typed content collections, Markdown entries, relations, content-driven routes, declarative filtering/sorting/pagination, draft handling, entry/query references, content inspection, and base-path rebasing for rendered Markdown links.
+
 ## 0.2.2
 
 No changes in this release.
