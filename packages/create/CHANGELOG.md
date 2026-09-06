@@ -1,5 +1,12 @@
 # @sitespec/create
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [80463a9]
+  - @sitespec/template@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
