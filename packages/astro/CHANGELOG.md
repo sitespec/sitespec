@@ -1,5 +1,14 @@
 # @sitespec/astro
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [b73225f]
+- Updated dependencies [b73225f]
+- Updated dependencies [b73225f]
+  - @sitespec/core@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
