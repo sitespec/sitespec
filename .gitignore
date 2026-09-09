@@ -8,3 +8,5 @@ packages/*/dist/
 dist/
 
 .release/
+.sitespec/audit/
+.sitespec/migration/

@@ -22,6 +22,7 @@ It supports:
 - a production media pipeline with responsive `srcset`, AVIF/WebP generation, intrinsic dimensions, crop/focal-point controls, and image validation;
 - canonical/hreflang, Open Graph/Twitter metadata, JSON-LD, generated social images, sitemap, robots, `llms.txt`, and RSS without project-level Astro configuration;
 - source/output validation and agent inspection through `site spec`;
+- evidence-first existing-site migration: production audit, live DOM segmentation, multi-page Design System analysis, explicit foundation/UI/component/shell review, implementation inference, and non-destructive Design System staging;
 - static Astro build, preview, and GitHub Pages deployment.
 
 Content, relations, queries, routes, and final props are resolved in core. Astro is the rendering layer, not a second content runtime.
@@ -48,6 +49,19 @@ npm run site -- spec design-system --json
 npm run site -- spec content --json
 npm run site -- spec collection:posts --json
 npm run site -- spec entry:posts/hello-world --json
+npm run site -- migrate audit https://example.com/ --json
+npm run site -- migrate segment .sitespec/audit/example.com/home
+# inspector: drag/collapse, name blocks, reload production without losing selections
+npm run site -- migrate design .sitespec/audit/example.com/home .sitespec/audit/example.com/second-page --json
+npm run site -- migrate components review .sitespec/migration/example.com/design
+npm run site -- migrate components contracts .sitespec/migration/example.com/design/component-review.json
+npm run site -- migrate shell contracts .sitespec/migration/example.com/design/component-review.json
+npm run site -- migrate ui review .sitespec/migration/example.com/design
+npm run site -- migrate ui contracts .sitespec/migration/example.com/design/ui-review.json
+npm run site -- migrate foundation review .sitespec/migration/example.com/design
+npm run site -- migrate foundation materialize .sitespec/migration/example.com/design/foundation-review.json
+npm run site -- migrate implementations infer .sitespec/migration/example.com/design
+npm run site -- migrate design-system materialize .sitespec/migration/example.com/design
 ```
 
 A content-driven page can be as small as:
@@ -82,6 +96,7 @@ Entries live under `content/posts/`. SiteSpec validates them, generates concrete
 - [Core concepts](docs/concepts.md)
 - [Design Systems](docs/design-systems.md)
 - [Content](docs/content.md)
+- [Existing-site migration](docs/migration.md)
 - [CLI reference](docs/cli.md)
 - [Documentation index](docs/index.md)
 

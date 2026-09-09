@@ -1044,9 +1044,10 @@ async function validateAstroDesignFile(
       const rawColorProperty = COLOR_PROPERTY.test(property)
         && !value.includes("var(")
         && !["inherit", "initial", "unset", "revert", "currentcolor", "transparent"].includes(value.toLowerCase());
+      const backgroundKeyword = value.toLowerCase();
       const rawBackground = property === "background"
         && !value.includes("var(")
-        && value.toLowerCase() !== "none"
+        && !["none", "inherit", "initial", "unset", "revert", "currentcolor", "transparent"].includes(backgroundKeyword)
         && !/^url\(/i.test(value);
       if (RAW_COLOR.test(value) || NAMED_COLOR.test(value) || rawColorProperty || rawBackground) {
         diagnostics.push(designDiagnostic(

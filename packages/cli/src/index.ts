@@ -13,6 +13,14 @@ import { PreviewError, startPreview } from "./preview.js";
 import { startDev, type DevEvent } from "./dev.js";
 import { deployGitHubPages, GitHubPagesDeployError } from "./deploy-github-pages.js";
 import { installDesignSystem, packDesignSystem } from "./design-system.js";
+import { auditUrl, MigrateAuditError, parseAuditViewports } from "./migrate-audit.js";
+import { designAudits, MigrateDesignError } from "./migrate-design.js";
+import { createFoundationReview, materializeFoundationReview, MigrateFoundationError, type FoundationReviewPolicy } from "./migrate-foundation.js";
+import { createComponentReview, materializeComponentContracts, MigrateComponentsError, type ComponentReviewPolicy } from "./migrate-components.js";
+import { createUiReview, materializeUiContracts, MigrateUiError, type UiReviewPolicy } from "./migrate-ui-contracts.js";
+import { materializeDesignSystemStaging, materializeShellContracts, MigrateDesignSystemError } from "./migrate-design-system.js";
+import { inferImplementations, MigrateImplementationError } from "./migrate-implementations.js";
+import { segmentAudit, MigrateSegmentError } from "./migrate-segment.js";
 
 function printDiagnostics(diagnostics: Diagnostic[]): void {
   for (const diagnostic of diagnostics) {
@@ -228,6 +236,602 @@ designSystemCommand
       const message = error instanceof Error ? error.message : String(error);
       if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: message }, null, 2));
       else console.error(`ERROR DESIGN_SYSTEM_INSTALL_FAILED\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+const migrate = program.command("migrate").description("Audit and migrate an existing website into SiteSpec");
+
+migrate
+  .command("audit")
+  .description("Capture one production page as migration evidence without creating a Design System")
+  .argument("<url>", "public http(s) URL to audit")
+  .option("--root <path>", "base directory for the default .sitespec/audit output", ".")
+  .option("--output <path>", "explicit audit output directory")
+  .option("--browser-path <path>", "Chrome/Chromium executable; alternatively set SITESPEC_CHROME_PATH")
+  .option("--viewports <list>", "comma-separated desktop,tablet,mobile viewport names", "desktop,tablet,mobile")
+  .option("--timeout <ms>", "navigation/browser timeout in milliseconds", (value: string) => Number(value), 30000)
+  .option("--settle <ms>", "quiet time after lazy-media scrolling in milliseconds", (value: string) => Number(value), 600)
+  .option("--json", "print machine-readable JSON")
+  .action(async (url: string, options: { root: string; output?: string; browserPath?: string; viewports: string; timeout: number; settle: number; json?: boolean }) => {
+    try {
+      const result = await auditUrl({
+        url,
+        root: resolve(options.root),
+        output: options.output,
+        browserPath: options.browserPath,
+        viewports: parseAuditViewports(options.viewports),
+        timeoutMs: options.timeout,
+        settleMs: options.settle
+      });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, audit: result }, null, 2));
+      } else {
+        console.log("Migration audit captured.");
+        console.log(`  source: ${result.sourceUrl}`);
+        if (result.finalUrl !== result.sourceUrl) console.log(`  final: ${result.finalUrl}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  screenshots: ${result.summary.screenshots}`);
+        console.log(`  sections: ${result.summary.sections}`);
+        console.log(`  section viewport regions: ${result.summary.sectionRegionNodes}`);
+        if (result.summary.manualRegionMatches !== undefined) console.log(`  manual root viewport matches: ${result.summary.manualRegionMatches}`);
+        if (result.summary.manualBoundaryGroups !== undefined) console.log(`  manual group boundary matches: ${result.summary.manualBoundaryGroups}`);
+        console.log(`  layout nodes: ${result.summary.layoutNodes}`);
+        console.log(`  media: ${result.summary.media}`);
+        console.log(`  leaf UI observations: ${result.summary.uiElements}`);
+        console.log(`  visible elements: ${result.summary.visibleElements}`);
+        console.log(`  design inventory: ${result.summary.colors} colors, ${result.summary.typography} typography styles, ${result.summary.radii} radii`);
+        console.log("\nNext:");
+        console.log(`  inspect ${resolve(result.output, "audit.json")}`);
+        console.log("  audit a second representative page before extracting shared Design System rules");
+      }
+    } catch (error) {
+      const code = error instanceof MigrateAuditError ? error.code : "MIGRATE_AUDIT_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateAuditError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else {
+        console.error(`ERROR ${code}\n  ${message}`);
+        if (details?.browserPath) console.error(`  browser: ${String(details.browserPath)}`);
+      }
+      process.exitCode = 2;
+    }
+  });
+
+
+migrate
+  .command("segment")
+  .description("Select human-confirmed production DOM regions in a live Chrome session")
+  .argument("<audit>", "completed migrate audit directory (or audit.json file)")
+  .option("--root <path>", "base directory for the audit path", ".")
+  .option("--browser-path <path>", "Chrome/Chromium executable; alternatively set SITESPEC_CHROME_PATH")
+  .option("--timeout <ms>", "production navigation/browser startup timeout in milliseconds", (value: string) => Number(value), 30000)
+  .option("--json", "print machine-readable JSON after Save & finish")
+  .action(async (audit: string, options: { root: string; browserPath?: string; timeout: number; json?: boolean }) => {
+    try {
+      const result = await segmentAudit({
+        audit,
+        root: resolve(options.root),
+        browserPath: options.browserPath,
+        timeoutMs: options.timeout,
+        onReady: url => {
+          const message = `Live production DOM picker: ${url}`;
+          if (options.json) console.error(message);
+          else {
+            console.log(message);
+            console.log("  Inspect mode: hover/click a DOM root; use arrows for parent/child/siblings; Add/update immediately resumes hover inspection");
+            console.log("  Add root to block (G) groups sibling DOM roots into one logical block; long block lists scroll independently");
+            console.log("  Drag/collapse the inspector as needed; Reload restores grouped selections; P toggles Interact mode");
+            console.log("  Save & finish writes segments.json");
+          }
+        }
+      });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, segmentation: result }, null, 2));
+      } else {
+        console.log("Live DOM segmentation saved.");
+        console.log(`  source: ${result.observedUrl}`);
+        console.log(`  audit: ${result.audit}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  logical DOM blocks: ${result.summary.segments} (${result.summary.sections} sections, ${result.summary.ignored} ignored)`);
+        console.log(`  shell: header=${result.summary.header ? "yes" : "no"}, footer=${result.summary.footer ? "yes" : "no"}`);
+        console.log("\nNext:");
+        console.log("  segment the second representative audit, then run migrate design again");
+      }
+    } catch (error) {
+      const code = error instanceof MigrateSegmentError ? error.code : "MIGRATE_SEGMENT_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateSegmentError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+migrate
+  .command("design")
+  .description("Analyze two or more migration audits and propose shared Design System evidence without generating source")
+  .argument("<audits...>", "completed migrate audit directories (or audit.json files) from the same site")
+  .option("--root <path>", "base directory for audit paths and default .sitespec/migration output", ".")
+  .option("--output <path>", "explicit design analysis output directory")
+  .option("--json", "print machine-readable JSON")
+  .action(async (audits: string[], options: { root: string; output?: string; json?: boolean }) => {
+    try {
+      const result = await designAudits({ audits, root: resolve(options.root), output: options.output });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, design: result }, null, 2));
+      } else {
+        console.log("Migration design analysis complete.");
+        console.log(`  site: ${result.site}`);
+        console.log(`  pages: ${result.summary.pages}`);
+        console.log(`  manual segmentation: ${result.summary.manualSegmentPages}/${result.summary.pages} pages`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  foundations: ${result.summary.foundationValues} observed values`);
+        console.log(`  normalization: ${result.summary.tokenNormalization.rawEvidenceValues} raw -> ${result.summary.tokenNormalization.normalizedEvidenceGroups} groups (${result.summary.tokenNormalization.rejectedEvidenceValues} rejected, ${result.summary.tokenNormalization.mergedEvidenceValues} merged)`);
+        console.log(`  token candidates: ${result.summary.primitiveTokenCandidates} primitive, ${result.summary.semanticTokenCandidates} semantic, ${result.summary.typographyCandidates} typography roles`);
+        console.log(`  foundation proposal: ${result.summary.foundationProposal.corePrimitiveTokens}/${result.summary.foundationProposal.primitiveTokens} core primitives, ${result.summary.foundationProposal.semanticRoles} semantic roles, ${result.summary.foundationProposal.typographyRoles} typography roles, ${result.summary.foundationProposal.unresolved} unresolved decisions`);
+        console.log(`  section rhythm: ${result.summary.sectionRhythm.status}${result.summary.sectionRhythm.recommended ? ` (${result.summary.sectionRhythm.recommended}, confidence ${result.summary.sectionRhythm.confidence})` : ` (${result.summary.sectionRhythm.candidates} candidates)`}`);
+        console.log(`  section clusters: ${result.summary.sectionClusters} (${result.summary.clusteredSections} clustered, ${result.summary.unclusteredSections} unclustered)`);
+        console.log(`  component families: ${result.summary.componentFamilies.total} (${result.summary.componentFamilies.core} core, ${result.summary.componentFamilies.supporting} supporting, ${result.summary.componentFamilies.local} local; ${result.summary.componentFamilies.variants} variants)`);
+        console.log(`  leaf UI families: ${result.summary.uiFamilies.total} (${result.summary.uiFamilies.core} core, ${result.summary.uiFamilies.supporting} supporting, ${result.summary.uiFamilies.local} local; ${result.summary.uiFamilies.observed} observations)`);
+        console.log(`  shell candidates: ${result.summary.shellCandidates}`);
+        console.log(`  media roles: ${result.summary.mediaRoleCandidates}`);
+        console.log("\nNext:");
+        console.log(`  review ${resolve(result.output, "foundations.json")}`);
+        console.log(`  review ${resolve(result.output, "token-candidates.json")}`);
+        console.log(`  review ${resolve(result.output, "section-rhythm.json")} for inferred vertical section rhythm`);
+        console.log(`  review ${resolve(result.output, "foundation-proposal.json")} as the proposed scale/foundation model`);
+        console.log(`  compare ${resolve(result.output, "section-clusters.json")} with the source section screenshots`);
+        console.log(`  review ${resolve(result.output, "component-families.json")} as the proposed component architecture`);
+        console.log(`  review ${resolve(result.output, "ui-families.json")} as direct leaf UI evidence`);
+        console.log(`  npm run site -- migrate foundation review ${JSON.stringify(result.output)}`);
+        console.log(`  npm run site -- migrate components review ${JSON.stringify(result.output)}`);
+        console.log(`  npm run site -- migrate ui review ${JSON.stringify(result.output)}`);
+      }
+    } catch (error) {
+      const code = error instanceof MigrateDesignError ? error.code : "MIGRATE_DESIGN_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateDesignError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+const migrateShell = migrate.command("shell").description("Propose reviewed shell-pack contracts from accepted shell families");
+
+migrateShell
+  .command("contracts")
+  .description("Create a shell-pack contract proposal from accepted shell family decisions")
+  .argument("<review>", "component-review.json or its analysis directory")
+  .option("--root <path>", "base directory for review/output paths", ".")
+  .option("--output <path>", "shell contract JSON path; defaults beside component-review.json")
+  .option("--json", "print machine-readable JSON")
+  .action(async (review: string, options: { root: string; output?: string; json?: boolean }) => {
+    try {
+      const result = await materializeShellContracts({ review, root: resolve(options.root), output: options.output });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, shellContracts: result }, null, 2));
+      } else {
+        console.log("Shell contract proposal ready.");
+        console.log(`  site: ${result.site}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  packs: ${result.summary.packs}`);
+        console.log(`  regions: ${result.summary.headerRegions} header, ${result.summary.footerRegions} footer, ${result.summary.otherRegions} other`);
+        if (result.blockers.length) {
+          console.log("  blockers:");
+          result.blockers.forEach(item => console.log(`    - ${item}`));
+        }
+        if (result.warnings.length) {
+          console.log("  warnings:");
+          result.warnings.forEach(item => console.log(`    - ${item}`));
+        }
+        console.log("\nNext:");
+        console.log(`  review ${result.output}`);
+        console.log(`  npm run site -- migrate implementations infer ${JSON.stringify(resolve(result.output, ".."))}`);
+      }
+      if (result.status === "blocked") process.exitCode = 1;
+    } catch (error) {
+      const code = error instanceof MigrateDesignSystemError ? error.code : "MIGRATE_SHELL_CONTRACTS_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateDesignSystemError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+const migrateImplementations = migrate.command("implementations").description("Infer runnable Astro implementations from accepted migration contracts and DOM/style evidence");
+
+migrateImplementations
+  .command("infer")
+  .description("Generate Astro implementations plus semantic token extensions from accepted contracts and audit evidence")
+  .argument("<analysis>", "migrate design output directory")
+  .option("--root <path>", "base directory for analysis/audit/output paths", ".")
+  .option("--output <path>", "implementation preview directory; defaults to <analysis>/implementation-preview")
+  .option("--json", "print machine-readable JSON")
+  .action(async (analysis: string, options: { root: string; output?: string; json?: boolean }) => {
+    try {
+      const result = await inferImplementations({ analysis, root: resolve(options.root), output: options.output });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: result.status !== "blocked", implementationInference: result }, null, 2));
+      } else {
+        console.log(`Implementation inference ${result.status}.`);
+        console.log(`  site: ${result.site}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  report: ${result.report}`);
+        console.log(`  implementations: ${result.summary.uiImplementations} UI, ${result.summary.sectionImplementations} sections, ${result.summary.shellImplementations} shell files`);
+        console.log(`  semantic token extensions: ${result.summary.semanticTokenExtensions}`);
+        console.log(`  style decisions: ${result.summary.evidenceBackedStyles} evidence-backed, ${result.summary.fallbackStyles} conservative fallbacks`);
+        if (result.blockers.length) {
+          console.log("  blockers:");
+          result.blockers.forEach(item => console.log(`    - ${item}`));
+        }
+        if (result.warnings.length) {
+          console.log("  warnings:");
+          result.warnings.forEach(item => console.log(`    - ${item}`));
+        }
+        console.log("\nNext:");
+        console.log(`  inspect ${result.report}`);
+        console.log(`  npm run site -- migrate design-system materialize ${JSON.stringify(resolve(result.report, ".."))}`);
+      }
+      if (result.status === "blocked") process.exitCode = 1;
+    } catch (error) {
+      const code = error instanceof MigrateImplementationError ? error.code : "MIGRATE_IMPLEMENTATIONS_INFER_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateImplementationError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+const migrateDesignSystem = migrate.command("design-system").description("Stage reviewed migration contracts as a concrete Design System library");
+
+migrateDesignSystem
+  .command("materialize")
+  .description("Assemble accepted foundation/contracts and, when available, inferred Astro implementations into a Design System staging directory")
+  .argument("<analysis>", "migrate design output directory")
+  .option("--root <path>", "base directory for analysis/output paths", ".")
+  .option("--output <path>", "staging directory; defaults to <analysis>/design-system-staging")
+  .option("--id <id>", "Design System id; defaults from the audited host")
+  .option("--name <name>", "Design System name")
+  .option("--version <version>", "Design System version", "0.1.0-migration")
+  .option("--json", "print machine-readable JSON")
+  .action(async (analysis: string, options: { root: string; output?: string; id?: string; name?: string; version: string; json?: boolean }) => {
+    try {
+      const result = await materializeDesignSystemStaging({
+        analysis,
+        root: resolve(options.root),
+        output: options.output,
+        id: options.id,
+        name: options.name,
+        version: options.version
+      });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, designSystemMaterialization: result }, null, 2));
+      } else {
+        console.log(`Design System ${result.phase} ${result.status}.`);
+        console.log(`  site: ${result.site}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  report: ${result.report}`);
+        console.log(`  foundation: ${result.summary.primitiveTokens ?? "?"} primitive, ${result.summary.semanticTokens ?? "?"} semantic (${result.summary.provisionalTokens ?? 0} provisional)`);
+        console.log(`  library: ${result.summary.uiContracts} UI, ${result.summary.sectionContracts} sections, ${result.summary.shellPacks} shell pack(s)`);
+        console.log(`  implementation blockers: ${result.summary.implementationBlockers}; font blockers: ${result.summary.fontBlockers}`);
+        if (result.blockers.length) {
+          console.log("  blockers:");
+          result.blockers.forEach(item => console.log(`    - ${item}`));
+        }
+        if (result.warnings.length) {
+          console.log("  warnings:");
+          result.warnings.forEach(item => console.log(`    - ${item}`));
+        }
+        console.log("\nNext:");
+        console.log(`  inspect ${result.report}`);
+        if (result.phase === "contract-staging") {
+          console.log(`  npm run site -- migrate implementations infer ${JSON.stringify(resolve(result.report, ".."))}`);
+          console.log("  then re-run design-system materialize to copy and lint the inferred Astro implementations");
+        } else {
+          console.log("  review the staged Astro implementations; local font binaries and unobserved interactive states remain fidelity follow-up");
+        }
+      }
+      if (result.status === "blocked") process.exitCode = 1;
+    } catch (error) {
+      const code = error instanceof MigrateDesignSystemError ? error.code : "MIGRATE_DESIGN_SYSTEM_MATERIALIZE_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateDesignSystemError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+const migrateUi = migrate.command("ui").description("Review and propose leaf UI primitive contracts from direct audit evidence");
+
+migrateUi
+  .command("review")
+  .description("Create an explicit accept/reject/pending review artifact from ui-families.json")
+  .argument("<analysis>", "migrate design output directory or ui-families.json")
+  .option("--root <path>", "base directory for analysis and output paths", ".")
+  .option("--output <path>", "review JSON path; defaults beside ui-families.json")
+  .option("--policy <policy>", "initial decisions: conservative, manual, or all", "conservative")
+  .option("--force", "replace an existing review template")
+  .option("--json", "print machine-readable JSON")
+  .action(async (analysis: string, options: { root: string; output?: string; policy: string; force?: boolean; json?: boolean }) => {
+    try {
+      if (!( ["conservative", "manual", "all"] as string[]).includes(options.policy)) {
+        throw new MigrateUiError("MIGRATE_UI_POLICY_INVALID", `Unknown review policy "${options.policy}".`, { allowed: ["conservative", "manual", "all"] });
+      }
+      const result = await createUiReview({
+        analysis,
+        root: resolve(options.root),
+        output: options.output,
+        policy: options.policy as UiReviewPolicy,
+        force: options.force
+      });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, uiReview: result }, null, 2));
+      } else {
+        console.log("Leaf UI review created.");
+        console.log(`  site: ${result.site}`);
+        console.log(`  policy: ${result.policy}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  families: ${result.summary.families.accept} accepted, ${result.summary.families.pending} pending, ${result.summary.families.reject} rejected`);
+        console.log(`  variants: ${result.summary.variants.accept} accepted, ${result.summary.variants.pending} pending, ${result.summary.variants.reject} rejected`);
+        console.log(`  auto-eligible: ${result.summary.autoEligible}; explicit-review boundaries: ${result.summary.reviewRequired}`);
+        console.log("\nNext:");
+        console.log(`  review ${result.output}`);
+        console.log("  candidate surfaces and form-control role gaps stay pending under conservative policy; accepting them is an explicit architecture decision");
+        console.log(`  npm run site -- migrate ui contracts ${JSON.stringify(result.output)}`);
+      }
+    } catch (error) {
+      const code = error instanceof MigrateUiError ? error.code : "MIGRATE_UI_REVIEW_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateUiError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+migrateUi
+  .command("contracts")
+  .description("Generate reviewable SiteSpec ui.yaml proposals for accepted leaf UI families")
+  .argument("<review>", "ui-review.json or its containing directory")
+  .option("--root <path>", "base directory for review and output paths", ".")
+  .option("--output <path>", "proposal directory; defaults to ui-contracts beside the review")
+  .option("--json", "print machine-readable JSON")
+  .action(async (review: string, options: { root: string; output?: string; json?: boolean }) => {
+    try {
+      const result = await materializeUiContracts({ review, root: resolve(options.root), output: options.output });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: result.status !== "blocked", uiContracts: result }, null, 2));
+      } else {
+        console.log(`UI contract proposal ${result.status}.`);
+        console.log(`  site: ${result.site}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  report: ${result.report}`);
+        console.log(`  ui contracts: ${result.summary.uiContracts}`);
+        console.log(`  explicit-review accepted: ${result.summary.reviewRequiredAccepted}`);
+        if (result.blockers.length) {
+          console.log("  blockers:");
+          for (const blocker of result.blockers) console.log(`    - ${blocker}`);
+        }
+        if (result.warnings.length) {
+          console.log("  warnings:");
+          for (const warning of result.warnings) console.log(`    - ${warning}`);
+        }
+        console.log("\nNext:");
+        console.log(`  inspect ${result.report}`);
+        console.log("  review generated ui.yaml proposals; Astro implementations and interactive-state styling are intentionally not generated yet");
+      }
+      if (result.status === "blocked") process.exitCode = 1;
+    } catch (error) {
+      const code = error instanceof MigrateUiError ? error.code : "MIGRATE_UI_CONTRACTS_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateUiError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+const migrateComponents = migrate.command("components").description("Review inferred shell/section component families without generating component source");
+
+migrateComponents
+  .command("review")
+  .description("Create an explicit accept/reject/pending review artifact from component-families.json")
+  .argument("<analysis>", "migrate design output directory or component-families.json")
+  .option("--root <path>", "base directory for analysis and output paths", ".")
+  .option("--output <path>", "review JSON path; defaults beside component-families.json")
+  .option("--policy <policy>", "initial decisions: conservative, manual, or all", "conservative")
+  .option("--force", "replace an existing review template")
+  .option("--json", "print machine-readable JSON")
+  .action(async (analysis: string, options: { root: string; output?: string; policy: string; force?: boolean; json?: boolean }) => {
+    try {
+      if (!(["conservative", "manual", "all"] as string[]).includes(options.policy)) {
+        throw new MigrateComponentsError("MIGRATE_COMPONENTS_POLICY_INVALID", `Unknown review policy "${options.policy}".`, { allowed: ["conservative", "manual", "all"] });
+      }
+      const result = await createComponentReview({
+        analysis,
+        root: resolve(options.root),
+        output: options.output,
+        policy: options.policy as ComponentReviewPolicy,
+        force: options.force
+      });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, componentReview: result }, null, 2));
+      } else {
+        console.log("Component-family review created.");
+        console.log(`  site: ${result.site}`);
+        console.log(`  policy: ${result.policy}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  families: ${result.summary.families.accept} accepted, ${result.summary.families.pending} pending, ${result.summary.families.reject} rejected`);
+        console.log(`  variants: ${result.summary.variants.accept} accepted, ${result.summary.variants.pending} pending, ${result.summary.variants.reject} rejected`);
+        console.log(`  shell: ${result.summary.shell.accept} accepted, ${result.summary.shell.pending} pending`);
+        console.log(`  sections: ${result.summary.section.accept} accepted, ${result.summary.section.pending} pending`);
+        console.log("\nNext:");
+        console.log(`  review ${result.output}`);
+        console.log("  rename componentId/variants where needed; keep one-off local families pending until another page confirms reuse");
+        console.log(`  npm run site -- migrate components contracts ${JSON.stringify(result.output)}`);
+        if (result.summary.shell.accept > 0) console.log(`  npm run site -- migrate shell contracts ${JSON.stringify(result.output)}`);
+        console.log(`  npm run site -- migrate ui review ${JSON.stringify(resolve(result.output, ".."))}`);
+      }
+    } catch (error) {
+      const code = error instanceof MigrateComponentsError ? error.code : "MIGRATE_COMPONENTS_REVIEW_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateComponentsError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+migrateComponents
+  .command("contracts")
+  .description("Generate reviewable SiteSpec component.yaml proposals for accepted section families")
+  .argument("<review>", "component-review.json or its containing directory")
+  .option("--root <path>", "base directory for review and output paths", ".")
+  .option("--output <path>", "proposal directory; defaults to component-contracts beside the review")
+  .option("--json", "print machine-readable JSON")
+  .action(async (review: string, options: { root: string; output?: string; json?: boolean }) => {
+    try {
+      const result = await materializeComponentContracts({ review, root: resolve(options.root), output: options.output });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: result.status !== "blocked", componentContracts: result }, null, 2));
+      } else {
+        console.log(`Component contract proposal ${result.status}.`);
+        console.log(`  site: ${result.site}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  report: ${result.report}`);
+        console.log(`  section contracts: ${result.summary.sectionContracts}`);
+        console.log(`  shell deferred: ${result.summary.shellDeferred}`);
+        if (result.blockers.length) {
+          console.log("  blockers:");
+          for (const blocker of result.blockers) console.log(`    - ${blocker}`);
+        }
+        if (result.warnings.length) {
+          console.log("  warnings:");
+          for (const warning of result.warnings) console.log(`    - ${warning}`);
+        }
+        console.log("\nNext:");
+        console.log(`  inspect ${result.report}`);
+        console.log("  review generated component.yaml proposals; implementations are intentionally not generated yet");
+        if (result.summary.shellDeferred > 0) console.log(`  npm run site -- migrate shell contracts ${JSON.stringify(result.review)}`);
+      }
+      if (result.status === "blocked") process.exitCode = 1;
+    } catch (error) {
+      const code = error instanceof MigrateComponentsError ? error.code : "MIGRATE_COMPONENTS_CONTRACTS_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateComponentsError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+
+const migrateFoundation = migrate.command("foundation").description("Review and materialize an inferred Design System foundation without mutating migration evidence");
+
+migrateFoundation
+  .command("review")
+  .description("Create an explicit accept/reject/pending review artifact from foundation-proposal.json")
+  .argument("<analysis>", "migrate design output directory or foundation-proposal.json")
+  .option("--root <path>", "base directory for analysis and output paths", ".")
+  .option("--output <path>", "review JSON path; defaults beside foundation-proposal.json")
+  .option("--policy <policy>", "initial decisions: conservative, manual, or all", "conservative")
+  .option("--force", "replace an existing review template")
+  .option("--json", "print machine-readable JSON")
+  .action(async (analysis: string, options: { root: string; output?: string; policy: string; force?: boolean; json?: boolean }) => {
+    try {
+      if (!(["conservative", "manual", "all"] as string[]).includes(options.policy)) {
+        throw new MigrateFoundationError("MIGRATE_FOUNDATION_POLICY_INVALID", `Unknown review policy "${options.policy}".`, { allowed: ["conservative", "manual", "all"] });
+      }
+      const result = await createFoundationReview({
+        analysis,
+        root: resolve(options.root),
+        output: options.output,
+        policy: options.policy as FoundationReviewPolicy,
+        force: options.force
+      });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: true, foundationReview: result }, null, 2));
+      } else {
+        console.log("Foundation review created.");
+        console.log(`  site: ${result.site}`);
+        console.log(`  policy: ${result.policy}`);
+        console.log(`  output: ${result.output}`);
+        console.log(`  primitive: ${result.summary.primitive.accept} accepted, ${result.summary.primitive.pending} pending, ${result.summary.primitive.reject} rejected`);
+        console.log(`  semantic: ${result.summary.semantic.accept} accepted, ${result.summary.semantic.pending} pending, ${result.summary.semantic.reject} rejected`);
+        console.log(`  typography: ${result.summary.typography.accept} accepted, ${result.summary.typography.pending} pending, ${result.summary.typography.reject} rejected`);
+        console.log(`  blocking layout decisions: ${result.summary.blocking.length ? result.summary.blocking.join(", ") : "none"}`);
+        console.log(`  provisional layout decisions: ${result.summary.provisional.length ? result.summary.provisional.join(", ") : "none"}`);
+        console.log("\nNext:");
+        console.log(`  review ${result.output}`);
+        console.log("  accept/reject supporting tokens; unresolved required layout values may remain explicitly provisional when backed by the current target Design System");
+        console.log(`  npm run site -- migrate foundation materialize ${JSON.stringify(result.output)}`);
+      }
+    } catch (error) {
+      const code = error instanceof MigrateFoundationError ? error.code : "MIGRATE_FOUNDATION_REVIEW_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateFoundationError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else console.error(`ERROR ${code}\n  ${message}`);
+      process.exitCode = 2;
+    }
+  });
+
+migrateFoundation
+  .command("materialize")
+  .description("Materialize accepted decisions plus explicit provisional compatibility fallbacks into token JSON; optionally apply it to a SiteSpec project")
+  .argument("<review>", "foundation-review.json or its containing directory")
+  .option("--root <path>", "base/target SiteSpec project root", ".")
+  .option("--output <path>", "generated token preview; defaults to foundation-tokens.json beside the review")
+  .option("--apply", "write the ready preview to the target Design System token source")
+  .option("--replace", "allow --apply to replace an existing canonical token source")
+  .option("--json", "print machine-readable JSON")
+  .action(async (review: string, options: { root: string; output?: string; apply?: boolean; replace?: boolean; json?: boolean }) => {
+    try {
+      const result = await materializeFoundationReview({ review, root: resolve(options.root), output: options.output, apply: options.apply, replace: options.replace });
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.5", success: result.status === "ready", foundation: result }, null, 2));
+      } else {
+        console.log(`Foundation token materialization ${result.status}${result.status === "ready" && result.quality === "provisional" ? " (provisional)" : ""}.`);
+        console.log(`  preview: ${result.output}`);
+        console.log(`  primitive: ${result.summary.primitive} (${result.summary.synthesizedPrimitive} synthesized)`);
+        console.log(`  semantic: ${result.summary.semantic}`);
+        console.log(`  typography roles: ${result.summary.typographyRoles}`);
+        if (result.summary.provisionalTokens) console.log(`  provisional tokens: ${result.summary.provisionalTokens} (${result.summary.carriedSemanticTokens} carried semantic)`);
+        if (result.applied) console.log(`  applied: ${result.applied}`);
+        if (result.blockers.length) {
+          console.log("  blockers:");
+          for (const blocker of result.blockers) console.log(`    - ${blocker}`);
+        }
+        if (result.warnings.length) {
+          console.log("  warnings:");
+          for (const warning of result.warnings) console.log(`    - ${warning}`);
+        }
+        if (result.status === "blocked" && result.hints.length) {
+          console.log("\nNext:");
+          for (const hint of result.hints) console.log(`  - ${hint}`);
+        }
+        if (result.status === "ready" && !result.applied) {
+          console.log("\nNext:");
+          console.log("  inspect the preview, then rerun with --apply --replace when the target Design System is ready");
+        }
+      }
+      if (result.status === "blocked") process.exitCode = 1;
+    } catch (error) {
+      const code = error instanceof MigrateFoundationError ? error.code : "MIGRATE_FOUNDATION_MATERIALIZE_FAILED";
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof MigrateFoundationError ? error.details : undefined;
+      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      else {
+        console.error(`ERROR ${code}\n  ${message}`);
+        const blockers = details?.blockers;
+        if (Array.isArray(blockers)) for (const blocker of blockers) console.error(`  blocker: ${String(blocker)}`);
+        if (details?.preview) console.error(`  preview: ${String(details.preview)}`);
+      }
       process.exitCode = 2;
     }
   });

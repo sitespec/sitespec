@@ -70,6 +70,29 @@ test("design lint rejects raw reusable color and spacing", async () => {
   }
 });
 
+
+test("design lint allows transparent and CSS-wide background keywords", async () => {
+  const { temp, root } = await starter("site-spec-design-transparent-");
+  try {
+    const file = join(root, "components", "cta", "index.astro");
+    const source = await readFile(file, "utf8");
+    await writeFile(
+      file,
+      source.replace("background: var(--color-surface-muted);", "background: transparent;"),
+      "utf8"
+    );
+
+    const result = await validateProject(root);
+    assert.equal(
+      result.diagnostics.some(item => item.code === "DESIGN_RAW_COLOR" && item.file === "components/cta/index.astro"),
+      false,
+      JSON.stringify(result.diagnostics, null, 2)
+    );
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
 test("design lint rejects primitive token usage and unknown semantic tokens", async () => {
   const { temp, root } = await starter("site-spec-design-token-usage-");
   try {

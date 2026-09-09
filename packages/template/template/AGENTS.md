@@ -76,6 +76,108 @@ For content work:
 6. Use `status: draft` for unpublished entries. Normal content queries include only published entries.
 
 
+## Migrating an existing website
+
+Before recreating an existing production website, collect evidence instead of guessing its Design System:
+
+```bash
+npm run site -- migrate audit https://example.com --json
+```
+
+The audit writes generated evidence under `.sitespec/audit/<host>/<route>/`: viewport screenshots, desktop section crops, a DOM snapshot, computed design inventory, media inventory, section candidates, responsive manual-root evidence, and a direct `ui-inventory.json` of visible leaf controls/surfaces. Audit at least two representative pages before extracting shared tokens, UI primitives, patterns, or sections. The audit command does **not** create or normalize Design System source automatically.
+
+Before cross-page analysis, manually confirm the visual regions of each representative audit:
+
+```bash
+npm run site -- migrate segment .sitespec/audit/example.com/home
+```
+
+The command opens the audited production URL in a dedicated Chrome/Chromium session and injects a SiteSpec DOM picker. In Inspect mode, hover/click exact production region roots and use parent/child/sibling navigation to select the right DOM boundary; press `P` for Interact mode when the live site must accept normal clicks. Mark `Header`, `Footer`, `Ignore`, or `Section`, optionally label the region, then Save & finish. `segments.json` stores selectors, DOM fingerprints, geometry, and content/style/structure evidence. `migrate design` prefers completed manual segments over automatic section candidates.
+
+After at least two audits from the same production host, analyze their shared design evidence with:
+
+```bash
+npm run site -- migrate design .sitespec/audit/example.com/home .sitespec/audit/example.com/second-page --json
+```
+
+`migrate design` writes exact cross-page foundations, normalized token/typography candidates, `section-rhythm.json`, `foundation-proposal.json`, cross-page section clusters, `component-families.json`, `ui-families.json`, shell candidates, and media-role proposals under `.sitespec/migration/<host>/design/`. Section rhythm only becomes an automatic `space.section` proposal when section-root top/bottom padding is balanced, reusable across section evidence, vertically dominant in the spacing inventory, and confirmed across audit viewports. Component families are architecture proposals: reviewer-controlled semantic labels win over generic clustering, repeated/cross-page families can become core, and one-off families remain local. Component prop hints record presence ratio, variant coverage, and a conservative required/optional recommendation rather than treating every always-observed value as required API. `ui-families.json` uses direct per-element audit evidence for Button/Link/form-control families; reuse status is separate from materialization eligibility, so Badge/Card and unresolved form-control roles can remain review-required even when they repeat strongly. Interactive visual states are not inferred yet. It does **not** edit `design-system.yaml`, `design/tokens.json`, components, UI primitives, or Page Specs. Treat confidence scores as evidence strength, not automatic approval.
+
+Review inferred shell/section families explicitly with:
+
+```bash
+npm run site -- migrate components review .sitespec/migration/example.com/design --json
+```
+
+The conservative policy accepts only `core` families and their observed variants; `supporting` and one-off `local` families remain pending. `componentId` and variant ids are reviewer-editable canonical names. This review records architecture decisions only and does not generate component source. Re-running `migrate design` preserves `component-review.json`; regenerate it with `migrate components review ... --force` only when previous reviewer edits may be replaced.
+
+Generate reviewable section contracts only after the family review:
+
+```bash
+npm run site -- migrate components contracts .sitespec/migration/example.com/design/component-review.json --json
+```
+
+This writes `component-contracts.json` plus `component-contracts/<id>/component.yaml` previews for accepted **section** families. The review/proposal SHA must still match. Accepted `site-header`/`site-footer` families remain in the shell layer and are reported as deferred shell-pack work instead of being misrepresented as page section components. Contract generation does not create `index.astro`, mutate the section library, or invent JavaScript/theme behavior that static evidence cannot prove.
+
+Propose the reviewed shell pack separately:
+
+```bash
+npm run site -- migrate shell contracts .sitespec/migration/example.com/design/component-review.json --json
+```
+
+This writes `shell-contracts.json` with the expected default shell entry/files and header/footer evidence. It does not fabricate Astro shell source.
+
+Review direct leaf UI families independently with:
+
+```bash
+npm run site -- migrate ui review .sitespec/migration/example.com/design --json
+```
+
+The conservative policy accepts only families that are both `core` and `materialization.eligibility: auto`. A visually repeated Card can therefore remain pending because the semantic boundary still comes from a heuristic. `uiId`, role, and variant ids are reviewer-editable. Re-running `migrate design` preserves `ui-review.json`; a changed proposal makes the review stale by SHA rather than silently applying old decisions.
+
+Generate reviewable leaf UI contracts only after that decision:
+
+```bash
+npm run site -- migrate ui contracts .sitespec/migration/example.com/design/ui-review.json --json
+```
+
+This writes `ui-contracts.json` plus `ui-contracts/<id>/ui.yaml` previews for accepted families. It does not create `index.astro`, mutate the canonical UI library, or invent hover/focus/active state behavior. Explicit acceptance can override a review-required Card/Badge/form-control boundary, but that override remains visible in the report.
+
+Turn the proposed foundation into explicit architecture decisions with:
+
+```bash
+npm run site -- migrate foundation review .sitespec/migration/example.com/design --json
+```
+
+Review `foundation-review.json`: proposed primitives, semantic roles, and typography roles are `accept`, `reject`, or `pending`. Required layout decisions may additionally be `provisional` when migration evidence is unresolved but a safe existing target/default-template value can be preserved explicitly. A high-confidence inferred section rhythm may still be accepted automatically under the conservative policy, including a supporting spacing primitive that is specifically justified by reusable section evidence. Provisional does not mean inferred: it is a compatibility fallback with provenance and must remain distinguishable from accepted evidence. The review is tied to the proposal SHA-256, so stale decisions cannot be silently reused after a new analysis.
+
+If `migrate design` is re-run, SiteSpec preserves existing `foundation-review.json`, `component-review.json`, and `ui-review.json` while replacing generated analysis. Expect those reviews to become stale by SHA; regenerate them with the corresponding `... review ... --force` command only after deciding that the previous reviewer edits may be replaced.
+
+Then materialize accepted decisions plus explicit provisional compatibility fallbacks into a non-destructive preview:
+
+```bash
+npm run site -- migrate foundation materialize .sitespec/migration/example.com/design/foundation-review.json --json
+```
+
+Inspect `foundation-tokens.json` and `foundation-materialization.json`. Provisional tokens carry `$extensions.org.sitespec.migration` provenance and are reported separately from canonical evidence-backed tokens. When a target Design System already exists, semantic tokens needed by its current components/shell may be carried forward provisionally if the migration does not yet replace them; explicit rejects are never restored this way. Materialization remains blocked for required decisions that are truly pending/rejected or invalid. It only replaces canonical `design/tokens.json` when explicitly run with `--apply --replace` and the target Design System layout/font preflight passes.
+
+After foundation/component/UI/shell previews are current, infer implementations explicitly:
+
+```bash
+npm run site -- migrate implementations infer .sitespec/migration/example.com/design --json
+```
+
+Implementation inference is contract-first: accepted `ui.yaml` / `component.yaml` / shell contracts define the public API and file set. Saved production DOM roots, leaf UI observations, and computed styles may shape layout and semantic-token mappings, but production HTML is not copied verbatim. The inference writes migration-owned Astro previews plus additive semantic token extensions; unobserved hover/focus/active behavior, responsive menu state, and local font binaries remain unresolved rather than being fabricated.
+
+Then assemble Design System staging:
+
+```bash
+npm run site -- migrate design-system materialize .sitespec/migration/example.com/design --json
+```
+
+Without an implementation report, staging remains contract-only/partial. With a current report, accepted Astro files are copied, the staged Design System is linted, and the phase becomes `implementation-staging`. Pending families remain excluded. Missing local font binaries are a visual-fidelity follow-up when the foundation font stack already has a safe fallback.
+
+Chrome or Chromium must be installed locally. Use `--browser-path <path>` or `SITESPEC_CHROME_PATH` when automatic detection is not sufficient.
+
 ## Adding a section component
 
 Only add a new section when existing components cannot satisfy the requirement.
