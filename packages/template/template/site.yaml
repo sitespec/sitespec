@@ -1,4 +1,4 @@
-specVersion: "0.5"
+specVersion: "0.7"
 site:
   id: __SITE_ID__
   name: "__SITE_NAME__"

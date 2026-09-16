@@ -1,6 +1,6 @@
 # SiteSpec documentation
 
-This documentation describes the current SiteSpec `specVersion: "0.5"` contract and the workflows supported by the repository today.
+This documentation describes the current SiteSpec `specVersion: "0.7"` contract and the workflows supported by the repository today.
 
 If you are new to SiteSpec, read:
 
@@ -26,6 +26,7 @@ If you are new to SiteSpec, read:
 - [Design Systems](design-systems.md)
 - [Content](content.md)
 - [Media & SEO](media-seo.md)
+- [Google Analytics and HubSpot](integrations.md)
 
 The JSON Schemas in the codebase remain the machine-readable source of truth. Documentation explains how the current contract is intended to be used rather than duplicating every schema constraint.
 

@@ -194,7 +194,7 @@ export async function installDesignSystem(options: InstallDesignSystemOptions): 
   const source = resolve(options.source);
   if (!(await exists(join(root, "site.yaml")))) throw new Error(`site.yaml was not found in ${root}.`);
   const specVersion = await readProjectSpecVersion(root);
-  if (specVersion !== "0.4" && specVersion !== "0.5") throw new Error(`Design System packs require a SiteSpec 0.4+ project; ${root} uses ${specVersion}. Upgrade the project contract first.`);
+  if (!["0.4", "0.5", "0.6", "0.7"].includes(specVersion)) throw new Error(`Design System packs require a SiteSpec 0.4+ project; ${root} uses ${specVersion}. Upgrade the project contract first.`);
 
   const inspection = await inspectDesignSystem(source);
   if (!inspection.valid) throw packError(inspection.diagnostics);

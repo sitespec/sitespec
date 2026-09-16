@@ -760,7 +760,7 @@ export async function inferImplementations(options: InferImplementationsOptions)
 
   const extensionBuilt = buildTokenExtension(tokens.value, leaves, observations);
   await writeTracked(output, "design/extensions.json", `${JSON.stringify(extensionBuilt.extension, null, 2)}\n`, files);
-  await writeTracked(output, "design/fonts.yaml", `specVersion: "0.5"\nfonts: {}\n`, files);
+  await writeTracked(output, "design/fonts.yaml", `specVersion: "0.7"\nfonts: {}\n`, files);
   warnings.push("Roboto Flex is referenced by the inferred foundation but local font binaries are not available in audit evidence. The generated fonts.yaml is intentionally empty, so runtime can fall back to sans-serif until local font assets are supplied.");
 
   for (const contract of ui.value.contracts ?? []) {

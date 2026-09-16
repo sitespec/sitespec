@@ -275,7 +275,7 @@ function resolveSeo(
   const socialHeight = socialConfig?.height ?? 630;
   const explicitOgImage = interpolateContext(source.openGraph?.image, params, contentEntry)
     ?? interpolateContext(source.image, params, contentEntry);
-  const generateSocial = site.specVersion === "0.5"
+  const generateSocial = ["0.5", "0.6", "0.7"].includes(site.specVersion)
     && (source.socialImage?.generate ?? socialConfig?.generate ?? true)
     && !explicitOgImage;
   const generatedSocial = generateSocial

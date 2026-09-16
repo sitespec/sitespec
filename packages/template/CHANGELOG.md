@@ -1,5 +1,11 @@
 # @sitespec/template
 
+## 0.7.0
+
+### Minor Changes
+
+- Upgrade the default starter to the SiteSpec 0.7 contract.
+
 ## 0.6.0
 
 ### Patch Changes

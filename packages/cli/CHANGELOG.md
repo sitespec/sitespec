@@ -1,5 +1,11 @@
 # @sitespec/cli
 
+## 0.7.0
+
+### Minor Changes
+
+- Accept SiteSpec 0.7 projects and expose integration configuration through `site spec integrations`.
+
 ## 0.6.0
 
 ### Minor Changes

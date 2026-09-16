@@ -1,6 +1,6 @@
 import type { ValidateFunction } from "ajv";
 
-export type SpecVersion = "0.1" | "0.2" | "0.3" | "0.4" | "0.5";
+export type SpecVersion = "0.1" | "0.2" | "0.3" | "0.4" | "0.5" | "0.6" | "0.7";
 export type Archetype = "marketing" | "article" | "listing" | "detail" | "legal" | "blank";
 export type PageState = "draft" | "published";
 export type ContentStatus = PageState;
@@ -81,6 +81,11 @@ export interface SourceMediaConfig {
   quality?: { avif?: number; webp?: number; jpeg?: number; png?: number };
 }
 
+export interface SourceIntegrations {
+  googleAnalytics?: { measurementId: string };
+  hubspot?: { portalId: string };
+}
+
 export interface SourceSite {
   specVersion: SpecVersion;
   site: { id: string; name: string; url: string; locale: string };
@@ -89,6 +94,7 @@ export interface SourceSite {
   assets: { favicon: string; appleTouchIcon?: string; defaultOgImage?: string };
   navigation?: SourceNavigation;
   media?: SourceMediaConfig;
+  integrations?: SourceIntegrations;
   seo?: SourceSiteSeo;
   quality?: {
     accessibility?: "AA";
@@ -118,7 +124,7 @@ export interface SourceContentRelation {
 }
 
 export interface CollectionManifest {
-  specVersion: "0.3" | "0.4" | "0.5";
+  specVersion: "0.3" | "0.4" | "0.5" | "0.6" | "0.7";
   collection: { id: string };
   entry: { schema: Record<string, unknown> };
   relations?: Record<string, SourceContentRelation>;
@@ -233,7 +239,7 @@ export interface SourcePage {
 }
 
 export interface SectionPresetManifest {
-  specVersion: "0.2" | "0.3" | "0.4" | "0.5";
+  specVersion: "0.2" | "0.3" | "0.4" | "0.5" | "0.6" | "0.7";
   description?: string;
   section: Omit<SourceSection, "id">;
 }
@@ -255,7 +261,7 @@ export interface ComponentManifest {
 }
 
 export interface UiManifest {
-  specVersion: "0.2" | "0.3" | "0.4" | "0.5";
+  specVersion: "0.2" | "0.3" | "0.4" | "0.5" | "0.6" | "0.7";
   ui: { id: string; role: UiRole };
   description?: string;
   variants?: string[];
@@ -291,7 +297,7 @@ export interface LoadedSectionPreset { file: string; id: string; value: SectionP
 export type DesignSystemExtensionMode = "locked" | "additive";
 
 export interface DesignSystemManifest {
-  specVersion: "0.4" | "0.5";
+  specVersion: "0.4" | "0.5" | "0.6" | "0.7";
   designSystem: {
     id: string;
     name: string;
@@ -464,6 +470,7 @@ export interface ResolvedSite {
     formats: MediaFormat[];
     quality: { avif: number; webp: number; jpeg: number; png: number };
   };
+  integrations: SourceIntegrations;
   seo: {
     siteName: string;
     titleTemplate?: string;

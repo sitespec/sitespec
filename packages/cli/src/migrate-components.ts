@@ -376,9 +376,9 @@ function yamlDocument(value: unknown, indent = 0): string {
 
 function propSchemaForHint(family: ComponentFamilyProposal, hint: ComponentFamilyProposal["contractHints"]["props"][number]): Record<string, unknown> {
   if (hint.kind === "string") return { type: "string" };
-  if (hint.kind === "action") return { $ref: "urn:site-spec:0.5:type:action" };
-  if (hint.kind === "media") return { $ref: "urn:site-spec:0.5:type:image" };
-  if (hint.kind === "navigation") return { $ref: "urn:site-spec:0.5:type:navigation" };
+  if (hint.kind === "action") return { $ref: "urn:site-spec:0.7:type:action" };
+  if (hint.kind === "media") return { $ref: "urn:site-spec:0.7:type:image" };
+  if (hint.kind === "navigation") return { $ref: "urn:site-spec:0.7:type:navigation" };
   if (hint.kind === "items") return { type: "array", items: { type: "object", additionalProperties: true } };
   if (hint.kind === "form") return { type: "object", additionalProperties: true };
   return { type: "object", additionalProperties: true };
@@ -434,7 +434,7 @@ function buildComponentManifest(
   };
   const semantics = family.contractHints.pageHeading ? { pageHeading: true } : undefined;
   const manifest: Record<string, unknown> = {
-    specVersion: "0.5",
+    specVersion: "0.7",
     component: { id: decision.componentId, role },
     description: `Proposed ${decision.componentId} section contract inferred from reviewed migration evidence.`,
     variants,

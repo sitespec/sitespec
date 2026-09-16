@@ -1,6 +1,6 @@
-# SiteSpec v0.5 Marketing Example
+# SiteSpec v0.7 Marketing Example
 
-Executable reference for the complete SiteSpec v0.5 contract.
+Executable reference for the complete SiteSpec v0.7 contract.
 
 Unlike the intentionally compact starter, this example is meant to make the current platform capabilities visible in source and verifiable in generated output:
 

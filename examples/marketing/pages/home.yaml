@@ -1,4 +1,4 @@
-specVersion: "0.5"
+specVersion: "0.7"
 page:
   id: home
   route: /
@@ -17,7 +17,7 @@ content:
 
 seo:
   title: Home
-  description: SiteSpec v0.5 showcase with typed content, Design System, responsive media and generated production SEO.
+  description: SiteSpec v0.7 showcase with typed content, Design System, responsive media and generated production SEO.
   socialImage:
     generate: true
 
@@ -34,7 +34,7 @@ sections:
     use: hero
     variant: split
     props:
-      eyebrow: SiteSpec v0.5
+      eyebrow: SiteSpec v0.7
       title: One specification from content model to production metadata
       text: This example exercises typed content, a portable Design System, responsive AVIF/WebP media, canonical metadata, JSON-LD, social images, hreflang, sitemap, robots, llms.txt and RSS without project-owned Astro configuration.
       primaryAction:

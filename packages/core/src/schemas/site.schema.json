@@ -15,7 +15,9 @@
         "0.2",
         "0.3",
         "0.4",
-        "0.5"
+        "0.5",
+        "0.6",
+      "0.7"
       ]
     },
     "site": {
@@ -96,6 +98,39 @@
       },
       "additionalProperties": {
         "$ref": "urn:site-spec:0.2:type:navigation"
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "googleAnalytics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "measurementId"
+          ],
+          "properties": {
+            "measurementId": {
+              "type": "string",
+              "pattern": "^G-[A-Z0-9]+$"
+            }
+          }
+        },
+        "hubspot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "portalId"
+          ],
+          "properties": {
+            "portalId": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          }
+        }
       }
     },
     "seo": {

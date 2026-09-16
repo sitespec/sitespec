@@ -606,7 +606,7 @@ export async function materializeDesignSystemStaging(options: MaterializeDesignS
   if (!ID_PATTERN.test(designSystemId)) throw new MigrateDesignSystemError("MIGRATE_DESIGN_SYSTEM_ID_INVALID", `Invalid Design System id "${designSystemId}".`, { id: designSystemId });
   const defaultShell = shellPacks[0];
   const manifest = {
-    specVersion: "0.5",
+    specVersion: "0.7",
     designSystem: {
       id: designSystemId,
       name: designSystemName,

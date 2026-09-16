@@ -72,7 +72,7 @@ test("site spec exposes a stable agent protocol", async () => {
       generated: string[];
     };
 
-    assert.equal(agent.protocolVersion, "7");
+    assert.equal(agent.protocolVersion, "8");
     assert.equal(capabilities.existingSiteAudit, true);
     assert.equal(capabilities.existingSiteManualSegmentation, true);
     assert.equal(capabilities.existingSiteDesignAnalysis, true);

@@ -1,7 +1,7 @@
-specVersion: "0.5"
+specVersion: "0.7"
 site:
   id: marketing-example
-  name: "SiteSpec v0.5 Example"
+  name: "SiteSpec v0.7 Example"
   url: https://example.test
   locale: en
 
@@ -39,9 +39,9 @@ navigation:
       href: /blog/category/product
 
 seo:
-  siteName: "SiteSpec v0.5 Example"
-  titleTemplate: "%s — SiteSpec v0.5 Example"
-  defaultDescription: "Executable SiteSpec v0.5 reference for content, Design System, media and SEO."
+  siteName: "SiteSpec v0.7 Example"
+  titleTemplate: "%s — SiteSpec v0.7 Example"
+  defaultDescription: "Executable SiteSpec v0.7 reference for content, Design System, media and SEO."
   sitemap:
     enabled: true
   robots:
@@ -52,12 +52,12 @@ seo:
         disallow: [/preview]
   llms:
     enabled: true
-    description: "Executable SiteSpec v0.5 reference site covering content, Design System, media and SEO."
+    description: "Executable SiteSpec v0.7 reference site covering content, Design System, media and SEO."
   rss:
     enabled: true
     path: /rss.xml
-    title: SiteSpec v0.5 Example
-    description: Published articles from the SiteSpec v0.5 reference site.
+    title: SiteSpec v0.7 Example
+    description: Published articles from the SiteSpec v0.7 reference site.
   socialImages:
     generate: true
     format: png

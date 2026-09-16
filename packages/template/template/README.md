@@ -1,6 +1,6 @@
 # __SITE_NAME__
 
-SiteSpec v0.5 starter and executable contract showcase.
+SiteSpec v0.7 starter and executable contract showcase.
 
 The starter stays deliberately small while demonstrating both composition and content:
 
@@ -12,7 +12,7 @@ The starter stays deliberately small while demonstrating both composition and co
 - reusable section presets in `sections/*`;
 - deterministic non-content dynamic routes with `page.paths` and `param:<name>`;
 - named navigation collections and `navigation:<id>` references;
-- the `urn:site-spec:0.5:type:pagination` core type;
+- the `urn:site-spec:0.7:type:pagination` core type;
 - self-hosted Inter web fonts declared in `design/fonts.yaml`;
 - semantic favicon, Apple touch icon and default Open Graph image assets;
 - responsive local media rendered through generated AVIF/WebP `srcset` derivatives with crop/focal-point controls;

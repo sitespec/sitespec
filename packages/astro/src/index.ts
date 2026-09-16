@@ -227,13 +227,13 @@ export async function validateAstroComponentContracts(options: AstroComponentCon
           message: `Component "${component.id}" contains an <img> without an alt attribute.`
         });
       }
-      if (component.manifest.specVersion === "0.5" && (!/\bwidth\s*=/.test(tag) || !/\bheight\s*=/.test(tag))) {
+      if (["0.5", "0.6", "0.7"].includes(component.manifest.specVersion) && (!/\bwidth\s*=/.test(tag) || !/\bheight\s*=/.test(tag))) {
         diagnostics.push({
           code: "COMPONENT_CONTRACT_IMAGE_DIMENSIONS_MISSING",
           severity: "error",
           file: loaded.file,
           component: component.id,
-          message: `SiteSpec 0.5 components must render explicit width and height on raw <img> elements. Prefer @site-generated/components/SiteImage.astro for responsive media.`
+          message: `SiteSpec 0.5+ components must render explicit width and height on raw <img> elements. Prefer @site-generated/components/SiteImage.astro for responsive media.`
         });
       }
     }
@@ -287,12 +287,12 @@ export async function validateAstroComponentContracts(options: AstroComponentCon
           message: `UI primitive "${primitive.id}" contains an <img> without an alt attribute.`
         });
       }
-      if (primitive.manifest.specVersion === "0.5" && (!/\bwidth\s*=/.test(tag) || !/\bheight\s*=/.test(tag))) {
+      if (["0.5", "0.6", "0.7"].includes(primitive.manifest.specVersion) && (!/\bwidth\s*=/.test(tag) || !/\bheight\s*=/.test(tag))) {
         diagnostics.push({
           code: "UI_CONTRACT_IMAGE_DIMENSIONS_MISSING",
           severity: "error",
           file: loaded.file,
-          message: `SiteSpec 0.5 UI primitives must render explicit width and height on raw <img> elements.`
+          message: `SiteSpec 0.5+ UI primitives must render explicit width and height on raw <img> elements.`
         });
       }
     }
@@ -423,13 +423,33 @@ export async function validateAstroBuildOutput(options: AstroComponentContractOp
         });
       }
     }
-    if (options.site.specVersion === "0.5" && !/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>/i.test(html)) {
+    if (["0.5", "0.6", "0.7"].includes(options.site.specVersion) && !/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>/i.test(html)) {
       diagnostics.push({
         code: "RENDERER_JSON_LD_MISSING",
         severity: "error",
         file: relative(options.root, file),
         page: page.id,
-        message: "SiteSpec 0.5 pages must render JSON-LD structured data."
+        message: "SiteSpec 0.5+ pages must render JSON-LD structured data."
+      });
+    }
+    const googleAnalytics = options.site.integrations.googleAnalytics;
+    if (googleAnalytics && !html.includes(`https://www.googletagmanager.com/gtag/js?id=${googleAnalytics.measurementId}`)) {
+      diagnostics.push({
+        code: "RENDERER_GOOGLE_ANALYTICS_MISSING",
+        severity: "error",
+        file: relative(options.root, file),
+        page: page.id,
+        message: `Rendered page is missing Google Analytics ${googleAnalytics.measurementId}.`
+      });
+    }
+    const hubspot = options.site.integrations.hubspot;
+    if (hubspot && !html.includes(`https://js.hs-scripts.com/${hubspot.portalId}.js`)) {
+      diagnostics.push({
+        code: "RENDERER_HUBSPOT_MISSING",
+        severity: "error",
+        file: relative(options.root, file),
+        page: page.id,
+        message: `Rendered page is missing HubSpot portal ${hubspot.portalId}.`
       });
     }
 
@@ -506,13 +526,13 @@ export async function validateAstroBuildOutput(options: AstroComponentContractOp
           message: "Rendered page contains an <img> without an alt attribute."
         });
       }
-      if (options.site.specVersion === "0.5" && (!/\bwidth=["'][1-9][0-9]*["']/i.test(tag) || !/\bheight=["'][1-9][0-9]*["']/i.test(tag))) {
+      if (["0.5", "0.6", "0.7"].includes(options.site.specVersion) && (!/\bwidth=["'][1-9][0-9]*["']/i.test(tag) || !/\bheight=["'][1-9][0-9]*["']/i.test(tag))) {
         diagnostics.push({
           code: "RENDERER_IMAGE_DIMENSIONS_MISSING",
           severity: "error",
           file: relative(options.root, file),
           page: page.id,
-          message: "SiteSpec 0.5 rendered images must include numeric width and height attributes to prevent layout shifts."
+          message: "SiteSpec 0.5+ rendered images must include numeric width and height attributes to prevent layout shifts."
         });
       }
     }
@@ -537,7 +557,8 @@ export async function validateAstroBuildOutput(options: AstroComponentContractOp
     const allowsJavascript = page.sections.some(section => options.registry.get(section.component)?.manifest.runtime?.javascript === true);
     if (!allowsJavascript) {
       const executableScripts = (html.match(/<script\b[^>]*>/gi) ?? [])
-        .filter(tag => !/type=["']application\/ld\+json["']/i.test(tag));
+        .filter(tag => !/type=["']application\/ld\+json["']/i.test(tag))
+        .filter(tag => !/data-sitespec-integration=["'](?:google-analytics|hubspot)["']/i.test(tag));
       if (executableScripts.length > 0) {
         diagnostics.push({
           code: "RENDERER_UNDECLARED_JAVASCRIPT",
@@ -970,7 +991,7 @@ async function prepareMediaSite(
   site: ResolvedSite,
   diagnostics: Diagnostic[]
 ): Promise<ResolvedSite> {
-  if (site.specVersion !== "0.5") return site;
+  if (!["0.5", "0.6", "0.7"].includes(site.specVersion)) return site;
   const cache = new Map<string, RenderImageRecord>();
   const pages = await Promise.all(site.pages.map(async page => ({
     ...page,
@@ -1134,7 +1155,10 @@ import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 
-const { page, assets, designSystem, jsonLd, siteSeo } = Astro.props;
+const { page, assets, designSystem, integrations, jsonLd, siteSeo } = Astro.props;
+const googleAnalyticsBootstrap = integrations?.googleAnalytics
+  ? "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config'," + JSON.stringify(integrations.googleAnalytics.measurementId) + ");"
+  : undefined;
 ---
 <!doctype html>
 <html lang={page.locale} data-site-theme={designSystem?.theme}>
@@ -1170,9 +1194,26 @@ const { page, assets, designSystem, jsonLd, siteSeo } = Astro.props;
     {page.seo.twitter.image && <meta name="twitter:image" content={page.seo.twitter.image} />}
 
     {jsonLd && <script is:inline type="application/ld+json" set:html={jsonLd}></script>}
+    {integrations?.googleAnalytics && (
+      <script
+        async
+        data-sitespec-integration="google-analytics"
+        src={"https://www.googletagmanager.com/gtag/js?id=" + integrations.googleAnalytics.measurementId}
+      ></script>
+    )}
+    {googleAnalyticsBootstrap && <script is:inline data-sitespec-integration="google-analytics" set:html={googleAnalyticsBootstrap}></script>}
   </head>
   <body>
     <slot />
+    {integrations?.hubspot && (
+      <script
+        async
+        defer
+        id="hs-script-loader"
+        data-sitespec-integration="hubspot"
+        src={"https://js.hs-scripts.com/" + integrations.hubspot.portalId + ".js"}
+      ></script>
+    )}
   </body>
 </html>
 `;
@@ -1348,10 +1389,11 @@ const brand = ${JSON.stringify(renderBrand, null, 2)};
 const assets = ${JSON.stringify(renderAssets, null, 2)};
 const navigation = ${JSON.stringify(renderNavigation, null, 2)};
 const designSystem = ${JSON.stringify(site.designSystem)};
+const integrations = ${JSON.stringify(site.integrations)};
 const jsonLd = ${JSON.stringify(jsonLd)};
 const siteSeo = ${JSON.stringify(siteSeo, null, 2)};
 ---
-<SiteLayout page={page} assets={assets} designSystem={designSystem} jsonLd={jsonLd} siteSeo={siteSeo}>
+<SiteLayout page={page} assets={assets} designSystem={designSystem} integrations={integrations} jsonLd={jsonLd} siteSeo={siteSeo}>
   <SiteShell site={site} brand={brand} page={page} navigation={navigation}>
 ${sectionMarkup}
   </SiteShell>

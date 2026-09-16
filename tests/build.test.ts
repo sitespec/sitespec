@@ -57,7 +57,7 @@ test("sitespec init creates a valid starter project", async () => {
 
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.specVersion, "0.5");
+    assert.equal(validation.site?.specVersion, "0.7");
     assert.equal(validation.site?.pages.length, 9);
     assert.deepEqual(validation.site?.pages.map(page => page.route), [
       "/",
@@ -200,7 +200,7 @@ test("npm run build materializes explicit dynamic routes into static HTML", asyn
   const root = join(temp, "acme");
   try {
     await initProject({ directory: root, name: "Acme" });
-    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.5"
+    await writeFile(join(root, "pages", "product.yaml"), `specVersion: "0.7"
 page:
   id: product
   route: /products/[slug]

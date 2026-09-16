@@ -1,5 +1,11 @@
 # @sitespec/astro
 
+## 0.7.0
+
+### Minor Changes
+
+- Render validated Google Analytics 4 and HubSpot loaders and verify them in production output.
+
 ## 0.6.0
 
 ### Patch Changes

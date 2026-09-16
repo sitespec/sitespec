@@ -8,7 +8,7 @@ Figma and other design applications are optional; a separate design-handoff step
 
 ## Current format
 
-The current document format is `specVersion: "0.5"`.
+The current document format is `specVersion: "0.7"`.
 
 It supports:
 
@@ -21,6 +21,7 @@ It supports:
 - a first-class Design System contract with exported UI primitives, section libraries, shell packs, themes, layout conventions, semantic tokens, local fonts, and controlled site token extensions;
 - a production media pipeline with responsive `srcset`, AVIF/WebP generation, intrinsic dimensions, crop/focal-point controls, and image validation;
 - canonical/hreflang, Open Graph/Twitter metadata, JSON-LD, generated social images, sitemap, robots, `llms.txt`, and RSS without project-level Astro configuration;
+- declarative Google Analytics 4 and HubSpot tracking integrations without hand-written script tags;
 - source/output validation and agent inspection through `site spec`;
 - evidence-first existing-site migration: production audit, live DOM segmentation, multi-page Design System analysis, explicit foundation/UI/component/shell review, implementation inference, and non-destructive Design System staging;
 - static Astro build, preview, and GitHub Pages deployment.
@@ -67,7 +68,7 @@ npm run site -- migrate design-system materialize .sitespec/migration/example.co
 A content-driven page can be as small as:
 
 ```yaml
-specVersion: "0.5"
+specVersion: "0.7"
 
 page:
   id: post
@@ -96,6 +97,7 @@ Entries live under `content/posts/`. SiteSpec validates them, generates concrete
 - [Core concepts](docs/concepts.md)
 - [Design Systems](docs/design-systems.md)
 - [Content](docs/content.md)
+- [Integrations](docs/integrations.md)
 - [Existing-site migration](docs/migration.md)
 - [CLI reference](docs/cli.md)
 - [Documentation index](docs/index.md)
@@ -110,7 +112,7 @@ npm run build
 npm test
 ```
 
-Run the full v0.5 reference example:
+Run the full v0.7 reference example:
 
 ```bash
 npm run dev -w @sitespec/example-marketing

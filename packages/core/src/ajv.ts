@@ -73,11 +73,19 @@ export function createAjv(): Ajv2020Instance {
   ajv.addSchema(schemaAlias(action, "urn:site-spec:0.5:type:action"));
   ajv.addSchema(loadSchema("types/image-v05.schema.json"));
   ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.5:type:navigation"));
+  ajv.addSchema(schemaAlias(action, "urn:site-spec:0.6:type:action"));
+  ajv.addSchema(schemaAlias(loadSchema("types/image-v05.schema.json"), "urn:site-spec:0.6:type:image"));
+  ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.6:type:navigation"));
+  ajv.addSchema(schemaAlias(action, "urn:site-spec:0.7:type:action"));
+  ajv.addSchema(schemaAlias(loadSchema("types/image-v05.schema.json"), "urn:site-spec:0.7:type:image"));
+  ajv.addSchema(schemaAlias(navigation, "urn:site-spec:0.7:type:navigation"));
   const pagination = loadSchema("types/pagination.schema.json");
   ajv.addSchema(pagination);
   ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.3:type:pagination"));
   ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.4:type:pagination"));
   ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.5:type:pagination"));
+  ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.6:type:pagination"));
+  ajv.addSchema(schemaAlias(pagination, "urn:site-spec:0.7:type:pagination"));
   return ajv;
 }
 

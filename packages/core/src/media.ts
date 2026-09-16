@@ -78,7 +78,7 @@ export async function validateResolvedMedia(
   specVersion: SpecVersion,
   pages: ResolvedPage[]
 ): Promise<Diagnostic[]> {
-  if (specVersion !== "0.5") return [];
+  if (!["0.5", "0.6", "0.7"].includes(specVersion)) return [];
   const diagnostics: Diagnostic[] = [];
   const metadataCache = new Map<string, Metadata | Error>();
 

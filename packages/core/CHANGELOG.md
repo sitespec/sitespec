@@ -1,5 +1,11 @@
 # @sitespec/core
 
+## 0.7.0
+
+### Minor Changes
+
+- Add the v0.7 Google Analytics and HubSpot integrations contract, validation, resolved model, and inspection capabilities.
+
 ## 0.6.0
 
 ### Patch Changes

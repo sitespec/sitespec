@@ -1,5 +1,11 @@
 # @sitespec/create
 
+## 0.7.0
+
+### Minor Changes
+
+- Create SiteSpec 0.7 starter projects.
+
 ## 0.6.0
 
 ### Patch Changes

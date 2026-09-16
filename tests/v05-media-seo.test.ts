@@ -14,12 +14,12 @@ async function starter(prefix: string): Promise<{ temp: string; root: string }> 
   return { temp, root };
 }
 
-test("v0.5 exposes media and SEO capabilities in the resolved contract", async () => {
+test("v0.7 exposes media and SEO capabilities in the resolved contract", async () => {
   const { temp, root } = await starter("sitespec-v05-contract-");
   try {
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.specVersion, "0.5");
+    assert.equal(validation.site?.specVersion, "0.7");
     assert.deepEqual(validation.site?.media.formats, ["avif", "webp"]);
     assert.equal(validation.site?.generated.media, true);
     assert.equal(validation.site?.generated.llms, true);
@@ -46,7 +46,7 @@ test("v0.5 exposes media and SEO capabilities in the resolved contract", async (
   }
 });
 
-test("v0.5 rejects local image props without accessible alt text", async () => {
+test("v0.7 rejects local image props without accessible alt text", async () => {
   const { temp, root } = await starter("sitespec-v05-alt-");
   try {
     const homeFile = join(root, "pages", "home.yaml");
@@ -60,16 +60,16 @@ test("v0.5 rejects local image props without accessible alt text", async () => {
   }
 });
 
-test("v0.5 validates reciprocal internal hreflang and emits sitemap alternates", async () => {
+test("v0.7 validates reciprocal internal hreflang and emits sitemap alternates", async () => {
   const { temp, root } = await starter("sitespec-v05-hreflang-");
   try {
     const homeFile = join(root, "pages", "home.yaml");
     const home = await readFile(homeFile, "utf8");
     await writeFile(homeFile, home.replace(
-      "  description: A compact SiteSpec v0.5 starter demonstrating composition and typed content end to end.\n",
-      "  description: A compact SiteSpec v0.5 starter demonstrating composition and typed content end to end.\n  hreflang:\n    en: /\n    lv: /lv\n"
+      "  description: A compact SiteSpec v0.7 starter demonstrating composition and typed content end to end.\n",
+      "  description: A compact SiteSpec v0.7 starter demonstrating composition and typed content end to end.\n  hreflang:\n    en: /\n    lv: /lv\n"
     ), "utf8");
-    await writeFile(join(root, "pages", "lv.yaml"), `specVersion: "0.5"
+    await writeFile(join(root, "pages", "lv.yaml"), `specVersion: "0.7"
 page:
   id: lv
   route: /lv
@@ -108,7 +108,7 @@ sections:
 });
 
 
-test("marketing example exercises the complete v0.5 media and SEO contract", async () => {
+test("marketing example exercises the complete v0.7 media and SEO contract", async () => {
   const root = join(process.cwd(), "examples", "marketing");
   const dist = join(root, "dist");
   const generated = join(root, ".site");
@@ -118,7 +118,7 @@ test("marketing example exercises the complete v0.5 media and SEO contract", asy
   try {
     const validation = await validateProject(root);
     assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
-    assert.equal(validation.site?.specVersion, "0.5");
+    assert.equal(validation.site?.specVersion, "0.7");
     assert.deepEqual(validation.site?.media.formats, ["avif", "webp"]);
 
     const routes = validation.site!.pages.map(page => page.route);
@@ -176,7 +176,7 @@ test("marketing example exercises the complete v0.5 media and SEO contract", asy
     assert.match(robots, /Sitemap: https:\/\/example\.test\/sitemap\.xml/);
 
     const llms = await readFile(join(dist, "llms.txt"), "utf8");
-    assert.match(llms, /# SiteSpec v0\.5 Example/);
+    assert.match(llms, /# SiteSpec v0\.7 Example/);
     assert.doesNotMatch(llms, /\[Preview\]/);
 
     const rss = await readFile(join(dist, "rss.xml"), "utf8");

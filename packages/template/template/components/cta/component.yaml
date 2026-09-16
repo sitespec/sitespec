@@ -1,4 +1,4 @@
-specVersion: "0.5"
+specVersion: "0.7"
 component:
   id: cta
   role: conversion
@@ -21,7 +21,7 @@ props:
       type: string
       maxLength: 90
     primaryAction:
-      $ref: urn:site-spec:0.5:type:action
+      $ref: urn:site-spec:0.7:type:action
 
 rules:
   allowedArchetypes:

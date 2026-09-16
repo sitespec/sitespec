@@ -169,7 +169,7 @@ const designSystemCommand = program
   .action(async (options: { root: string; json?: boolean }) => {
     const result = await inspectDesignSystem(resolve(options.root));
     if (options.json) {
-      console.log(JSON.stringify({ version: "0.5", ...result }, null, 2));
+      console.log(JSON.stringify({ version: "0.7", ...result }, null, 2));
     } else if (result.designSystem) {
       const ds = result.designSystem as {
         id: string; name: string; version: string;
@@ -200,7 +200,7 @@ designSystemCommand
   .action(async (directory: string, options: { root: string; json?: boolean }) => {
     try {
       const result = await packDesignSystem({ root: resolve(options.root), directory });
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
       else {
         console.log(`Packed Design System ${result.id}@${result.version}`);
         console.log(`  target: ${result.root}`);
@@ -208,7 +208,7 @@ designSystemCommand
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: message }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: message }, null, 2));
       else console.error(`ERROR DESIGN_SYSTEM_PACK_FAILED\n  ${message}`);
       process.exitCode = 2;
     }
@@ -225,7 +225,7 @@ designSystemCommand
   .action(async (source: string, options: { root: string; replace?: boolean; force?: boolean; json?: boolean }) => {
     try {
       const result = await installDesignSystem({ root: resolve(options.root), source, replace: options.replace, force: options.force });
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: true, designSystem: { id: result.id, version: result.version }, root: result.root, files: result.files }, null, 2));
       else {
         console.log(`Installed Design System ${result.id}@${result.version}`);
         console.log(`  root: ${result.root}`);
@@ -234,7 +234,7 @@ designSystemCommand
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: message }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: message }, null, 2));
       else console.error(`ERROR DESIGN_SYSTEM_INSTALL_FAILED\n  ${message}`);
       process.exitCode = 2;
     }
@@ -265,7 +265,7 @@ migrate
         settleMs: options.settle
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, audit: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, audit: result }, null, 2));
       } else {
         console.log("Migration audit captured.");
         console.log(`  source: ${result.sourceUrl}`);
@@ -289,7 +289,7 @@ migrate
       const code = error instanceof MigrateAuditError ? error.code : "MIGRATE_AUDIT_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateAuditError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else {
         console.error(`ERROR ${code}\n  ${message}`);
         if (details?.browserPath) console.error(`  browser: ${String(details.browserPath)}`);
@@ -327,7 +327,7 @@ migrate
         }
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, segmentation: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, segmentation: result }, null, 2));
       } else {
         console.log("Live DOM segmentation saved.");
         console.log(`  source: ${result.observedUrl}`);
@@ -342,7 +342,7 @@ migrate
       const code = error instanceof MigrateSegmentError ? error.code : "MIGRATE_SEGMENT_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateSegmentError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -359,7 +359,7 @@ migrate
     try {
       const result = await designAudits({ audits, root: resolve(options.root), output: options.output });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, design: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, design: result }, null, 2));
       } else {
         console.log("Migration design analysis complete.");
         console.log(`  site: ${result.site}`);
@@ -392,7 +392,7 @@ migrate
       const code = error instanceof MigrateDesignError ? error.code : "MIGRATE_DESIGN_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateDesignError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -411,7 +411,7 @@ migrateShell
     try {
       const result = await materializeShellContracts({ review, root: resolve(options.root), output: options.output });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, shellContracts: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, shellContracts: result }, null, 2));
       } else {
         console.log("Shell contract proposal ready.");
         console.log(`  site: ${result.site}`);
@@ -435,7 +435,7 @@ migrateShell
       const code = error instanceof MigrateDesignSystemError ? error.code : "MIGRATE_SHELL_CONTRACTS_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateDesignSystemError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -454,7 +454,7 @@ migrateImplementations
     try {
       const result = await inferImplementations({ analysis, root: resolve(options.root), output: options.output });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: result.status !== "blocked", implementationInference: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: result.status !== "blocked", implementationInference: result }, null, 2));
       } else {
         console.log(`Implementation inference ${result.status}.`);
         console.log(`  site: ${result.site}`);
@@ -480,7 +480,7 @@ migrateImplementations
       const code = error instanceof MigrateImplementationError ? error.code : "MIGRATE_IMPLEMENTATIONS_INFER_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateImplementationError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -509,7 +509,7 @@ migrateDesignSystem
         version: options.version
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, designSystemMaterialization: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, designSystemMaterialization: result }, null, 2));
       } else {
         console.log(`Design System ${result.phase} ${result.status}.`);
         console.log(`  site: ${result.site}`);
@@ -540,7 +540,7 @@ migrateDesignSystem
       const code = error instanceof MigrateDesignSystemError ? error.code : "MIGRATE_DESIGN_SYSTEM_MATERIALIZE_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateDesignSystemError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -570,7 +570,7 @@ migrateUi
         force: options.force
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, uiReview: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, uiReview: result }, null, 2));
       } else {
         console.log("Leaf UI review created.");
         console.log(`  site: ${result.site}`);
@@ -588,7 +588,7 @@ migrateUi
       const code = error instanceof MigrateUiError ? error.code : "MIGRATE_UI_REVIEW_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateUiError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -605,7 +605,7 @@ migrateUi
     try {
       const result = await materializeUiContracts({ review, root: resolve(options.root), output: options.output });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: result.status !== "blocked", uiContracts: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: result.status !== "blocked", uiContracts: result }, null, 2));
       } else {
         console.log(`UI contract proposal ${result.status}.`);
         console.log(`  site: ${result.site}`);
@@ -630,7 +630,7 @@ migrateUi
       const code = error instanceof MigrateUiError ? error.code : "MIGRATE_UI_CONTRACTS_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateUiError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -660,7 +660,7 @@ migrateComponents
         force: options.force
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, componentReview: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, componentReview: result }, null, 2));
       } else {
         console.log("Component-family review created.");
         console.log(`  site: ${result.site}`);
@@ -681,7 +681,7 @@ migrateComponents
       const code = error instanceof MigrateComponentsError ? error.code : "MIGRATE_COMPONENTS_REVIEW_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateComponentsError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -698,7 +698,7 @@ migrateComponents
     try {
       const result = await materializeComponentContracts({ review, root: resolve(options.root), output: options.output });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: result.status !== "blocked", componentContracts: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: result.status !== "blocked", componentContracts: result }, null, 2));
       } else {
         console.log(`Component contract proposal ${result.status}.`);
         console.log(`  site: ${result.site}`);
@@ -724,7 +724,7 @@ migrateComponents
       const code = error instanceof MigrateComponentsError ? error.code : "MIGRATE_COMPONENTS_CONTRACTS_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateComponentsError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -755,7 +755,7 @@ migrateFoundation
         force: options.force
       });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: true, foundationReview: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: true, foundationReview: result }, null, 2));
       } else {
         console.log("Foundation review created.");
         console.log(`  site: ${result.site}`);
@@ -775,7 +775,7 @@ migrateFoundation
       const code = error instanceof MigrateFoundationError ? error.code : "MIGRATE_FOUNDATION_REVIEW_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateFoundationError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else console.error(`ERROR ${code}\n  ${message}`);
       process.exitCode = 2;
     }
@@ -794,7 +794,7 @@ migrateFoundation
     try {
       const result = await materializeFoundationReview({ review, root: resolve(options.root), output: options.output, apply: options.apply, replace: options.replace });
       if (options.json) {
-        console.log(JSON.stringify({ version: "0.5", success: result.status === "ready", foundation: result }, null, 2));
+        console.log(JSON.stringify({ version: "0.7", success: result.status === "ready", foundation: result }, null, 2));
       } else {
         console.log(`Foundation token materialization ${result.status}${result.status === "ready" && result.quality === "provisional" ? " (provisional)" : ""}.`);
         console.log(`  preview: ${result.output}`);
@@ -825,7 +825,7 @@ migrateFoundation
       const code = error instanceof MigrateFoundationError ? error.code : "MIGRATE_FOUNDATION_MATERIALIZE_FAILED";
       const message = error instanceof Error ? error.message : String(error);
       const details = error instanceof MigrateFoundationError ? error.details : undefined;
-      if (options.json) console.log(JSON.stringify({ version: "0.5", success: false, error: { code, message, details } }, null, 2));
+      if (options.json) console.log(JSON.stringify({ version: "0.7", success: false, error: { code, message, details } }, null, 2));
       else {
         console.error(`ERROR ${code}\n  ${message}`);
         const blockers = details?.blockers;

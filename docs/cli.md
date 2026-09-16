@@ -213,7 +213,7 @@ Without `implementation-inference.json`, staging remains contract-only and repor
 
 ## Design System commands
 
-Inspect the installed first-class Design System through the `site spec` surface requested by the current v0.5 agent contract:
+Inspect the installed first-class Design System through the `site spec` surface requested by the current v0.7 agent contract:
 
 ```bash
 npm run site -- spec design-system --json
@@ -231,7 +231,7 @@ Copy the current Design System into an empty portable pack directory:
 npm run site -- design-system pack ../company-design-system
 ```
 
-Install a pack into a SiteSpec v0.5 project:
+Install a pack into a SiteSpec v0.7 project:
 
 ```bash
 npm run site -- design-system install ../company-design-system --replace

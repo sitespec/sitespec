@@ -224,7 +224,7 @@ function containsPostV01CoreType(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(containsPostV01CoreType);
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[2345]:/.test(record.$ref)) return true;
+  if (typeof record.$ref === "string" && /^urn:site-spec:0\.[234567]:/.test(record.$ref)) return true;
   return Object.values(record).some(containsPostV01CoreType);
 }
 
@@ -239,6 +239,16 @@ function containsReferencePrefix(value: unknown, prefix: string): boolean {
 function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[]): void {
   if (!project.site) return;
   const version = project.site.specVersion;
+  if (project.site.integrations && version !== "0.7") diagnostics.push({
+    code: "V07_FEATURE_REQUIRES_SPEC_VERSION",
+    severity: "error",
+    file: "site.yaml",
+    path: "/integrations",
+    message: 'Google Analytics and HubSpot integrations require specVersion "0.7".',
+    expected: "0.7",
+    actual: version,
+    suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.7" }]
+  });
   for (const page of project.pages) {
     if (page.value.specVersion !== version) diagnostics.push({
       code: "SPEC_VERSION_MISMATCH", severity: "error", file: page.file,
@@ -271,7 +281,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
     if (version === "0.1" || version === "0.2") diagnostics.push({
       code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: collection.file,
       message: `Typed content collections require specVersion "0.3" or newer.`,
-      expected: ["0.3", "0.4", "0.5"], actual: version,
+      expected: ["0.3", "0.4", "0.5", "0.6", "0.7"], actual: version,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
     });
   }
@@ -279,7 +289,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
     for (const page of project.pages) if (page.value.content) diagnostics.push({
       code: "V03_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: page.file, page: page.value.page.id,
       path: "/content", message: `Content-driven pages and queries require specVersion "0.3" or newer.`,
-      expected: ["0.3", "0.4", "0.5"], actual: version,
+      expected: ["0.3", "0.4", "0.5", "0.6", "0.7"], actual: version,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.3" }]
     });
   }
@@ -300,7 +310,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
       if (containsPostV01CoreType(component.value.props)) diagnostics.push({
         code: "V02_FEATURE_REQUIRES_SPEC_VERSION", severity: "error", file: component.file, component: component.value.component.id,
         path: "/props", message: 'SiteSpec 0.2+ core prop types require specVersion "0.2" or newer.',
-        expected: ["0.2", "0.3", "0.4", "0.5"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
+        expected: ["0.2", "0.3", "0.4", "0.5", "0.6", "0.7"], actual: version, suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.2" }]
       });
     }
   }
@@ -320,7 +330,7 @@ function validateSpecVersions(project: LoadedProject, diagnostics: Diagnostic[])
 async function validateDesignSystemProject(project: LoadedProject, diagnostics: Diagnostic[]): Promise<void> {
   if (!project.site) return;
   const contract = project.designSystem?.value;
-  if ((project.site.specVersion === "0.4" || project.site.specVersion === "0.5") && !contract) {
+  if (["0.4", "0.5", "0.6", "0.7"].includes(project.site.specVersion) && !contract) {
     diagnostics.push({
       code: "DESIGN_SYSTEM_CONTRACT_MISSING",
       severity: "error",
@@ -331,13 +341,13 @@ async function validateDesignSystemProject(project: LoadedProject, diagnostics: 
     });
     return;
   }
-  if (project.site.specVersion !== "0.4" && project.site.specVersion !== "0.5" && (contract || project.site.designSystem)) {
+  if (!["0.4", "0.5", "0.6", "0.7"].includes(project.site.specVersion) && (contract || project.site.designSystem)) {
     diagnostics.push({
       code: "V04_FEATURE_REQUIRES_SPEC_VERSION",
       severity: "error",
       file: contract ? "design-system.yaml" : "site.yaml",
       message: "Design System contracts and site-level Design System selection require specVersion \"0.4\" or newer.",
-      expected: ["0.4", "0.5"],
+      expected: ["0.4", "0.5", "0.6", "0.7"],
       actual: project.site.specVersion,
       suggestions: [{ action: "upgrade-spec-version", field: "specVersion", value: "0.4" }]
     });
@@ -717,7 +727,7 @@ function pageInstances(project: LoadedProject, page: LoadedProject["pages"][numb
     diagnostics.push({
       code: "DYNAMIC_ROUTE_REQUIRES_V02", severity: "error", file: page.file, page: page.value.page.id,
       path: "/page/route", message: "Dynamic route templates require specVersion \"0.2\" or newer.",
-      expected: ["0.2", "0.3", "0.4", "0.5"], actual: page.value.specVersion
+      expected: ["0.2", "0.3", "0.4", "0.5", "0.6", "0.7"], actual: page.value.specVersion
     });
     return [];
   }
@@ -994,7 +1004,7 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
   const sortedPages = resolvedPages.sort((a, b) => a.route.localeCompare(b.route));
   const sourceSite = project.site;
   const hasArticles = sortedPages.some(page => page.state === "published" && page.archetype === "article");
-  const isV05 = sourceSite?.specVersion === "0.5";
+  const isV05 = sourceSite ? ["0.5", "0.6", "0.7"].includes(sourceSite.specVersion) : false;
   const site: ResolvedSite | undefined = sourceSite ? {
     specVersion: sourceSite.specVersion,
     site: { ...sourceSite.site, url: sourceSite.site.url.replace(/\/+$/, "") },
@@ -1019,6 +1029,7 @@ export async function validateLoadedProject(project: LoadedProject): Promise<Val
         png: sourceSite.media?.quality?.png ?? 85
       }
     },
+    integrations: { ...(sourceSite.integrations ?? {}) },
     seo: {
       siteName: sourceSite.seo?.siteName ?? sourceSite.site.name,
       titleTemplate: sourceSite.seo?.titleTemplate,

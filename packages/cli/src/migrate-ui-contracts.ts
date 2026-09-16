@@ -396,7 +396,7 @@ function buildUiManifest(decision: UiFamilyReviewDecision, family: UiFamilyPropo
     if (hint.required) required.push(hint.name);
   }
   const manifest: Record<string, unknown> = {
-    specVersion: "0.5",
+    specVersion: "0.7",
     ui: { id: decision.uiId, role: decision.role },
     description: `Proposed ${decision.uiId} UI primitive inferred from reviewed leaf DOM evidence.`,
     variants,

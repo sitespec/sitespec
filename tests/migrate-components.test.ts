@@ -144,7 +144,7 @@ test("accepted section families materialize as component.yaml proposals while sh
     assert.deepEqual(result.files, ["hero/component.yaml"]);
 
     const hero = await readFile(join(result.output, "hero", "component.yaml"), "utf8");
-    assert.match(hero, /specVersion: "0.5"/);
+    assert.match(hero, /specVersion: "0.7"/);
     assert.match(hero, /id: "hero"/);
     assert.match(hero, /role: "intro"/);
     assert.match(hero, /- "default"/);

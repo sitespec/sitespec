@@ -9,11 +9,11 @@ import { resolvedContentEntry } from "./content-query.js";
 
 export function agentProtocol(): Record<string, unknown> {
   return {
-    protocolVersion: "7",
+    protocolVersion: "8",
     bootstrapFiles: ["AGENTS.md", "CLAUDE.md"],
     workflow: {
       inspect: "npm run site -- spec --json",
-      inspectTarget: "npm run site -- spec <page-or-collection-or-entry-or-component-or-ui-or-section-or-navigation-or-shell-or-assets-or-media-or-seo-or-design-or-design-system-or-fonts> --json",
+      inspectTarget: "npm run site -- spec <page-or-collection-or-entry-or-component-or-ui-or-section-or-navigation-or-shell-or-assets-or-media-or-seo-or-integrations-or-design-or-design-system-or-fonts> --json",
       inspectDesignSystem: "npm run site -- spec design-system --json",
       inspectDesignSystemPack: "npm run site -- design-system --json",
       installDesignSystem: "npm run site -- design-system install <pack> --replace",
@@ -110,7 +110,7 @@ export function agentProtocol(): Record<string, unknown> {
       faviconRequired: true
     },
     media: {
-      define: "site.yaml#/media + urn:site-spec:0.5:type:image props",
+      define: "site.yaml#/media + urn:site-spec:0.7:type:image props",
       sourceRoot: "public/",
       renderer: "@site-generated/components/SiteImage.astro",
       generatedRoot: "media.output (default /_media)",
@@ -122,6 +122,12 @@ export function agentProtocol(): Record<string, unknown> {
       page: "pages/*.yaml#/seo",
       generated: ["sitemap.xml", "robots.txt", "llms.txt", "RSS", "per-page social images"],
       rule: "Canonical, hreflang, Open Graph/Twitter and JSON-LD are resolved by SiteSpec; do not duplicate page head metadata in Astro components."
+    },
+    integrations: {
+      define: "site.yaml#/integrations",
+      inspect: "npm run site -- spec integrations --json",
+      providers: ["googleAnalytics", "hubspot"],
+      rule: "Configure validated provider identifiers in site.yaml; do not duplicate analytics loaders in Astro components or shell code."
     },
     navigation: {
       define: "site.yaml#/navigation/<collection>",
@@ -190,7 +196,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
   const diagnostics = validation.diagnostics;
   const design = (await inspectDesign(root)).design;
   const designSystem = project.designSystem ? (await inspectDesignSystem(root)).designSystem : undefined;
-  const specVersion = project.site?.specVersion ?? "0.5";
+  const specVersion = project.site?.specVersion ?? "0.7";
 
   const components = [...project.registry.values()].map(component => ({
     id: component.id,
@@ -332,6 +338,15 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
     }))
   };
 
+  const integrations = {
+    source: "site.yaml#/integrations",
+    config: validation.site?.integrations ?? project.site?.integrations ?? {},
+    providers: {
+      googleAnalytics: { enabled: !!project.site?.integrations?.googleAnalytics, idField: "measurementId" },
+      hubspot: { enabled: !!project.site?.integrations?.hubspot, idField: "portalId" }
+    }
+  };
+
   const base = {
     specVersion,
     valid: validation.valid,
@@ -347,16 +362,16 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
       dynamicRoutes: specVersion !== "0.1",
       routeParamReferences: specVersion !== "0.1",
       paginationCoreType: specVersion !== "0.1",
-      typedContentCollections: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
-      markdownEntries: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
-      contentRelations: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
-      contentQueries: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
-      contentPagination: specVersion === "0.3" || specVersion === "0.4" || specVersion === "0.5",
-      designSystemContract: specVersion === "0.4" || specVersion === "0.5",
-      designSystemPacks: specVersion === "0.4" || specVersion === "0.5",
-      shellPacks: specVersion === "0.4" || specVersion === "0.5",
-      themes: specVersion === "0.4" || specVersion === "0.5",
-      tokenExtensions: specVersion === "0.4" || specVersion === "0.5",
+      typedContentCollections: ["0.3", "0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      markdownEntries: ["0.3", "0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      contentRelations: ["0.3", "0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      contentQueries: ["0.3", "0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      contentPagination: ["0.3", "0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      designSystemContract: ["0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      designSystemPacks: ["0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      shellPacks: ["0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      themes: ["0.4", "0.5", "0.6", "0.7"].includes(specVersion),
+      tokenExtensions: ["0.4", "0.5", "0.6", "0.7"].includes(specVersion),
       existingSiteAudit: true,
       existingSiteManualSegmentation: true,
       existingSiteDesignAnalysis: true,
@@ -368,12 +383,14 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
       existingSiteLeafUiAnalysis: true,
       existingSiteFoundationReview: true,
       existingSiteFoundationMaterialization: true,
-      mediaPipeline: specVersion === "0.5",
-      responsiveImages: specVersion === "0.5",
-      generatedSocialImages: specVersion === "0.5",
-      hreflang: specVersion === "0.5",
-      llmsTxt: specVersion === "0.5",
-      rss: specVersion === "0.5",
+      mediaPipeline: ["0.5", "0.6", "0.7"].includes(specVersion),
+      responsiveImages: ["0.5", "0.6", "0.7"].includes(specVersion),
+      generatedSocialImages: ["0.5", "0.6", "0.7"].includes(specVersion),
+      hreflang: ["0.5", "0.6", "0.7"].includes(specVersion),
+      llmsTxt: ["0.5", "0.6", "0.7"].includes(specVersion),
+      rss: ["0.5", "0.6", "0.7"].includes(specVersion),
+      googleAnalytics: specVersion === "0.7",
+      hubspot: specVersion === "0.7",
       siteShell: true,
       semanticSiteAssets: true,
       designTokens: true,
@@ -397,6 +414,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
     assets,
     media,
     seo,
+    integrations,
     design,
     navigation,
     content: contentCollections,
@@ -412,6 +430,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
   if (query === "assets") return { specVersion, valid: validation.valid, type: "assets", agent: agentProtocol(), assets, diagnostics };
   if (query === "media") return { specVersion, valid: validation.valid, type: "media", agent: agentProtocol(), media, diagnostics };
   if (query === "seo") return { specVersion, valid: validation.valid, type: "seo", agent: agentProtocol(), seo, diagnostics };
+  if (query === "integrations") return { specVersion, valid: validation.valid, type: "integrations", agent: agentProtocol(), integrations, diagnostics };
   if (query === "design") return { specVersion, valid: validation.valid, type: "design", agent: agentProtocol(), design, diagnostics };
   if (query === "design-system") return { specVersion, valid: validation.valid, type: "design-system", agent: agentProtocol(), designSystem, diagnostics };
   if (query === "fonts") return {
