@@ -23,7 +23,7 @@ const { sectionId, variant, theme, props } = Astro.props;
   section { padding: var(--space-section) var(--space-page); background: var(--color-surface-muted); color: var(--color-text-default); }
   section[data-theme="inverted"] { background: var(--color-surface-inverted); color: var(--color-text-inverted); }
   section[data-variant="centered"] .content { text-align: center; }
-  h2 { max-width: 780px; margin: 0; font-size: var(--font-size-heading); line-height: var(--font-line-height-heading); letter-spacing: -.035em; }
+  h2 { max-width: 780px; margin: 0; font-size: var(--font-size-heading); line-height: var(--font-line-height-heading); letter-spacing: var(--font-letter-spacing-heading); }
   section[data-variant="centered"] h2 { margin-inline: auto; }
   .actions { margin-top: var(--space-stack-lg); }
 </style>

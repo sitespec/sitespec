@@ -1,0 +1,56 @@
+---
+interface Option { label: string; value: string; disabled?: boolean }
+interface Props {
+  id?: string;
+  label: string;
+  name: string;
+  value?: string;
+  options: Option[];
+  description?: string;
+  error?: string;
+  required?: boolean;
+  disabled?: boolean;
+  variant?: "default";
+}
+const { id, label, name, value, options, description, error, required = false, disabled = false, variant = "default" } = Astro.props;
+const groupId = id ?? `field-${name.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+const descriptionId = description ? `${groupId}-description` : undefined;
+const errorId = error ? `${groupId}-error` : undefined;
+const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+const invalid = Boolean(error);
+---
+<fieldset class="radio-group" data-ui="radio-group" data-variant={variant} data-invalid={invalid ? "true" : undefined} aria-describedby={describedBy}>
+  <legend>{label}{required ? <span aria-hidden="true"> *</span> : null}</legend>
+  <div class="options">
+    {options.map((option, index) => {
+      const optionId = `${groupId}-${index + 1}`;
+      return <label class="option" for={optionId}>
+        <input id={optionId} name={name} type="radio" value={option.value} checked={option.value === value} required={required} disabled={disabled || option.disabled} aria-invalid={invalid ? "true" : undefined} />
+        <span>{option.label}</span>
+      </label>;
+    })}
+  </div>
+  {description ? <p class="description" id={descriptionId}>{description}</p> : null}
+  {error ? <p class="error" id={errorId}>{error}</p> : null}
+</fieldset>
+
+<style>
+  .radio-group { display: grid; gap: var(--space-stack-sm); margin: 0; padding: 0; border: 0; color: var(--color-field-text-default); }
+  legend { padding: 0; color: var(--color-field-label); font-weight: var(--font-weight-label); }
+  .options { display: grid; gap: var(--space-stack-sm); }
+  .option { display: flex; align-items: flex-start; gap: var(--space-stack-sm); cursor: pointer; }
+  input { flex: none; width: var(--size-control-indicator); height: var(--size-control-indicator); margin: 0; accent-color: var(--color-control-checked-background); }
+  .option:hover input,
+  .radio-group[data-sitespec-state="hover"] input { outline: 1px solid var(--color-field-border-hover); outline-offset: var(--space-focus-offset); }
+  input:focus-visible,
+  .radio-group[data-sitespec-state="focus-visible"] input { outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--space-focus-offset); }
+  .radio-group[data-invalid="true"] input,
+  .radio-group[data-sitespec-state="invalid"] input { outline: 1px solid var(--color-field-border-invalid); outline-offset: var(--space-focus-offset); }
+  input:disabled,
+  .radio-group[data-sitespec-state="disabled"] input { cursor: not-allowed; }
+  .option:has(input:disabled),
+  .radio-group[data-sitespec-state="disabled"] .option { color: var(--color-field-text-disabled); cursor: not-allowed; }
+  .description, .error { margin: 0; font-size: var(--font-size-small); }
+  .description { color: var(--color-field-description); }
+  .error { color: var(--color-field-error); }
+</style>

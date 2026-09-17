@@ -122,7 +122,11 @@ test("npm run build renders a static Astro site", async () => {
     assert.match(html, /<meta property="og:image" content="https:\/\/acme\.test\/_social\/home-[a-f0-9]{10}\.png"\s*\/?>/);
     assert.match(html, /<meta name="twitter:image" content="https:\/\/acme\.test\/_social\/home-[a-f0-9]{10}\.png"\s*\/?>/);
     assert.match(html, /<script[^>]+type="application\/ld\+json"/);
-    assert.doesNotMatch(html, /<script\b(?![^>]*type="application\/ld\+json")/i, "starter build should ship no executable client JavaScript");
+    const executableScripts = html.match(/<script\b(?![^>]*type="application\/ld\+json")[^>]*>/gi) ?? [];
+    assert.equal(executableScripts.length, 2, "starter shell should emit only its declared theme/bootstrap and header behavior scripts");
+    assert.match(html, /data-sitespec-theme-bootstrap/);
+    assert.match(html, /data-icon="theme"/);
+    assert.match(html, /data-icon="menu"/);
     assert.match(html, /<picture\b[^>]*>/);
     assert.match(html, /type="image\/avif"[^>]+srcset="[^"]*\/_media\//);
     assert.match(html, /type="image\/webp"[^>]+srcset="[^"]*\/_media\//);

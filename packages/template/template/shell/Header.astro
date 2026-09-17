@@ -1,4 +1,5 @@
 ---
+import IconButton from "../ui/icon-button/index.astro";
 interface NavigationItem {
   id: string;
   label: string;
@@ -17,8 +18,12 @@ const items = navigation.primary ?? [];
 <header class="site-header" data-site-shell="header">
   <div class="inner">
     <a class="brand" href={site.homeHref}>{site.name}</a>
+    <div class="controls">
+      <IconButton label="Switch theme" icon="theme" variant="ghost" pressed={false} />
+      {items.length > 0 && <IconButton label="Open navigation" icon="menu" variant="ghost" controls="primary-navigation" expanded={false} />}
+    </div>
     {items.length > 0 && (
-      <nav aria-label="Primary">
+      <nav id="primary-navigation" aria-label="Primary" data-site-navigation>
         <ul>
           {items.map((item) => (
             <li>
@@ -38,6 +43,81 @@ const items = navigation.primary ?? [];
   </div>
 </header>
 
+<script is:inline>
+  (() => {
+    const THEME_KEY = "sitespec-theme";
+    const MOBILE_QUERY = "(max-width: 48rem)";
+    const root = document.documentElement;
+
+    document.querySelectorAll('[data-site-shell="header"]').forEach((header) => {
+      const themeButton = header.querySelector('[data-ui="icon-button"][data-icon="theme"]');
+      const menuButton = header.querySelector('[data-ui="icon-button"][data-icon="menu"]');
+      const navigation = header.querySelector('[data-site-navigation]');
+      const media = window.matchMedia(MOBILE_QUERY);
+
+      const syncThemeButton = () => {
+        if (!themeButton) return;
+        const dark = root.dataset.siteTheme === "dark";
+        themeButton.setAttribute("aria-pressed", String(dark));
+        themeButton.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+      };
+
+      const previewThemeHref = (theme) => {
+        const match = location.pathname.match(/^(.*\/sitespec-design-preview\/)([^/]+)(\/(?:normal|stress)\/[^/]+\/?)$/);
+        return match ? `${match[1]}${encodeURIComponent(theme)}${match[3]}${location.search}${location.hash}` : undefined;
+      };
+
+      themeButton?.addEventListener("click", () => {
+        const next = root.dataset.siteTheme === "dark" ? "default" : "dark";
+        const previewHref = previewThemeHref(next);
+        if (previewHref) {
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: "sitespec:design-lab-theme", theme: next }, location.origin);
+            return;
+          }
+          location.href = previewHref;
+          return;
+        }
+        root.dataset.siteTheme = next;
+        try { localStorage.setItem(THEME_KEY, next); } catch {}
+        syncThemeButton();
+      });
+      syncThemeButton();
+
+      const closeMenu = (restoreFocus = false) => {
+        if (!menuButton) return;
+        header.removeAttribute("data-menu-open");
+        menuButton.setAttribute("aria-expanded", "false");
+        menuButton.setAttribute("aria-label", "Open navigation");
+        if (restoreFocus) menuButton.focus();
+      };
+
+      const openMenu = () => {
+        if (!menuButton || !navigation) return;
+        header.setAttribute("data-menu-open", "true");
+        menuButton.setAttribute("aria-expanded", "true");
+        menuButton.setAttribute("aria-label", "Close navigation");
+        navigation.querySelector("a")?.focus();
+      };
+
+      menuButton?.addEventListener("click", () => {
+        if (header.hasAttribute("data-menu-open")) closeMenu();
+        else openMenu();
+      });
+      navigation?.addEventListener("click", (event) => {
+        if (media.matches && event.target.closest("a")) closeMenu();
+      });
+      header.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && header.hasAttribute("data-menu-open")) {
+          event.preventDefault();
+          closeMenu(true);
+        }
+      });
+      media.addEventListener?.("change", (event) => { if (!event.matches) closeMenu(); });
+    });
+  })();
+</script>
+
 <style>
   .site-header {
     position: sticky;
@@ -51,13 +131,27 @@ const items = navigation.primary ?? [];
     max-width: var(--size-content);
     margin-inline: auto;
     padding-block: var(--space-stack-md);
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-stack-lg);
   }
-  .brand { font-weight: 800; text-decoration: none; }
+  .brand { font-weight: var(--font-weight-brand); text-decoration: none; }
+  .controls { grid-column: 3; display: flex; align-items: center; gap: var(--space-stack-sm); }
+  .controls :global([data-icon="menu"]) { display: none; }
+  nav { grid-column: 2; grid-row: 1; justify-self: end; }
   ul { display: flex; flex-wrap: wrap; gap: var(--space-stack-md); margin: 0; padding: 0; list-style: none; }
   nav a { text-decoration: none; }
   nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: .25em; }
+  nav a:focus-visible { outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--space-focus-offset); border-radius: var(--radius-control); }
+
+  @media (max-width: 48rem) {
+    .inner { grid-template-columns: 1fr auto; gap: var(--space-stack-md); }
+    .controls { grid-column: 2; }
+    .controls :global([data-icon="menu"]) { display: inline-grid; }
+    nav { display: none; grid-column: 1 / -1; grid-row: 2; justify-self: stretch; border-top: 1px solid var(--color-border-default); padding-top: var(--space-stack-md); }
+    .site-header[data-menu-open] nav { display: block; }
+    ul { display: grid; gap: 0; }
+    nav a { display: block; padding-block: var(--space-stack-sm); }
+  }
 </style>

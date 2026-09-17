@@ -1,7 +1,7 @@
 import type { AuditLeafUiKind, AuditLeafUiObservation } from "./migrate-audit.js";
 
 export type UiFamilyStatus = "core" | "supporting" | "local";
-export type UiFamilyRole = "layout" | "action" | "content" | "navigation" | "feedback" | "media" | "typography";
+export type UiFamilyRole = "layout" | "action" | "content" | "navigation" | "feedback" | "media" | "typography" | "form";
 
 export interface UiEvidencePage {
   page: string;
@@ -87,10 +87,10 @@ function px(value: string | undefined): number {
 function familyForKind(kind: AuditLeafUiKind): { id: string; role: UiFamilyRole; candidate?: boolean } {
   if (kind === "button") return { id: "button", role: "action" };
   if (kind === "link") return { id: "link", role: "navigation" };
-  if (kind === "input") return { id: "text-input", role: "content" };
-  if (kind === "textarea") return { id: "textarea", role: "content" };
-  if (kind === "select") return { id: "select", role: "content" };
-  if (kind === "checkbox" || kind === "radio") return { id: "choice", role: "content" };
+  if (kind === "input") return { id: "text-input", role: "form" };
+  if (kind === "textarea") return { id: "textarea", role: "form" };
+  if (kind === "select") return { id: "select", role: "form" };
+  if (kind === "checkbox" || kind === "radio") return { id: "choice", role: "form" };
   if (kind === "badge-candidate") return { id: "badge", role: "content", candidate: true };
   return { id: "card", role: "content", candidate: true };
 }
@@ -223,12 +223,7 @@ export function buildUiFamilyModel(pages: UiEvidencePage[]): UiFamilyModel {
           eligibility: "review-required",
           reason: `${id} is inferred from a visual/container heuristic. Reuse strength does not by itself prove the semantic UI boundary.`
         }
-      : ["text-input", "textarea", "select", "choice"].includes(id)
-        ? {
-            eligibility: "review-required",
-            reason: "The current SiteSpec UiRole vocabulary has no explicit form-control role; an explicit reviewer decision is required before materialization."
-          }
-        : {
+      : {
             eligibility: "auto",
             reason: "The family is backed by direct native/semantic element evidence and may be auto-accepted when reuse evidence is core."
           };
@@ -274,9 +269,6 @@ export function buildUiFamilyModel(pages: UiEvidencePage[]): UiFamilyModel {
     families,
     unresolved: [
       ...(candidateFamilies.length ? [{ area: "candidate-surfaces", reason: "Badge/Card boundaries are visual heuristics and require explicit review before generating ui.yaml contracts.", families: candidateFamilies }] : []),
-      ...(families.some(item => ["text-input", "textarea", "select", "choice"].includes(item.id))
-        ? [{ area: "form-control-role", reason: "The current SiteSpec UiRole vocabulary has no explicit form-control role. Form-control families remain proposals and must not be materialized to ui.yaml until that semantic role is reviewed." }]
-        : []),
       { area: "interactive-states", reason: "The first leaf UI inventory captures default rendered state only. Hover/focus/active/disabled visual-state token mapping is not yet modeled." }
     ],
     summary: {

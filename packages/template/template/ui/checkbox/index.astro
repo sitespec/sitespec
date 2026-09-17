@@ -1,0 +1,51 @@
+---
+interface Props {
+  id?: string;
+  label: string;
+  name: string;
+  value?: string;
+  description?: string;
+  error?: string;
+  checked?: boolean;
+  required?: boolean;
+  disabled?: boolean;
+  variant?: "default";
+}
+const { id, label, name, value = "on", description, error, checked = false, required = false, disabled = false, variant = "default" } = Astro.props;
+const controlId = id ?? `field-${name.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+const descriptionId = description ? `${controlId}-description` : undefined;
+const errorId = error ? `${controlId}-error` : undefined;
+const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+const invalid = Boolean(error);
+---
+<div class="checkbox" data-ui="checkbox" data-variant={variant} data-invalid={invalid ? "true" : undefined}>
+  <label class="choice" for={controlId}>
+    <input id={controlId} name={name} type="checkbox" value={value} checked={checked} required={required} disabled={disabled} aria-invalid={invalid ? "true" : undefined} aria-describedby={describedBy} />
+    <span>{label}</span>
+  </label>
+  {description ? <p class="description" id={descriptionId}>{description}</p> : null}
+  {error ? <p class="error" id={errorId}>{error}</p> : null}
+</div>
+
+<style>
+  .checkbox { display: grid; gap: var(--space-stack-sm); color: var(--color-field-text-default); }
+  .choice { display: flex; align-items: flex-start; gap: var(--space-stack-sm); color: var(--color-field-label); font-weight: var(--font-weight-body); cursor: pointer; }
+  input { flex: none; width: var(--size-control-indicator); height: var(--size-control-indicator); margin: 0; accent-color: var(--color-control-checked-background); }
+  .choice:hover input,
+  .checkbox[data-sitespec-state="hover"] input { outline: 1px solid var(--color-field-border-hover); outline-offset: var(--space-focus-offset); }
+  input:active,
+  .checkbox[data-sitespec-state="active"] input { accent-color: var(--color-action-primary-background-active); }
+  input:focus-visible,
+  .checkbox[data-sitespec-state="focus-visible"] input { outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--space-focus-offset); }
+  input:checked,
+  .checkbox[data-sitespec-state="checked"] input { accent-color: var(--color-control-checked-background); }
+  .checkbox[data-invalid="true"] input,
+  .checkbox[data-sitespec-state="invalid"] input { outline: 1px solid var(--color-field-border-invalid); outline-offset: var(--space-focus-offset); }
+  input:disabled,
+  .checkbox[data-sitespec-state="disabled"] input { cursor: not-allowed; }
+  .checkbox:has(input:disabled) .choice,
+  .checkbox[data-sitespec-state="disabled"] .choice { color: var(--color-field-text-disabled); cursor: not-allowed; }
+  .description, .error { margin: 0; padding-inline-start: calc(var(--size-control-indicator) + var(--space-stack-sm)); font-size: var(--font-size-small); }
+  .description { color: var(--color-field-description); }
+  .error { color: var(--color-field-error); }
+</style>

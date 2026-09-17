@@ -4,8 +4,9 @@ import { createHash } from "node:crypto";
 import sharp from "sharp";
 import { basename, dirname, extname, join, relative } from "node:path";
 import { build as astroBuild, dev as astroDev } from "astro";
-import { inspectDesign, loadDesignFonts, loadDesignSystemContract } from "@sitespec/core";
+import { buildRegistry, inspectDesign, loadDesignFonts, loadDesignSystemContract } from "@sitespec/core";
 import type { Diagnostic, RegisteredComponent, RegisteredUiPrimitive, ResolvedPage, ResolvedSite } from "@sitespec/core";
+import { DESIGN_LAB_PAGE_FILENAME, designLabStressFixture, writeDesignLab } from "./design-lab.js";
 
 type SharpPipeline = ReturnType<typeof sharp>;
 type SharpMetadata = Awaited<ReturnType<SharpPipeline["metadata"]>>;
@@ -32,6 +33,7 @@ export interface AstroDevOptions {
   port?: number;
   diagnostics?: Diagnostic[];
   logLevel?: "debug" | "info" | "warn" | "error" | "silent";
+  designLab?: boolean;
 }
 
 export interface AstroDevServer {
@@ -130,42 +132,56 @@ export async function validateAstroComponentContracts(options: AstroComponentCon
   const diagnostics: Diagnostic[] = [];
 
   const contract = await loadDesignSystemContract(options.root);
-  const shellEntries = contract.designSystem
-    ? [...new Set(Object.values(contract.designSystem.value.shells.items).map(shell => shell.entry))].sort()
-    : ["shell/default.astro"];
+  const shellPacks = contract.designSystem
+    ? Object.entries(contract.designSystem.value.shells.items).map(([id, shell]) => ({ id, ...shell }))
+    : [{ id: "default", entry: "shell/default.astro", files: ["shell/default.astro"], runtime: undefined }];
 
-  for (const shellEntry of shellEntries) {
-    const shellFile = join(options.root, shellEntry);
-    try {
-      const shellSource = await readFile(shellFile, "utf8");
-      if (!/<slot(?:\s|\/>|>)/i.test(shellSource)) {
+  for (const shell of shellPacks.sort((a, b) => a.id.localeCompare(b.id))) {
+    const shellFiles = [...new Set([shell.entry, ...shell.files])];
+    for (const shellEntry of shellFiles) {
+      const shellFile = join(options.root, shellEntry);
+      try {
+        const shellSource = await readFile(shellFile, "utf8");
+        if (shellEntry === shell.entry && !/<slot(?:\s|\/>|>)/i.test(shellSource)) {
+          diagnostics.push({
+            code: "SHELL_SLOT_MISSING",
+            severity: "error",
+            file: shellEntry,
+            message: `Site shell ${shellEntry} must render <slot /> so page sections remain visible.`,
+            expected: "<slot />",
+            suggestions: [{
+              action: "restore-shell-slot",
+              file: shellEntry,
+              message: "Render <slot /> at the point where page sections should appear."
+            }]
+          });
+        }
+        const hasScript = /<script(?:\s|>)/i.test(shellSource);
+        const hasClientDirective = /\bclient:[a-z-]+\s*=/i.test(shellSource);
+        if (shell.runtime?.javascript !== true && (hasScript || hasClientDirective)) {
+          diagnostics.push({
+            code: "SHELL_CONTRACT_JAVASCRIPT_FORBIDDEN",
+            severity: "error",
+            file: shellEntry,
+            message: `Site shell pack "${shell.id}" ships client JavaScript but runtime.javascript is not true.`,
+            hint: "Remove the client JavaScript or declare shells.items.<id>.runtime.javascript: true in design-system.yaml."
+          });
+        }
+      } catch (error) {
         diagnostics.push({
-          code: "SHELL_SLOT_MISSING",
+          code: (error as NodeJS.ErrnoException).code === "ENOENT" ? "SHELL_IMPLEMENTATION_MISSING" : "SHELL_IMPLEMENTATION_READ_FAILED",
           severity: "error",
           file: shellEntry,
-          message: `Site shell ${shellEntry} must render <slot /> so page sections remain visible.`,
-          expected: "<slot />",
+          message: (error as NodeJS.ErrnoException).code === "ENOENT"
+            ? `Site shell ${shellEntry} was not found.`
+            : error instanceof Error ? error.message : String(error),
           suggestions: [{
-            action: "restore-shell-slot",
+            action: "restore-site-shell",
             file: shellEntry,
-            message: "Render <slot /> at the point where page sections should appear."
+            message: "Restore the user-owned shell pack entry. Renderer code must not contain header/footer presentation."
           }]
         });
       }
-    } catch (error) {
-      diagnostics.push({
-        code: (error as NodeJS.ErrnoException).code === "ENOENT" ? "SHELL_IMPLEMENTATION_MISSING" : "SHELL_IMPLEMENTATION_READ_FAILED",
-        severity: "error",
-        file: shellEntry,
-        message: (error as NodeJS.ErrnoException).code === "ENOENT"
-          ? `Site shell ${shellEntry} was not found.`
-          : error instanceof Error ? error.message : String(error),
-        suggestions: [{
-          action: "restore-site-shell",
-          file: shellEntry,
-          message: "Restore the user-owned shell pack entry. Renderer code must not contain header/footer presentation."
-        }]
-      });
     }
   }
 
@@ -278,6 +294,45 @@ export async function validateAstroComponentContracts(options: AstroComponentCon
       });
     }
 
+    const productionStatePatterns: Record<string, RegExp> = {
+      hover: /:hover\b/,
+      active: /:active\b/,
+      "focus-visible": /:focus-visible\b/,
+      disabled: /:disabled\b|\[aria-disabled(?:=|\])|\bdisabled\s*=/,
+      invalid: /:invalid\b|\[aria-invalid(?:=|\])|\baria-invalid\s*=/,
+      readonly: /:read-only\b|\[readonly(?:=|\])|\breadonly\s*=/,
+      checked: /:checked\b|\[aria-checked(?:=|\])|\bchecked\s*=/
+    };
+    for (const state of primitive.states.filter(state => state !== "default")) {
+      const productionPattern = productionStatePatterns[state];
+      if (productionPattern && !productionPattern.test(source)) {
+        diagnostics.push({
+          code: "UI_CONTRACT_STATE_IMPLEMENTATION_MISSING",
+          severity: "error",
+          file: loaded.file,
+          message: `UI primitive "${primitive.id}" declares state "${state}" but its implementation does not expose the corresponding production interaction selector or disabled semantics.`,
+          actual: state
+        });
+      }
+      const previewDouble = `[data-sitespec-state="${state}"]`;
+      const previewSingle = `[data-sitespec-state='${state}']`;
+      if (!source.includes(previewDouble) && !source.includes(previewSingle)) {
+        diagnostics.push({
+          code: "UI_CONTRACT_STATE_PREVIEW_MISSING",
+          severity: "error",
+          file: loaded.file,
+          message: `UI primitive "${primitive.id}" declares state "${state}" but does not expose the Design Lab preview selector ${previewDouble}.`,
+          expected: previewDouble,
+          actual: state,
+          suggestions: [{
+            action: "add-ui-state-preview-selector",
+            file: loaded.file,
+            message: `Pair the real interaction selector with ${previewDouble} so Design Lab can render this state deterministically.`
+          }]
+        });
+      }
+    }
+
     for (const tag of source.match(/<img\b[^>]*>/gi) ?? []) {
       if (!/\balt\s*=/.test(tag)) {
         diagnostics.push({
@@ -346,6 +401,10 @@ function hasMetaContent(html: string, attribute: "name" | "property", key: strin
 
 export async function validateAstroBuildOutput(options: AstroComponentContractOptions & { outDir: string; site: ResolvedSite }): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
+  const designSystemContract = await loadDesignSystemContract(options.root);
+  const selectedShellId = options.site.designSystem?.shell ?? designSystemContract.designSystem?.value.shells.default;
+  const selectedShell = selectedShellId ? designSystemContract.designSystem?.value.shells.items[selectedShellId] : undefined;
+  const shellAllowsJavascript = selectedShell?.runtime?.javascript === true;
 
   for (const page of options.site.pages.filter(page => page.state === "published")) {
     const file = outputPageFile(options.outDir, page.route);
@@ -554,7 +613,7 @@ export async function validateAstroBuildOutput(options: AstroComponentContractOp
       }
     }
 
-    const allowsJavascript = page.sections.some(section => options.registry.get(section.component)?.manifest.runtime?.javascript === true);
+    const allowsJavascript = shellAllowsJavascript || page.sections.some(section => options.registry.get(section.component)?.manifest.runtime?.javascript === true);
     if (!allowsJavascript) {
       const executableScripts = (html.match(/<script\b[^>]*>/gi) ?? [])
         .filter(tag => !/type=["']application\/ld\+json["']/i.test(tag))
@@ -1316,7 +1375,11 @@ function jsonLdForPage(page: ResolvedPage, site: ResolvedSite): string {
     .replaceAll("&", "\\u0026");
 }
 
-function pageSource(page: ResolvedPage, site: ResolvedSite): string {
+function pageSource(
+  page: ResolvedPage,
+  site: ResolvedSite,
+  preview?: { registry: Map<string, RegisteredComponent>; theme?: string; stress: boolean }
+): string {
   const basePath = siteBasePath(site.site.url);
   const renderPage: ResolvedPage = {
     ...page,
@@ -1326,9 +1389,28 @@ function pageSource(page: ResolvedPage, site: ResolvedSite): string {
     })),
     content: page.content ? rebaseRenderValue(page.content, basePath) as ResolvedPage["content"] : undefined
   };
+  const stressRenderPage: ResolvedPage = preview ? {
+    ...renderPage,
+    sections: renderPage.sections.map(section => {
+      const component = preview?.registry.get(section.component);
+      const stressProps = component ? designLabStressFixture(component) : undefined;
+      return stressProps ? {
+        ...section,
+        props: rebaseRenderValue(stressProps, basePath) as Record<string, unknown>
+      } : section;
+    })
+  } : renderPage;
+  const previewMode = preview?.stress ? "stress" : "normal";
+  const publishedPages = site.pages.filter(candidate => candidate.state === "published");
+  const previewHrefForRoute = (route: string): string | undefined => {
+    if (!preview?.theme) return undefined;
+    const target = publishedPages.find(candidate => candidate.route === route);
+    if (!target) return undefined;
+    return `${basePath}/sitespec-design-preview/${encodeURIComponent(preview.theme)}/${previewMode}/${encodeURIComponent(target.id)}`.replace(/\/+/g, "/");
+  };
   const renderSite = {
     ...site.site,
-    homeHref: rebaseSitePath("/", basePath)
+    homeHref: previewHrefForRoute("/") ?? rebaseSitePath("/", basePath)
   };
   const renderBrand = {
     ...site.brand,
@@ -1342,12 +1424,22 @@ function pageSource(page: ResolvedPage, site: ResolvedSite): string {
   };
   const renderNavigation = Object.fromEntries(Object.entries(site.navigation).map(([collection, items]) => [
     collection,
-    items.map(item => ({
-      ...item,
-      href: rebaseSitePath(item.href, basePath),
-      current: !item.external && ((item.href.split(/[?#]/, 1)[0] || "/") === page.route)
-    }))
+    items.map(item => {
+      const route = item.href.split(/[?#]/, 1)[0] || "/";
+      return {
+        ...item,
+        href: !item.external ? (previewHrefForRoute(route) ?? rebaseSitePath(item.href, basePath)) : item.href,
+        current: !item.external && route === page.route
+      };
+    })
   ]));
+  const stressNavigation = preview ? Object.fromEntries(Object.entries(renderNavigation).map(([collection, items]) => [
+    collection,
+    items.map((item, index) => ({
+      ...item,
+      label: `${item.label} — deliberately long navigation label ${index + 1}`
+    }))
+  ])) : renderNavigation;
   const jsonLd = jsonLdForPage(page, site);
   const siteSeo = {
     rss: {
@@ -1378,25 +1470,38 @@ function pageSource(page: ResolvedPage, site: ResolvedSite): string {
     })
     .join("\n");
 
+  const selectedPage = preview?.stress ? stressRenderPage : renderPage;
+  const selectedNavigation = preview?.stress ? stressNavigation : renderNavigation;
+  const selectedDesignSystem = preview?.theme && site.designSystem
+    ? { ...site.designSystem, theme: preview.theme }
+    : site.designSystem;
+  const pageStateSource = `
+const site = ${JSON.stringify(renderSite, null, 2)};
+const page = ${JSON.stringify(selectedPage, null, 2)};
+const brand = ${JSON.stringify(renderBrand, null, 2)};
+const assets = ${JSON.stringify(renderAssets, null, 2)};
+const navigation = ${JSON.stringify(selectedNavigation, null, 2)};
+const designSystem = ${JSON.stringify(selectedDesignSystem)};`;
+  const previewBootstrapSource = preview
+    ? `\nconst designLabPreviewBootstrap = ${JSON.stringify(`window.parent!==window&&window.parent.postMessage(${JSON.stringify({ type: "sitespec:design-lab-state", page: page.id, theme: preview.theme, stress: preview.stress })},location.origin);`)};`
+    : "";
+  const previewBootstrapMarkup = preview
+    ? `\n  <script is:inline data-sitespec-design-preview-state set:html={designLabPreviewBootstrap}></script>`
+    : "";
+
   return `---
 import SiteLayout from "@site-generated/layouts/SiteLayout.astro";
 import SiteShell from "@site-project/${shellEntry}";
 ${imports}
-
-const site = ${JSON.stringify(renderSite, null, 2)};
-const page = ${JSON.stringify(renderPage, null, 2)};
-const brand = ${JSON.stringify(renderBrand, null, 2)};
-const assets = ${JSON.stringify(renderAssets, null, 2)};
-const navigation = ${JSON.stringify(renderNavigation, null, 2)};
-const designSystem = ${JSON.stringify(site.designSystem)};
+${pageStateSource}
 const integrations = ${JSON.stringify(site.integrations)};
 const jsonLd = ${JSON.stringify(jsonLd)};
-const siteSeo = ${JSON.stringify(siteSeo, null, 2)};
+const siteSeo = ${JSON.stringify(siteSeo, null, 2)};${previewBootstrapSource}
 ---
 <SiteLayout page={page} assets={assets} designSystem={designSystem} integrations={integrations} jsonLd={jsonLd} siteSeo={siteSeo}>
   <SiteShell site={site} brand={brand} page={page} navigation={navigation}>
 ${sectionMarkup}
-  </SiteShell>
+  </SiteShell>${previewBootstrapMarkup}
 </SiteLayout>
 `;
 }
@@ -1439,7 +1544,7 @@ async function writeGeneratedProject(root: string, site: ResolvedSite, diagnosti
   const generatedRoot = join(root, GENERATED_DIR);
   const generatedSrc = join(generatedRoot, "src");
   await rm(generatedRoot, { recursive: true, force: true });
-  await syncGeneratedProject(root, site, diagnostics, { includeDrafts: false });
+  await syncGeneratedProject(root, site, diagnostics, { includeDrafts: false, designLab: false });
   return generatedSrc;
 }
 
@@ -1447,7 +1552,7 @@ async function syncGeneratedProject(
   root: string,
   site: ResolvedSite,
   diagnostics: Diagnostic[],
-  options: { includeDrafts: boolean }
+  options: { includeDrafts: boolean; designLab: boolean }
 ): Promise<string> {
   const generatedRoot = join(root, GENERATED_DIR);
   const generatedSrc = join(generatedRoot, "src");
@@ -1468,6 +1573,7 @@ async function syncGeneratedProject(
   await writeFile(join(generatedSrc, "styles", "global.css"), globalCssSource(), "utf8");
 
   const pages = options.includeDrafts ? renderSite.pages : renderSite.pages.filter(page => page.state === "published");
+  const designLabRegistry = options.designLab ? (await buildRegistry(root)).registry : undefined;
   const desiredPageFiles = new Set<string>();
   for (const page of pages) {
     const file = pageFilePath(generatedSrc, page.route);
@@ -1477,8 +1583,28 @@ async function syncGeneratedProject(
   }
 
   for (const file of await listAstroFiles(join(generatedSrc, "pages"))) {
-    if (!desiredPageFiles.has(file)) await rm(file, { force: true });
+    const isDesignLab = options.designLab && file === join(generatedSrc, "pages", DESIGN_LAB_PAGE_FILENAME);
+    if (!desiredPageFiles.has(file) && !isDesignLab) await rm(file, { force: true });
   }
+
+  if (options.designLab && designLabRegistry) {
+    const design = await inspectDesign(root);
+    diagnostics.push(...design.diagnostics);
+    for (const page of pages.filter(page => page.state === "published")) {
+      for (const theme of design.design.themes.items) {
+        for (const stress of [false, true]) {
+          const mode = stress ? "stress" : "normal";
+          const file = join(generatedSrc, "pages", "sitespec-design-preview", theme.id, mode, `${page.id}.astro`);
+          await mkdir(dirname(file), { recursive: true });
+          await writeFile(file, pageSource(page, renderSite, { registry: designLabRegistry, theme: theme.id, stress }), "utf8");
+        }
+      }
+    }
+  }
+
+  // The Lab owns this generated-only route while design mode is active. Writing it
+  // after normal pages prevents a project route collision from replacing the Lab.
+  if (options.designLab) await writeDesignLab({ root, generatedSrc, site: renderSite });
 
   return generatedSrc;
 }
@@ -1537,7 +1663,7 @@ const diagnostics = ${payload};
 `;
 }
 
-async function writeDevDiagnostics(root: string, diagnostics: Diagnostic[]): Promise<string> {
+async function writeDevDiagnostics(root: string, diagnostics: Diagnostic[], designLab = false): Promise<string> {
   const generatedSrc = join(root, GENERATED_DIR, "src");
   await mkdir(join(generatedSrc, "pages"), { recursive: true });
   await mkdir(join(generatedSrc, "layouts"), { recursive: true });
@@ -1552,6 +1678,9 @@ async function writeDevDiagnostics(root: string, diagnostics: Diagnostic[]): Pro
     await writeFile(join(generatedSrc, "pages", "index.astro"), `---\nimport SiteLayout from "@site-generated/layouts/SiteLayout.astro";\n---\n<SiteLayout />\n`, "utf8");
   }
   await writeFile(join(generatedSrc, "pages", "404.astro"), `---\nimport SiteLayout from "@site-generated/layouts/SiteLayout.astro";\n---\n<SiteLayout />\n`, "utf8");
+  if (designLab) {
+    await writeFile(join(generatedSrc, "pages", DESIGN_LAB_PAGE_FILENAME), `---\nexport function getStaticPaths() {\n  return [{ params: { designLab: "__sitespec/design" } }];\n}\n\nimport SiteLayout from "@site-generated/layouts/SiteLayout.astro";\n---\n<SiteLayout />\n`, "utf8");
+  }
   return generatedSrc;
 }
 
@@ -1570,12 +1699,12 @@ export async function startAstroDevServer(options: AstroDevOptions): Promise<Ast
   const initialDiagnostics = options.diagnostics ?? [];
   let generatedSrc: string;
   if (options.site) {
-    generatedSrc = await syncGeneratedProject(root, options.site, initialDiagnostics, { includeDrafts: true });
+    generatedSrc = await syncGeneratedProject(root, options.site, initialDiagnostics, { includeDrafts: true, designLab: options.designLab === true });
     if (initialDiagnostics.some(diagnostic => diagnostic.severity === "error")) {
-      generatedSrc = await writeDevDiagnostics(root, initialDiagnostics);
+      generatedSrc = await writeDevDiagnostics(root, initialDiagnostics, options.designLab === true);
     }
   } else {
-    generatedSrc = await writeDevDiagnostics(root, initialDiagnostics);
+    generatedSrc = await writeDevDiagnostics(root, initialDiagnostics, options.designLab === true);
   }
 
   const server = await astroDev({
@@ -1617,13 +1746,13 @@ export async function startAstroDevServer(options: AstroDevOptions): Promise<Ast
     watcher: server.watcher,
     update: async site => {
       const diagnostics: Diagnostic[] = [];
-      await syncGeneratedProject(root, site, diagnostics, { includeDrafts: true });
+      await syncGeneratedProject(root, site, diagnostics, { includeDrafts: true, designLab: options.designLab === true });
       if (diagnostics.some(diagnostic => diagnostic.severity === "error")) {
-        await writeDevDiagnostics(root, diagnostics);
+        await writeDevDiagnostics(root, diagnostics, options.designLab === true);
       }
       return diagnostics;
     },
-    showDiagnostics: diagnostics => writeDevDiagnostics(root, diagnostics).then(() => undefined),
+    showDiagnostics: diagnostics => writeDevDiagnostics(root, diagnostics, options.designLab === true).then(() => undefined),
     stop: () => server.stop()
   };
 }

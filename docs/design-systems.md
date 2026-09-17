@@ -91,6 +91,26 @@ npm run site -- design-system --json
 
 The JSON result includes identity/version, exported libraries, shell packs, themes, layout convention, token extension policy, token counts, font families, and copy/install semantics.
 
+## Typography foundations
+
+Typography follows the same primitive-to-semantic boundary as color, spacing, and radius. Primitive tokens hold the raw type decisions; reusable UI, section, and shell code consumes only semantic typography variables.
+
+The bundled Design System models family, size, line-height, weight, and letter-spacing. For example:
+
+```text
+primitive.font.weight.bold           -> 700
+semantic.font.weight.action          -> primitive.font.weight.bold
+                                       -> --font-weight-action
+
+primitive.font.letterSpacing.display -> -0.045em
+semantic.font.letterSpacing.display  -> primitive.font.letterSpacing.display
+                                       -> --font-letter-spacing-display
+```
+
+`font-weight` and `letter-spacing` are design-linted alongside `font-family`, `font-size`, and `line-height`. Raw reusable values such as `font-weight: 700` or `letter-spacing: -0.045em` are rejected inside UI primitives, sections, and Site Shell code; use the semantic token that describes the role instead.
+
+Design Lab Foundations renders both the semantic typography vocabulary and the primitive typography scale so family, size, line-height, weight, and tracking can be reviewed visually.
+
 ## UI primitives and section libraries
 
 `libraries.ui` is the exported internal UI layer. Page Specs cannot use these primitives directly.
@@ -100,6 +120,30 @@ The JSON result includes identity/version, exported libraries, shell packs, them
 `libraries.presets` exports reusable configured sections from `sections/*.yaml`. An exported preset must target a section exported by the same Design System.
 
 This keeps the public composition API separate from lower-level UI implementation details.
+
+Interactive UI primitives can declare a separate state axis in `ui.yaml`:
+
+```yaml
+variants:
+  - default
+  - primary
+  - secondary
+
+states:
+  - default
+  - hover
+  - active
+  - focus-visible
+  - disabled
+```
+
+`variants` describe intentional visual/API variants; `states` describe interaction states of each variant. They must not be flattened into names such as `primary-hover`. `action` and `navigation` primitives that omit expected interactive states remain compatible with existing v0.7 projects, but validation emits `UI_INTERACTIVE_STATES_INCOMPLETE` until the states are explicitly modeled. A declared state must be implemented by real production semantics (`:hover`, `:active`, `:focus-visible`, `:checked`, readonly/disabled attributes, or `aria-invalid`/native invalid semantics) and paired with the equivalent `[data-sitespec-state="<state>"]` selector. The latter is a deterministic Design Lab preview hook; it does not replace the real browser interaction selector.
+
+Form controls use the explicit `form` UI role. The state vocabulary additionally includes `invalid`, `readonly`, and `checked`; form primitives declare only the states they actually support. The bundled Design System exports `text-field`, `textarea-field`, `select-field`, `checkbox`, `radio-group`, and `switch`. These primitives own label/control/help/error wiring so section implementations do not have to recreate accessibility relationships for every form.
+
+The bundled Button is dual-mode: with `href` it renders an anchor-style action, and without `href` it renders a native `<button>` with `button`, `submit`, or `reset` type. This lets forms consume the same action primitive without turning submit controls into links.
+
+Form presentation is tokenized through semantic `color.field.*`, `color.control.*`, control size, switch size, and full-radius tokens. Dark theme overrides those semantics rather than restyling primitives directly.
 
 ## Layout convention
 
@@ -171,6 +215,29 @@ designSystem:
 
 Every shell entry must render `<slot />`. The renderer imports the selected shell instead of assuming `shell/default.astro`.
 
+## Design Lab
+
+Use the Design Lab while developing or reviewing the installed Design System:
+
+```bash
+npm run site -- design dev
+```
+
+When run from a normal SiteSpec project, the current directory is the project root. When run from the SiteSpec source repository itself, the repository root is not a website, so the command automatically opens `examples/marketing` as the bundled executable Design System fixture. Pass `--root <path>` to select another project explicitly.
+
+`design lab` is an alias for the same command. The Lab is generated inside SiteSpec's existing Astro development runtime and does not add source files to the website. It renders the actual exported Design System implementation, not a parallel Storybook layer.
+
+The Design Lab built on the v0.7 Design System contract provides four review surfaces:
+
+- **Foundations** — semantic color, typography, spacing, size, radius, and other tokens;
+- **UI** — every exported UI primitive as a `variant × state` matrix, including declared hover/active/focus-visible/disabled/invalid/readonly/checked states, plus a real Form composition benchmark when the form foundation is installed;
+- **Sections** — every exported section across declared variant/theme combinations;
+- **Pages** — the project's published pages in desktop, 768 px, and 375 px frames.
+
+The global theme selector switches the real `data-site-theme` value everywhere, including the page iframe. **Stress** swaps generated contract-valid fixtures for longer copy and denser arrays, so wrapping and content-resilience problems become visible without changing Page Specs. In **Pages**, the preview uses a dedicated generated route for the selected page, theme, and stress state; section props are replaced only when SiteSpec can derive a valid stress fixture from `component.yaml`, navigation labels are expanded, and production rendering remains unchanged. Fixtures are derived from `ui.yaml` and `component.yaml`; if SiteSpec cannot generate a valid fixture for a contract, the Lab shows that UI/section case as unsupported or keeps the original page-section props instead of inventing invalid data.
+
+The Lab is intentionally the first layer of the design-system generator. Candidate generation, mutation, locking, and side-by-side candidate comparison should build on this preview runtime rather than introduce a second rendering model.
+
 ## Pack and install workflow
 
 Create a portable source pack from a project that contains the Design System you want to reuse:
@@ -212,3 +279,12 @@ A practical organization-level workflow is:
 6. To adopt a newer InAppStory Design System, install the newer pack with `--replace`, validate the site, and commit the copied source change.
 
 The Design System is reusable, but every website remains independently buildable from its own Git repository.
+
+
+### Shell interaction reference
+
+The bundled starter shell includes a token-driven `icon-button` UI primitive, a light/dark preference toggle persisted in `localStorage`, and a mobile navigation menu with `aria-expanded`, `aria-controls`, Escape-to-close, and focus restoration. Design Lab page previews use forced theme routes, so persisted user preferences never override the Lab-selected theme; internal shell navigation remains inside the same `theme × stress` preview namespace.
+
+### Shell runtime
+
+A shell pack that ships executable client JavaScript must declare `shells.items.<id>.runtime.javascript: true` in `design-system.yaml`. This opt-in covers the pack files listed by that shell and is enforced both at source-contract validation and rendered-output validation. Static shell packs can omit `runtime`.

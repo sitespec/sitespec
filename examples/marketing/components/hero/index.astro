@@ -38,8 +38,8 @@ const { sectionId, variant, theme, props } = Astro.props;
   .media { overflow: hidden; border-radius: var(--radius-card); }
   .media :global(picture), .media :global(img) { display: block; width: 100%; }
   @media (max-width: 760px) { section[data-variant="split"] .hero-grid.has-media { grid-template-columns: 1fr; } }
-  .eyebrow { margin: 0 0 var(--space-stack-sm); font-size: var(--font-size-small); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-accent-default); }
-  h1 { margin: 0; font-size: var(--font-size-display); line-height: var(--font-line-height-display); letter-spacing: -.045em; }
+  .eyebrow { margin: 0 0 var(--space-stack-sm); font-size: var(--font-size-small); font-weight: var(--font-weight-label); letter-spacing: var(--font-letter-spacing-label); text-transform: uppercase; color: var(--color-accent-default); }
+  h1 { margin: 0; font-size: var(--font-size-display); line-height: var(--font-line-height-display); letter-spacing: var(--font-letter-spacing-display); }
   .lead { max-width: 680px; margin: var(--space-stack-lg) 0 0; font-size: var(--font-size-lead); line-height: var(--font-line-height-lead); color: var(--color-text-muted); }
   section[data-theme="inverted"] .lead { color: var(--color-text-inverted-muted); }
   .actions { margin-top: var(--space-stack-xl); }

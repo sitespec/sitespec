@@ -20,7 +20,7 @@ const { sectionId, variant, theme, props } = Astro.props;
   section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
   article { max-width: var(--size-content); }
   time { display: block; margin-bottom: var(--space-stack-sm); color: var(--color-text-muted); font-size: var(--font-size-small); }
-  h1 { margin: 0; font-size: var(--font-size-display); line-height: var(--font-line-height-display); letter-spacing: -.045em; }
+  h1 { margin: 0; font-size: var(--font-size-display); line-height: var(--font-line-height-display); letter-spacing: var(--font-letter-spacing-display); }
   .lead { margin: var(--space-stack-lg) 0 0; font-size: var(--font-size-lead); line-height: var(--font-line-height-lead); color: var(--color-text-muted); }
   .body { margin-top: var(--space-stack-2xl); line-height: var(--font-line-height-body); }
   .body :global(h2) { margin: var(--space-stack-2xl) 0 var(--space-stack-md); font-size: var(--font-size-heading); }

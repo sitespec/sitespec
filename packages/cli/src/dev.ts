@@ -1,6 +1,6 @@
 import chokidar, { type FSWatcher } from "chokidar";
-import { realpath } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { readFile, realpath, stat } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { loadProject, validateLoadedProject, type Diagnostic, type ResolvedSite } from "@sitespec/core";
 import { startAstroDevServer, validateAstroComponentContracts } from "@sitespec/astro";
 
@@ -10,11 +10,12 @@ export interface DevProjectOptions {
   port?: number;
   debounceMs?: number;
   rendererLogLevel?: "debug" | "info" | "warn" | "error" | "silent";
+  designLab?: boolean;
   onEvent?: (event: DevEvent) => void;
 }
 
 export type DevEvent =
-  | { event: "ready"; url: string; host: string; port: number; valid: boolean; diagnostics: Diagnostic[] }
+  | { event: "ready"; url: string; labUrl?: string; host: string; port: number; valid: boolean; diagnostics: Diagnostic[] }
   | { event: "updated"; valid: true; diagnostics: Diagnostic[] }
   | { event: "invalid"; valid: false; diagnostics: Diagnostic[] }
   | { event: "error"; valid: false; diagnostics: Diagnostic[] };
@@ -24,6 +25,7 @@ export interface DevProjectServer {
   host: string;
   port: number;
   url: string;
+  labUrl?: string;
   close(): Promise<void>;
 }
 
@@ -46,8 +48,77 @@ const WATCHED_SOURCE_PATHS: string[] = [
   "public"
 ];
 
+export type DesignLabRootSource = "explicit" | "project" | "repository-example";
+
+export interface DesignLabRootResolution {
+  root: string;
+  source: DesignLabRootSource;
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function isSiteSpecSourceRepository(root: string): Promise<boolean> {
+  try {
+    const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as {
+      name?: unknown;
+      private?: unknown;
+      workspaces?: unknown;
+    };
+    return manifest.name === "sitespec"
+      && manifest.private === true
+      && Array.isArray(manifest.workspaces)
+      && manifest.workspaces.includes("examples/*");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (error instanceof SyntaxError) return false;
+    throw error;
+  }
+}
+
+/**
+ * Resolve the SiteSpec project used by `sitespec design dev`. Installed projects
+ * default to the current directory. When developing the SiteSpec monorepo itself,
+ * the repository root is not a SiteSpec website, so the bundled marketing example
+ * is used as the executable Design System fixture. An explicit --root always wins.
+ */
+export async function resolveDesignLabProjectRoot(options: {
+  root?: string;
+  cwd?: string;
+} = {}): Promise<DesignLabRootResolution> {
+  const cwd = resolve(options.cwd ?? process.cwd());
+  if (options.root !== undefined) {
+    return { root: resolve(cwd, options.root), source: "explicit" };
+  }
+
+  if (await pathExists(join(cwd, "site.yaml"))) {
+    return { root: cwd, source: "project" };
+  }
+
+  const repositoryExample = join(cwd, "examples", "marketing");
+  if (await isSiteSpecSourceRepository(cwd) && await pathExists(join(repositoryExample, "site.yaml"))) {
+    return { root: repositoryExample, source: "repository-example" };
+  }
+
+  return { root: cwd, source: "project" };
+}
+
 function hasErrors(diagnostics: Diagnostic[]): boolean {
   return diagnostics.some(diagnostic => diagnostic.severity === "error");
+}
+
+function designLabUrl(serverUrl: string, site?: ResolvedSite): string | undefined {
+  if (!site) return undefined;
+  const basePath = new URL(site.site.url).pathname.replace(/\/+$/, "");
+  const path = `${basePath && basePath !== "/" ? basePath : ""}/__sitespec/design/`;
+  return new URL(path, serverUrl).href;
 }
 
 async function validateForDev(root: string): Promise<DevValidationState> {
@@ -110,7 +181,8 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     diagnostics: initial.diagnostics,
     host: options.host ?? "127.0.0.1",
     port: options.port ?? 4321,
-    logLevel: options.rendererLogLevel
+    logLevel: options.rendererLogLevel,
+    designLab: options.designLab === true
   });
   const initialValid = initial.valid && !hasErrors(initial.diagnostics);
 
@@ -189,9 +261,11 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     throw error;
   }
 
+  const labUrl = options.designLab ? designLabUrl(dev.url, initial.site) : undefined;
   options.onEvent?.({
     event: "ready",
     url: dev.url,
+    labUrl,
     host: dev.host,
     port: dev.port,
     valid: initialValid,
@@ -203,6 +277,7 @@ export async function startDev(options: DevProjectOptions): Promise<DevProjectSe
     host: dev.host,
     port: dev.port,
     url: dev.url,
+    labUrl,
     close: async () => {
       if (closed) return;
       closed = true;

@@ -22,7 +22,7 @@ const { sectionId, variant, theme, props } = Astro.props;
 <style>
   section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
   section[data-theme="muted"] { background: var(--color-surface-muted); }
-  h2 { max-width: 720px; margin: 0 0 var(--space-stack-2xl); font-size: var(--font-size-heading); letter-spacing: -.035em; }
+  h2 { max-width: 720px; margin: 0 0 var(--space-stack-2xl); font-size: var(--font-size-heading); letter-spacing: var(--font-letter-spacing-heading); }
   .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-stack-md); }
   article { padding: var(--space-stack-xl); border: 1px solid var(--color-border-default); border-radius: var(--radius-card); background: var(--color-surface-card); }
   h3 { margin: 0 0 var(--space-stack-sm); font-size: var(--font-size-subheading); }

@@ -1,0 +1,102 @@
+---
+interface Props {
+  label: string;
+  icon: "theme" | "menu";
+  variant?: "default" | "ghost";
+  controls?: string;
+  expanded?: boolean;
+  pressed?: boolean;
+  disabled?: boolean;
+}
+const {
+  label,
+  icon,
+  variant = "default",
+  controls,
+  expanded,
+  pressed,
+  disabled = false
+} = Astro.props;
+---
+<button
+  class="icon-button"
+  type="button"
+  data-ui="icon-button"
+  data-variant={variant}
+  data-icon={icon}
+  aria-label={label}
+  aria-controls={controls}
+  aria-expanded={expanded}
+  aria-pressed={pressed}
+  disabled={disabled}
+>
+  {icon === "theme" ? (
+    <span class="theme-icon" aria-hidden="true">
+      <svg class="sun" viewBox="0 0 24 24" focusable="false">
+        <circle cx="12" cy="12" r="3.5" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+      </svg>
+      <svg class="moon" viewBox="0 0 24 24" focusable="false">
+        <path d="M20.3 15.2A8.5 8.5 0 0 1 8.8 3.7 8.5 8.5 0 1 0 20.3 15.2Z" />
+      </svg>
+    </span>
+  ) : (
+    <span class="menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+  )}
+</button>
+
+<style>
+  .icon-button {
+    display: inline-grid;
+    place-items: center;
+    aspect-ratio: 1;
+    padding: var(--space-control-y);
+    border: 1px solid var(--color-action-secondary-border-default);
+    border-radius: var(--radius-control);
+    background: var(--color-action-secondary-background-default);
+    color: var(--color-action-secondary-foreground-default);
+    font-size: var(--font-size-lead);
+    cursor: pointer;
+  }
+
+  .icon-button[data-variant="ghost"] { border-color: transparent; background: transparent; }
+
+  .icon-button:is(:hover, [data-sitespec-state="hover"]) {
+    border-color: var(--color-action-secondary-border-hover);
+    background: var(--color-action-secondary-background-hover);
+  }
+
+  .icon-button:is(:active, [data-sitespec-state="active"]) {
+    border-color: var(--color-action-secondary-border-active);
+    background: var(--color-action-secondary-background-active);
+  }
+
+  .icon-button:is(:focus-visible, [data-sitespec-state="focus-visible"]) {
+    outline: var(--size-focus-ring) solid var(--color-focus-ring);
+    outline-offset: var(--space-focus-offset);
+  }
+
+  .icon-button:is(:disabled, [data-sitespec-state="disabled"]) {
+    border-color: var(--color-action-disabled-border);
+    background: var(--color-action-disabled-background);
+    color: var(--color-action-disabled-foreground);
+    cursor: not-allowed;
+  }
+
+  svg { display: block; inline-size: 1em; block-size: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .theme-icon { display: grid; }
+  .theme-icon > * { grid-area: 1 / 1; transition: opacity .15s ease, transform .15s ease; }
+  .moon { opacity: 0; transform: scale(.75); }
+  :global(html[data-site-theme="dark"]) .sun { opacity: 0; transform: scale(.75); }
+  :global(html[data-site-theme="dark"]) .moon { opacity: 1; transform: scale(1); }
+
+  .menu-icon { display: grid; gap: var(--space-icon-gap); inline-size: 1em; }
+  .menu-icon span { display: block; inline-size: 100%; block-size: .08em; border-radius: var(--radius-control); background: currentColor; transform-origin: center; transition: transform .15s ease, opacity .15s ease; }
+  .icon-button[aria-expanded="true"] .menu-icon span:nth-child(1) { transform: translateY(.26em) rotate(45deg); }
+  .icon-button[aria-expanded="true"] .menu-icon span:nth-child(2) { opacity: 0; }
+  .icon-button[aria-expanded="true"] .menu-icon span:nth-child(3) { transform: translateY(-.26em) rotate(-45deg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-icon > *, .menu-icon span { transition: none; }
+  }
+</style>

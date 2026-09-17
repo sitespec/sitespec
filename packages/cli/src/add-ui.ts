@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { readProjectSpecVersion } from "./project-spec-version.js";
 
 const ID_PATTERN = /^[a-z][a-z0-9-]*$/;
-const ROLES = new Set(["layout", "action", "content", "navigation", "feedback", "media", "typography"]);
+const ROLES = new Set(["layout", "action", "content", "navigation", "feedback", "media", "typography", "form"]);
 
 export interface AddUiOptions {
   root: string;

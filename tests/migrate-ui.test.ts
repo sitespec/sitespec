@@ -88,7 +88,7 @@ test("badge/card remain candidate-weighted until reuse evidence is stronger", ()
   assert.ok(model.unresolved.some(item => item.area === "interactive-states"));
 });
 
-test("form-control proposals expose the current UiRole vocabulary gap", () => {
+test("form-control proposals use the form UI role", () => {
   const model = buildUiFamilyModel([
     {
       page: "home",
@@ -99,9 +99,9 @@ test("form-control proposals expose the current UiRole vocabulary gap", () => {
       ]
     }
   ]);
-  assert.ok(model.families.some(family => family.id === "text-input"));
-  assert.ok(model.families.some(family => family.id === "select"));
-  assert.ok(model.unresolved.some(entry => entry.area === "form-control-role"));
+  assert.equal(model.families.find(family => family.id === "text-input")?.role, "form");
+  assert.equal(model.families.find(family => family.id === "select")?.role, "form");
+  assert.equal(model.unresolved.some(entry => entry.area === "form-control-role"), false);
 });
 
 function uiProposal() {

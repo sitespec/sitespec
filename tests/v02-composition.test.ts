@@ -91,7 +91,7 @@ test("v0.7 starter exposes composition and typed content", async () => {
     assert.deepEqual(content.map(item => item.id), ["posts"]);
     assert.equal(content[0]?.entries.length, 2);
     const ui = inspection.ui as Array<{ id: string }>;
-    assert.deepEqual(ui.map(item => item.id).sort(), ["button", "container"]);
+    assert.deepEqual(ui.map(item => item.id).sort(), ["button", "checkbox", "container", "icon-button", "radio-group", "select-field", "switch", "text-field", "textarea-field"]);
     const presets = inspection.sectionPresets as Array<{ reference: string }>;
     assert.ok(presets.some(item => item.reference === "section:final-cta"));
     const pages = inspection.pages as Array<{ id: string; dynamic: boolean; generatedRoutes: Array<{ route: string }> }>;
@@ -167,6 +167,65 @@ test("pagination is a valid v0.7 core prop type", async () => {
   });
 });
 
+test("v0.7 UI contracts expose interactive states without making legacy contracts invalid", async () => {
+  await withSite(async root => {
+    const project = await loadProject(root);
+    const button = project.uiRegistry.get("button");
+    assert.ok(button);
+    assert.deepEqual(button.states, ["default", "hover", "active", "focus-visible", "disabled"]);
+    assert.equal(button.validateProps({ label: "Submit", type: "submit" }), true);
+    assert.equal(button.validateProps({ label: "Read more", href: "/docs" }), true);
+    assert.equal(project.diagnostics.some(item => item.code === "UI_INTERACTIVE_STATES_INCOMPLETE" && item.file === "ui/button/ui.yaml"), false);
+
+    const textField = project.uiRegistry.get("text-field");
+    const checkbox = project.uiRegistry.get("checkbox");
+    assert.equal(textField?.role, "form");
+    assert.deepEqual(textField?.states, ["default", "hover", "focus-visible", "invalid", "readonly", "disabled"]);
+    assert.equal(checkbox?.role, "form");
+    assert.ok(checkbox?.states.includes("checked"));
+    assert.equal(project.diagnostics.some(item => item.code === "UI_INTERACTIVE_STATES_INCOMPLETE" && item.file.startsWith("ui/") && ["text-field", "textarea-field", "select-field", "checkbox", "radio-group", "switch"].some(id => item.file.includes(`/` + id + `/`))), false);
+
+    const diagnostics = await validateAstroComponentContracts({
+      root,
+      registry: project.registry,
+      uiRegistry: project.uiRegistry
+    });
+    assert.equal(diagnostics.some(item => item.code === "UI_CONTRACT_STATE_IMPLEMENTATION_MISSING"), false, JSON.stringify(diagnostics, null, 2));
+    assert.equal(diagnostics.some(item => item.code === "UI_CONTRACT_STATE_PREVIEW_MISSING"), false, JSON.stringify(diagnostics, null, 2));
+
+    const buttonSourceFile = join(root, "ui", "button", "index.astro");
+    const source = await readFile(buttonSourceFile, "utf8");
+    await writeFile(buttonSourceFile, source.replaceAll('[data-sitespec-state="hover"]', '[data-sitespec-state="hover-preview-missing"]'), "utf8");
+    const brokenDiagnostics = await validateAstroComponentContracts({
+      root,
+      registry: project.registry,
+      uiRegistry: project.uiRegistry
+    });
+    assert.ok(brokenDiagnostics.some(item => item.code === "UI_CONTRACT_STATE_PREVIEW_MISSING" && item.actual === "hover"));
+
+    await writeFile(buttonSourceFile, source.replaceAll(":hover", ":state-hover"), "utf8");
+    const missingProductionDiagnostics = await validateAstroComponentContracts({
+      root,
+      registry: project.registry,
+      uiRegistry: project.uiRegistry
+    });
+    assert.ok(missingProductionDiagnostics.some(item => item.code === "UI_CONTRACT_STATE_IMPLEMENTATION_MISSING" && item.actual === "hover"));
+  });
+});
+
+test("legacy interactive UI contracts without states remain loadable but surface a completeness warning", async () => {
+  await withSite(async root => {
+    const manifestFile = join(root, "ui", "button", "ui.yaml");
+    const manifest = await readFile(manifestFile, "utf8");
+    await writeFile(manifestFile, manifest.replace(/\nstates:\n(?:  - [^\n]+\n)+/, "\n"), "utf8");
+    const project = await loadProject(root);
+    assert.ok(project.uiRegistry.has("button"));
+    assert.ok(project.diagnostics.some(item => item.code === "UI_INTERACTIVE_STATES_INCOMPLETE" && item.severity === "warning"));
+    const validation = await validateProject(root);
+    assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics, null, 2));
+  });
+});
+
 test("site add ui creates a formal primitive contract", async () => {
   await withSite(async root => {
     const added = await addUi({ root, id: "badge", role: "content" });
@@ -198,7 +257,7 @@ test("v0.7 validates UI primitive implementation contracts", async () => {
   await withSite(async root => {
     const button = join(root, "ui", "button", "index.astro");
     const source = await readFile(button, "utf8");
-    await writeFile(button, source.replace(' data-ui="button"', ''), "utf8");
+    await writeFile(button, source.replaceAll('data-ui="button"', ''), "utf8");
     const project = await loadProject(root);
     const diagnostics = await validateAstroComponentContracts({
       root,

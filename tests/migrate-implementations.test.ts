@@ -169,6 +169,7 @@ test("implementation inference generates runnable accepted UI, section and shell
     assert.match(button, /data-variant="default"/);
     assert.match(button, /var\(--space-control-y\)/);
     assert.doesNotMatch(button, /padding:\s*12px/);
+    assert.doesNotMatch(button, /font-weight:\s*700/);
     const hero = await readFile(join(result.output, "components", "hero", "index.astro"), "utf8");
     assert.match(hero, /data-component="hero"/);
     assert.match(hero, /var\(--space-section\)/);
@@ -183,7 +184,9 @@ test("implementation inference generates runnable accepted UI, section and shell
     assert.doesNotMatch(leadForm, /<Button[^>]+Submit/);
     const features = await readFile(join(result.output, "components", "features", "index.astro"), "utf8");
     assert.match(features, /data-component="features"/);
-    assert.match(await readFile(join(result.output, "shell", "Header.astro"), "utf8"), /data-site-shell="header"/);
+    const inferredHeader = await readFile(join(result.output, "shell", "Header.astro"), "utf8");
+    assert.match(inferredHeader, /data-site-shell="header"/);
+    assert.doesNotMatch(inferredHeader, /font-weight:\s*700/);
     const extension = JSON.parse(await readFile(join(result.output, "design", "extensions.json"), "utf8"));
     assert.equal(extension.semantic.space.control.x.$value, "{primitive.space.24}");
     assert.equal(extension.semantic.color.accent.contrast.$value, "{primitive.color.white}");

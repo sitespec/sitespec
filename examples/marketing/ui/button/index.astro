@@ -1,22 +1,33 @@
 ---
 interface Props {
   label: string;
-  href: string;
+  href?: string;
   target?: "self" | "blank";
+  type?: "button" | "submit" | "reset";
   variant?: "default" | "primary" | "secondary";
+  disabled?: boolean;
 }
-const { label, href, target = "self", variant = "default" } = Astro.props;
+const { label, href, target = "self", type = "button", variant = "default", disabled = false } = Astro.props;
 ---
-<a
-  class="button"
-  data-ui="button"
-  data-variant={variant}
-  href={href}
-  target={target === "blank" ? "_blank" : undefined}
-  rel={target === "blank" ? "noreferrer" : undefined}
->
-  {label}
-</a>
+{href ? (
+  <a
+    class="button"
+    data-ui="button"
+    data-variant={variant}
+    href={disabled ? undefined : href}
+    target={!disabled && target === "blank" ? "_blank" : undefined}
+    rel={!disabled && target === "blank" ? "noreferrer" : undefined}
+    aria-disabled={disabled ? "true" : undefined}
+    role={disabled ? "link" : undefined}
+    tabindex={disabled ? -1 : undefined}
+  >
+    {label}
+  </a>
+) : (
+  <button class="button" data-ui="button" data-variant={variant} type={type} disabled={disabled}>
+    {label}
+  </button>
+)}
 
 <style>
   .button {
@@ -24,23 +35,61 @@ const { label, href, target = "self", variant = "default" } = Astro.props;
     align-items: center;
     justify-content: center;
     padding: var(--space-control-y) var(--space-control-x);
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-action-secondary-border-default);
     border-radius: var(--radius-control);
-    background: var(--color-surface-default);
-    color: var(--color-text-default);
-    font-weight: 700;
+    background: var(--color-action-secondary-background-default);
+    color: var(--color-action-secondary-foreground-default);
+    font: inherit;
+    font-weight: var(--font-weight-action);
     text-decoration: none;
+    cursor: pointer;
   }
 
   .button[data-variant="default"],
   .button[data-variant="primary"] {
-    border-color: var(--color-accent-default);
-    background: var(--color-accent-default);
-    color: var(--color-accent-contrast);
+    border-color: var(--color-action-primary-background-default);
+    background: var(--color-action-primary-background-default);
+    color: var(--color-action-primary-foreground-default);
   }
 
   .button[data-variant="secondary"] {
-    background: var(--color-surface-default);
-    color: var(--color-text-default);
+    border-color: var(--color-action-secondary-border-default);
+    background: var(--color-action-secondary-background-default);
+    color: var(--color-action-secondary-foreground-default);
+  }
+
+  .button[data-variant="default"]:is(:hover, [data-sitespec-state="hover"]),
+  .button[data-variant="primary"]:is(:hover, [data-sitespec-state="hover"]) {
+    border-color: var(--color-action-primary-background-hover);
+    background: var(--color-action-primary-background-hover);
+  }
+
+  .button[data-variant="secondary"]:is(:hover, [data-sitespec-state="hover"]) {
+    border-color: var(--color-action-secondary-border-hover);
+    background: var(--color-action-secondary-background-hover);
+  }
+
+  .button[data-variant="default"]:is(:active, [data-sitespec-state="active"]),
+  .button[data-variant="primary"]:is(:active, [data-sitespec-state="active"]) {
+    border-color: var(--color-action-primary-background-active);
+    background: var(--color-action-primary-background-active);
+  }
+
+  .button[data-variant="secondary"]:is(:active, [data-sitespec-state="active"]) {
+    border-color: var(--color-action-secondary-border-active);
+    background: var(--color-action-secondary-background-active);
+  }
+
+  .button:is(:focus-visible, [data-sitespec-state="focus-visible"]) {
+    outline: var(--size-focus-ring) solid var(--color-focus-ring);
+    outline-offset: var(--space-focus-offset);
+  }
+
+  .button:is(:disabled, [aria-disabled="true"], [data-sitespec-state="disabled"]) {
+    border-color: var(--color-action-disabled-border);
+    background: var(--color-action-disabled-background);
+    color: var(--color-action-disabled-foreground);
+    cursor: not-allowed;
+    pointer-events: none;
   }
 </style>

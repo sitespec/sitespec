@@ -3,19 +3,25 @@ ui:
   id: button
   role: action
 
-description: Primary and secondary link-style action primitive for sections and shell.
+description: Primary and secondary action primitive that renders an anchor when href is provided and a native button otherwise.
 
 variants:
   - default
   - primary
   - secondary
 
+states:
+  - default
+  - hover
+  - active
+  - focus-visible
+  - disabled
+
 props:
   type: object
   additionalProperties: false
   required:
     - label
-    - href
   properties:
     label:
       type: string
@@ -26,6 +32,10 @@ props:
       minLength: 1
     target:
       enum: [self, blank]
+    type:
+      enum: [button, submit, reset]
+    disabled:
+      type: boolean
 
 runtime:
   javascript: false

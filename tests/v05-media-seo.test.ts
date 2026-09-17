@@ -122,7 +122,7 @@ test("marketing example exercises the complete v0.7 media and SEO contract", asy
     assert.deepEqual(validation.site?.media.formats, ["avif", "webp"]);
 
     const routes = validation.site!.pages.map(page => page.route);
-    for (const route of ["/about", "/lv/about", "/preview"]) {
+    for (const route of ["/about", "/contact", "/lv/about", "/preview"]) {
       assert.ok(routes.includes(route), `missing ${route}`);
     }
 
@@ -158,6 +158,17 @@ test("marketing example exercises the complete v0.7 media and SEO contract", asy
     const aboutHtml = await readFile(join(dist, "about", "index.html"), "utf8");
     assert.match(aboutHtml, /hreflang="lv" href="https:\/\/example\.test\/lv\/about"/);
     assert.match(aboutHtml, /hreflang="x-default" href="https:\/\/example\.test\/about"/);
+
+    const contactHtml = await readFile(join(dist, "contact", "index.html"), "utf8");
+    assert.match(contactHtml, /data-component="contact-form"/);
+    assert.match(contactHtml, /data-ui="text-field"/);
+    assert.match(contactHtml, /data-ui="select-field"/);
+    assert.match(contactHtml, /data-ui="radio-group"/);
+    assert.match(contactHtml, /data-ui="textarea-field"/);
+    assert.match(contactHtml, /data-ui="checkbox"/);
+    assert.match(contactHtml, /data-ui="switch"/);
+    assert.match(contactHtml, /<form[^>]*method="get"/);
+    assert.match(contactHtml, /<button[^>]*type="submit"/);
 
     const aboutLvHtml = await readFile(join(dist, "lv", "about", "index.html"), "utf8");
     assert.match(aboutLvHtml, /<html lang="lv"/);

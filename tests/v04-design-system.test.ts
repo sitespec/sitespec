@@ -38,7 +38,7 @@ test("v0.7 starter exposes a first-class Design System contract", async () => {
       tokens: { extension: string; rules: { primitive: string; semantic: string } };
       themes: { default: string; items: Array<{ id: string }> };
       libraries: { ui: Array<{ id: string }>; sections: Array<{ id: string }>; presets: Array<{ id: string }> };
-      shells: { default: string; items: Array<{ id: string }> };
+      shells: { default: string; items: Array<{ id: string; runtime: { javascript?: boolean } }> };
       layout: { convention: string };
     };
     assert.equal(designSystem.id, "sitespec-default");
@@ -48,11 +48,12 @@ test("v0.7 starter exposes a first-class Design System contract", async () => {
     assert.deepEqual(designSystem.tokens.rules, { primitive: "additive", semantic: "additive" });
     assert.equal(designSystem.themes.default, "default");
     assert.deepEqual(designSystem.themes.items.map(item => item.id), ["dark", "default"]);
-    assert.deepEqual(designSystem.libraries.ui.map(item => item.id), ["button", "container"]);
+    assert.deepEqual(designSystem.libraries.ui.map(item => item.id), ["button", "container", "icon-button", "text-field", "textarea-field", "select-field", "checkbox", "radio-group", "switch"]);
     assert.ok(designSystem.libraries.sections.some(item => item.id === "hero"));
     assert.deepEqual(designSystem.libraries.presets.map(item => item.id), ["final-cta"]);
     assert.equal(designSystem.shells.default, "default");
     assert.deepEqual(designSystem.shells.items.map(item => item.id), ["default"]);
+    assert.equal(designSystem.shells.items[0]?.runtime.javascript, true);
     assert.equal(designSystem.layout.convention, "outer-gutter-inner-container");
 
     const viaSpec = await inspectProject(root, "design-system");
@@ -69,6 +70,21 @@ test("v0.7 starter exposes a first-class Design System contract", async () => {
   }
 });
 
+
+test("v0.7 shell client JavaScript requires an explicit shell runtime opt-in", async () => {
+  const { temp, root } = await starter("sitespec-v04-ds-shell-runtime-");
+  try {
+    const contractFile = join(root, "design-system.yaml");
+    const contract = await readFile(contractFile, "utf8");
+    await writeFile(contractFile, contract.replace("      runtime:\n        javascript: true\n", ""), "utf8");
+
+    const validation = await validateProject(root);
+    assert.equal(validation.valid, false);
+    assert.ok(validation.diagnostics.some(item => item.code === "DESIGN_SYSTEM_SHELL_JAVASCRIPT_FORBIDDEN" && item.file === "shell/default.astro"));
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
 
 test("v0.7 rejects an exported preset whose section is outside the Design System section library", async () => {
   const { temp, root } = await starter("sitespec-v04-ds-preset-library-");

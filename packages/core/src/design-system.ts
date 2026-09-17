@@ -53,23 +53,35 @@ async function validateShells(root: string, manifest: DesignSystemManifest, diag
     for (const [index, file] of shell.files.entries()) {
       await requiredFile(root, file, `/shells/items/${id}/files/${index}`, diagnostics);
     }
-    if (!(await fileExists(join(root, shell.entry)))) continue;
-    try {
-      const source = await readFile(join(root, shell.entry), "utf8");
-      if (!/<slot(?:\s|\/>|>)/i.test(source)) diagnostics.push({
-        code: "DESIGN_SYSTEM_SHELL_SLOT_MISSING",
-        severity: "error",
-        file: shell.entry,
-        message: `Shell pack "${id}" must render <slot />.`,
-        expected: "<slot />"
-      });
-    } catch (error) {
-      diagnostics.push({
-        code: "DESIGN_SYSTEM_SHELL_READ_FAILED",
-        severity: "error",
-        file: shell.entry,
-        message: error instanceof Error ? error.message : String(error)
-      });
+    for (const file of new Set([shell.entry, ...shell.files])) {
+      if (!(await fileExists(join(root, file)))) continue;
+      try {
+        const source = await readFile(join(root, file), "utf8");
+        if (file === shell.entry && !/<slot(?:\s|\/>|>)/i.test(source)) diagnostics.push({
+          code: "DESIGN_SYSTEM_SHELL_SLOT_MISSING",
+          severity: "error",
+          file: shell.entry,
+          message: `Shell pack "${id}" must render <slot />.`,
+          expected: "<slot />"
+        });
+        const hasScript = /<script(?:\s|>)/i.test(source);
+        const hasClientDirective = /\bclient:[a-z-]+\s*=/i.test(source);
+        if (shell.runtime?.javascript !== true && (hasScript || hasClientDirective)) diagnostics.push({
+          code: "DESIGN_SYSTEM_SHELL_JAVASCRIPT_FORBIDDEN",
+          severity: "error",
+          file,
+          path: `/shells/items/${id}/runtime/javascript`,
+          message: `Shell pack "${id}" ships client JavaScript but runtime.javascript is not true.`,
+          hint: "Remove the client JavaScript or declare shells.items.<id>.runtime.javascript: true in design-system.yaml."
+        });
+      } catch (error) {
+        diagnostics.push({
+          code: "DESIGN_SYSTEM_SHELL_READ_FAILED",
+          severity: "error",
+          file,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
     }
   }
 }
@@ -198,7 +210,7 @@ export async function inspectDesignSystem(root: string): Promise<DesignSystemIns
     },
     shells: {
       default: manifest.shells.default,
-      items: Object.entries(manifest.shells.items).map(([id, shell]) => ({ id, entry: shell.entry, files: shell.files }))
+      items: Object.entries(manifest.shells.items).map(([id, shell]) => ({ id, entry: shell.entry, files: shell.files, runtime: shell.runtime ?? {} }))
     }
   };
 

@@ -9,6 +9,7 @@ Unlike the intentionally compact starter, this example is meant to make the curr
 - `entry:` and `query:` references, filtering, sorting and pagination;
 - content-driven post, author, category and tag routes;
 - a portable Design System with sections, UI primitives, themes, shell packs and semantic tokens;
+- a real `/contact` page composed from the exported form primitives, including native validation/focus semantics and responsive light/dark rendering;
 - local responsive media with generated AVIF/WebP derivatives, `srcset`, intrinsic dimensions, crop and focal point;
 - generated canonical, Open Graph, Twitter and JSON-LD metadata;
 - generated and explicit social-image scenarios;
@@ -53,6 +54,7 @@ npm run site -w @sitespec/example-marketing -- spec seo --json
 ```text
 /
 /about
+/contact
 /lv/about
 /preview
 /blog

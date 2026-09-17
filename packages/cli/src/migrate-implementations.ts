@@ -530,7 +530,6 @@ function uiStyleCss(uiId: string, contract: Record<string, unknown>, observation
     `  font-family: ${cssVar("semantic.font.family.body")};`,
     `  font-size: ${cssVar("semantic.font.size.body")};`,
     `  line-height: ${cssVar("semantic.font.lineHeight.body")};`,
-    `  font-weight: 700;`,
     `  text-decoration: none;`,
     `  cursor: pointer;`,
     `}`,
@@ -600,7 +599,7 @@ function componentCss(componentId: string, family: ComponentFamilyProposal, audi
     `.field-list { display: grid; gap: ${cssVar("semantic.space.stack.md")}; }`,
     `.field { display: grid; gap: ${cssVar("semantic.space.stack.sm")}; }`,
     `.field input, .field textarea, .field select { padding: ${cssVar("semantic.space.control.y")} ${cssVar("semantic.space.control.x")}; border: 1px solid ${cssVar("semantic.color.border.default")}; border-radius: ${cssVar("semantic.radius.control")}; background: ${cssVar("semantic.color.surface.default")}; color: ${cssVar("semantic.color.text.default")}; font: inherit; }`,
-    `.form-submit { justify-self: start; padding: ${cssVar("semantic.space.control.y")} ${cssVar("semantic.space.control.x")}; border: 1px solid ${cssVar("semantic.color.accent.default")}; border-radius: ${cssVar("semantic.radius.control")}; background: ${cssVar("semantic.color.accent.default")}; color: ${cssVar("semantic.color.accent.contrast")}; font: inherit; font-weight: 700; cursor: pointer; }`,
+    `.form-submit { justify-self: start; padding: ${cssVar("semantic.space.control.y")} ${cssVar("semantic.space.control.x")}; border: 1px solid ${cssVar("semantic.color.accent.default")}; border-radius: ${cssVar("semantic.radius.control")}; background: ${cssVar("semantic.color.accent.default")}; color: ${cssVar("semantic.color.accent.contrast")}; font: inherit; cursor: pointer; }`,
     `@media (max-width: 760px) { .layout { display: grid; grid-template-columns: 1fr; } }`
   ];
   if (componentId === "testimonials") lines.push(`section[data-variant="carousel"] .items { display: flex; overflow-x: auto; }`, `section[data-variant="carousel"] .item { min-width: min(82vw, 30rem); }`);
@@ -650,7 +649,7 @@ function shellStyle(region: "header" | "footer", family: ComponentFamilyProposal
 }
 
 function headerImplementation(css: string): string {
-  return `---\ninterface NavigationItem { id: string; label: string; href: string; target: "self" | "blank"; external: boolean; current?: boolean; }\ninterface Props { site: { name: string; homeHref: string }; navigation: Record<string, NavigationItem[]>; }\nconst { site, navigation } = Astro.props;\nconst items = navigation.primary ?? [];\n---\n<header class="site-header" data-site-shell="header">\n  <div class="inner">\n    <a class="brand" href={site.homeHref}>{site.name}</a>\n    {items.length > 0 && <nav aria-label="Primary"><ul>{items.map((item) => <li><a href={item.href} target={item.target === "blank" ? "_blank" : undefined} rel={item.target === "blank" ? "noreferrer" : undefined} aria-current={item.current ? "page" : undefined}>{item.label}</a></li>)}</ul></nav>}\n  </div>\n</header>\n<style>\n${css}.brand { font-family: ${cssVar("semantic.font.family.heading")}; font-weight: 700; }\n</style>\n`;
+  return `---\ninterface NavigationItem { id: string; label: string; href: string; target: "self" | "blank"; external: boolean; current?: boolean; }\ninterface Props { site: { name: string; homeHref: string }; navigation: Record<string, NavigationItem[]>; }\nconst { site, navigation } = Astro.props;\nconst items = navigation.primary ?? [];\n---\n<header class="site-header" data-site-shell="header">\n  <div class="inner">\n    <a class="brand" href={site.homeHref}>{site.name}</a>\n    {items.length > 0 && <nav aria-label="Primary"><ul>{items.map((item) => <li><a href={item.href} target={item.target === "blank" ? "_blank" : undefined} rel={item.target === "blank" ? "noreferrer" : undefined} aria-current={item.current ? "page" : undefined}>{item.label}</a></li>)}</ul></nav>}\n  </div>\n</header>\n<style>\n${css}.brand { font-family: ${cssVar("semantic.font.family.heading")}; }\n</style>\n`;
 }
 
 function footerImplementation(css: string): string {

@@ -423,7 +423,7 @@ The command verifies the review/proposal SHA before writing `component-contracts
 
 Aggregates direct leaf-element audit evidence independently from section families. Native controls and anchors have stronger semantic evidence; Badge/Card remain candidate-weighted because their boundaries come from guarded visual/container heuristics. Reuse is classified as `core` / `supporting` / `local`, visual Button variants (`solid` / `outline` / `ghost`) and native choice variants can be proposed, and exact examples retain page/viewport/selector/segment provenance.
 
-Reuse status and semantic-boundary eligibility are intentionally separate. `status: core` means the family clearly repeats; it does **not** automatically mean SiteSpec should create that primitive. `materialization.eligibility: auto` is reserved for direct semantic/native element evidence. Badge/Card heuristics and the current form-control role gap are `review-required` even when repeated strongly.
+Reuse status and semantic-boundary eligibility are intentionally separate. `status: core` means the family clearly repeats; it does **not** automatically mean SiteSpec should create that primitive. `materialization.eligibility: auto` is reserved for direct semantic/native element evidence. Badge/Card heuristics remain `review-required` even when repeated strongly. Native text inputs, textareas, selects, checkboxes, and radios map to the explicit `form` UI role and can be auto-eligible when their evidence is direct.
 
 Create an explicit leaf UI review with:
 

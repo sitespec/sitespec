@@ -124,7 +124,7 @@ npm run site -- migrate design \
   .sitespec/audit/example.com/products-widget
 ```
 
-The default generated output is `.sitespec/migration/<host>/design/` and contains `foundations.json`, `token-candidates.json`, `section-rhythm.json`, `foundation-proposal.json`, `section-clusters.json`, `component-families.json`, `ui-families.json`, `shell-candidates.json`, `media-roles.json`, and `report.json`. `foundations.json` remains exact production evidence. Before writing `token-candidates.json`, the command runs a deterministic normalization/filtering layer: it canonicalizes supported CSS colors and font stacks, removes SVG paint references/default computed border noise, rejects negative/multi-value/subpixel spacing artifacts, canonicalizes full radii and transparent shadow layers, keeps only strong per-viewport container-width candidates, and converts computed typography line heights to unitless ratios. `section-rhythm.json` then evaluates real logical section-boundary vertical padding against cross-page clusters plus normalized spacing/viewport evidence. `component-families.json` is the section/shell architecture layer: reviewer semantic intent wins over generic cluster naming, cross-page/repeated families are classified as `core`/`supporting`, one-offs remain `local`, and explicit label vocabulary such as `carousel` can create observed variants. Component prop hints now record presence ratio, variant coverage, and a conservative required/optional recommendation so a visually recurring image does not automatically become required API. `ui-families.json` is intentionally separate and derives Button/Link/native form-control families from direct `ui-inventory.json` element evidence; `status` describes reuse while `materialization.eligibility` separately prevents Badge/Card heuristics or unresolved form-control roles from being auto-approved. Interactive state mapping remains unresolved. The command never writes canonical `design/tokens.json`, `design-system.yaml`, components, UI primitives, or Page Specs.
+The default generated output is `.sitespec/migration/<host>/design/` and contains `foundations.json`, `token-candidates.json`, `section-rhythm.json`, `foundation-proposal.json`, `section-clusters.json`, `component-families.json`, `ui-families.json`, `shell-candidates.json`, `media-roles.json`, and `report.json`. `foundations.json` remains exact production evidence. Before writing `token-candidates.json`, the command runs a deterministic normalization/filtering layer: it canonicalizes supported CSS colors and font stacks, removes SVG paint references/default computed border noise, rejects negative/multi-value/subpixel spacing artifacts, canonicalizes full radii and transparent shadow layers, keeps only strong per-viewport container-width candidates, and converts computed typography line heights to unitless ratios. `section-rhythm.json` then evaluates real logical section-boundary vertical padding against cross-page clusters plus normalized spacing/viewport evidence. `component-families.json` is the section/shell architecture layer: reviewer semantic intent wins over generic cluster naming, cross-page/repeated families are classified as `core`/`supporting`, one-offs remain `local`, and explicit label vocabulary such as `carousel` can create observed variants. Component prop hints now record presence ratio, variant coverage, and a conservative required/optional recommendation so a visually recurring image does not automatically become required API. `ui-families.json` is intentionally separate and derives Button/Link/native form-control families from direct `ui-inventory.json` element evidence; `status` describes reuse while `materialization.eligibility` separately prevents Badge/Card heuristics from being auto-approved while native form controls map to the explicit `form` UI role. Interactive state mapping remains unresolved. The command never writes canonical `design/tokens.json`, `design-system.yaml`, components, UI primitives, or Page Specs.
 
 For human-confirmed `manual-dom` blocks, cross-page clustering applies a conservative semantic-intent gate inferred primarily from reviewer block names. Conflicting known intents are never clustered merely because their geometry or DOM shape looks similar; unknown intents require a higher similarity score plus label/heading support. The inferred intent and evidence source are included in `section-clusters.json` provenance for review.
 
@@ -177,7 +177,7 @@ Generate reviewable UI manifests only after that decision:
 npm run site -- migrate ui contracts .sitespec/migration/example.com/design/ui-review.json
 ```
 
-This verifies the review SHA and writes `ui-contracts.json` plus `ui-contracts/<id>/ui.yaml` for accepted families. Contract generation refuses an accepted family that has no canonical `default` variant, preventing a schema-shaped preview from later failing the SiteSpec UI registry. `ui-contracts.json` keeps the observed-source → canonical-variant mapping. No `index.astro`, runtime JavaScript assertion, hover/focus/active state mapping, or canonical UI registration is generated.
+This verifies the review SHA and writes `ui-contracts.json` plus `ui-contracts/<id>/ui.yaml` for accepted families. Contract generation refuses an accepted family that has no canonical `default` variant, preventing a schema-shaped preview from later failing the SiteSpec UI registry. `ui-contracts.json` keeps the observed-source → canonical-variant mapping. No `index.astro`, runtime JavaScript assertion, hover/focus/active state mapping, or canonical UI registration is generated. The optional `states` contract axis is therefore intentionally omitted until interaction-state evidence is captured or reviewed rather than invented by migration.
 
 Review the rationalized foundation separately from the generated proposal:
 
@@ -210,6 +210,29 @@ npm run site -- migrate design-system materialize .sitespec/migration/example.co
 ```
 
 Without `implementation-inference.json`, staging remains contract-only and reports missing Astro/font files as blockers. With a current inference report, SiteSpec copies only the expected accepted implementations, merges the additive token extension contract, runs Design System lint on the staged pack, and reports phase `implementation-staging`. Pending/rejected families such as a heuristic Card remain excluded and do not become blockers. Local Roboto Flex binaries remain a visual-fidelity warning while the declared fallback font stack keeps the pack executable.
+
+## Design Lab
+
+Run the visual Design System development surface:
+
+```bash
+npm run site -- design dev
+# alias:
+npm run site -- design lab
+```
+
+When run from a normal SiteSpec project, the current directory is the project root. When run from the SiteSpec source repository itself, the repository root is not a website, so the command automatically opens `examples/marketing` as the bundled executable Design System fixture. Pass `--root <path>` to select another project explicitly.
+
+Options mirror the normal development server:
+
+```text
+--root <path>
+--host <host>
+--port <port>
+--json
+```
+
+The Lab uses the same live validation and renderer as `sitespec dev`, but adds the reserved `/__sitespec/design/` route with token, UI, section, stress-test, theme, and page-preview views. Theme and Stress state are propagated into **Pages** previews through dedicated Design-Lab-only preview routes, so the iframe uses the selected `data-site-theme` and contract-valid stress props/navigation without modifying Page Specs. Generated Lab files live only under `.site/astro/`; normal production builds do not include this preview behavior.
 
 ## Design System commands
 

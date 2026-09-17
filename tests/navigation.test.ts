@@ -27,6 +27,10 @@ test("sitespec init exposes named navigation and a user-owned Site Shell", async
     assert.equal(shell.layout, "shell/default.astro");
     assert.equal(shell.exists, true);
     assert.equal(shell.conventionalFiles.header.path, "shell/Header.astro");
+    const headerSource = await readFile(join(root, "shell", "Header.astro"), "utf8");
+    assert.match(headerSource, /ui\/icon-button/);
+    assert.match(headerSource, /aria-expanded/);
+    assert.match(headerSource, /sitespec-theme/);
     assert.equal(shell.conventionalFiles.header.exists, true);
     assert.equal(shell.conventionalFiles.footer.path, "shell/Footer.astro");
     assert.equal(shell.conventionalFiles.footer.exists, true);

@@ -226,6 +226,15 @@
                 "items": {
                   "$ref": "#/$defs/relativePath"
                 }
+              },
+              "runtime": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "javascript": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }

@@ -1,0 +1,54 @@
+---
+interface Props {
+  id?: string;
+  label: string;
+  name: string;
+  description?: string;
+  error?: string;
+  checked?: boolean;
+  required?: boolean;
+  disabled?: boolean;
+  variant?: "default";
+}
+const { id, label, name, description, error, checked = false, required = false, disabled = false, variant = "default" } = Astro.props;
+const controlId = id ?? `field-${name.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+const descriptionId = description ? `${controlId}-description` : undefined;
+const errorId = error ? `${controlId}-error` : undefined;
+const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+const invalid = Boolean(error);
+---
+<div class="switch" data-ui="switch" data-variant={variant} data-invalid={invalid ? "true" : undefined}>
+  <label class="switch-label" for={controlId}>
+    <input class="switch-control" id={controlId} name={name} type="checkbox" role="switch" checked={checked} required={required} disabled={disabled} aria-invalid={invalid ? "true" : undefined} aria-describedby={describedBy} />
+    <span>{label}</span>
+  </label>
+  {description ? <p class="description" id={descriptionId}>{description}</p> : null}
+  {error ? <p class="error" id={errorId}>{error}</p> : null}
+</div>
+
+<style>
+  .switch { display: grid; gap: var(--space-stack-sm); color: var(--color-field-text-default); }
+  .switch-label { display: flex; align-items: center; gap: var(--space-stack-sm); color: var(--color-field-label); cursor: pointer; }
+  .switch-control { box-sizing: border-box; flex: none; display: flex; align-items: center; width: var(--size-switch-width); height: var(--size-switch-height); margin: 0; padding: var(--space-switch-inset); border: 1px solid var(--color-control-unchecked-border); border-radius: var(--radius-full); appearance: none; background: var(--color-control-unchecked-background); cursor: pointer; }
+  .switch-control::after { content: ""; display: block; width: var(--size-switch-thumb); height: var(--size-switch-thumb); border-radius: var(--radius-full); background: var(--color-control-thumb); transition: transform 140ms ease; }
+  .switch-label:hover .switch-control,
+  .switch[data-sitespec-state="hover"] .switch-control { border-color: var(--color-field-border-hover); }
+  .switch-control:active::after,
+  .switch[data-sitespec-state="active"] .switch-control::after { transform: scale(.92); }
+  .switch-control:focus-visible,
+  .switch[data-sitespec-state="focus-visible"] .switch-control { outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--space-focus-offset); }
+  .switch-control:checked,
+  .switch[data-sitespec-state="checked"] .switch-control { border-color: var(--color-control-checked-border); background: var(--color-control-checked-background); }
+  .switch-control:checked::after,
+  .switch[data-sitespec-state="checked"] .switch-control::after { transform: translateX(calc(var(--size-switch-width) - var(--size-switch-thumb) - (2 * var(--space-switch-inset)) - 2px)); }
+  .switch[data-invalid="true"] .switch-control,
+  .switch[data-sitespec-state="invalid"] .switch-control { border-color: var(--color-field-border-invalid); }
+  .switch-control:disabled,
+  .switch[data-sitespec-state="disabled"] .switch-control { background: var(--color-field-background-disabled); border-color: var(--color-field-border-disabled); cursor: not-allowed; }
+  .switch:has(.switch-control:disabled) .switch-label,
+  .switch[data-sitespec-state="disabled"] .switch-label { color: var(--color-field-text-disabled); cursor: not-allowed; }
+  .description, .error { margin: 0; padding-inline-start: calc(var(--size-switch-width) + var(--space-stack-sm)); font-size: var(--font-size-small); }
+  .description { color: var(--color-field-description); }
+  .error { color: var(--color-field-error); }
+  @media (prefers-reduced-motion: reduce) { .switch-control::after { transition: none; } }
+</style>

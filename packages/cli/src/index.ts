@@ -10,7 +10,7 @@ import { addComponent } from "./add-component.js";
 import { addUi } from "./add-ui.js";
 import { validateAstroComponentContracts } from "@sitespec/astro";
 import { PreviewError, startPreview } from "./preview.js";
-import { startDev, type DevEvent } from "./dev.js";
+import { resolveDesignLabProjectRoot, startDev, type DevEvent } from "./dev.js";
 import { deployGitHubPages, GitHubPagesDeployError } from "./deploy-github-pages.js";
 import { installDesignSystem, packDesignSystem } from "./design-system.js";
 import { auditUrl, MigrateAuditError, parseAuditViewports } from "./migrate-audit.js";
@@ -581,7 +581,7 @@ migrateUi
         console.log(`  auto-eligible: ${result.summary.autoEligible}; explicit-review boundaries: ${result.summary.reviewRequired}`);
         console.log("\nNext:");
         console.log(`  review ${result.output}`);
-        console.log("  candidate surfaces and form-control role gaps stay pending under conservative policy; accepting them is an explicit architecture decision");
+        console.log("  candidate visual surfaces stay pending under conservative policy; native form-control families use the explicit form role and can follow the normal evidence policy");
         console.log(`  npm run site -- migrate ui contracts ${JSON.stringify(result.output)}`);
       }
     } catch (error) {
@@ -1015,6 +1015,75 @@ source: ${design.source}`);
     if (navigation.length > 0) {
       console.log("\nNavigation");
       for (const collection of navigation) console.log(`${collection.id.padEnd(20)} ${collection.items.length} item(s)`);
+    }
+  });
+
+const designCommand = program.command("design").description("Develop and visually inspect the installed SiteSpec Design System");
+
+designCommand
+  .command("dev")
+  .alias("lab")
+  .description("Run the interactive Design Lab using real tokens, UI primitives, sections, themes, and pages")
+  .option("--host <host>", "host to bind", "127.0.0.1")
+  .option("--port <port>", "port to bind", (value: string) => {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) throw new Error(`Invalid port: ${value}`);
+    return parsed;
+  }, 4321)
+  .option("--json", "print newline-delimited machine-readable events")
+  .option("--root <path>", "project root; defaults to the current SiteSpec project or the bundled marketing example in the SiteSpec source repository")
+  .action(async (options: { host: string; port: number; json?: boolean; root?: string }) => {
+    const rootResolution = await resolveDesignLabProjectRoot({ root: options.root });
+    const printEvent = (event: DevEvent): void => {
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.7", surface: "design-lab", root: rootResolution.root, rootSource: rootResolution.source, ...event }));
+        return;
+      }
+      if (event.event === "ready") {
+        console.log(`Design Lab at ${event.labUrl ?? event.url}`);
+        console.log(`  site: ${event.url}`);
+        console.log(`  root: ${rootResolution.root}${rootResolution.source === "repository-example" ? " (bundled repository example)" : ""}`);
+        console.log(`  state: ${event.valid ? "valid" : "invalid"}`);
+        console.log("  views: foundations, UI primitives, sections, themes, page viewports, stress fixtures");
+        console.log("  watching Design System source and SiteSpec pages");
+        console.log("  press Ctrl+C to stop");
+        if (!event.valid) printDiagnostics(event.diagnostics);
+        return;
+      }
+      if (event.event === "updated") {
+        console.log("OK  Design Lab updated.");
+        return;
+      }
+      console.log(event.event === "invalid" ? "Design System is temporarily invalid; Lab server is still running." : "Design Lab refresh failed; server is still running.");
+      printDiagnostics(event.diagnostics);
+    };
+
+    try {
+      const dev = await startDev({
+        root: rootResolution.root,
+        host: options.host,
+        port: options.port,
+        rendererLogLevel: options.json ? "silent" : "warn",
+        designLab: true,
+        onEvent: printEvent
+      });
+
+      let closing = false;
+      const close = async () => {
+        if (closing) return;
+        closing = true;
+        await dev.close();
+      };
+      process.once("SIGINT", () => { void close(); });
+      process.once("SIGTERM", () => { void close(); });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (options.json) {
+        console.log(JSON.stringify({ version: "0.7", surface: "design-lab", event: "error", valid: false, diagnostics: [{ code: "DESIGN_LAB_START_FAILED", severity: "error", message }] }));
+      } else {
+        console.error(`ERROR DESIGN_LAB_START_FAILED\n  ${message}`);
+      }
+      process.exitCode = 1;
     }
   });
 

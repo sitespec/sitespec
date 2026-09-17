@@ -3,6 +3,15 @@ import Header from "./Header.astro";
 import Footer from "./Footer.astro";
 const { site, brand, page, navigation } = Astro.props;
 ---
+<script is:inline data-sitespec-theme-bootstrap>
+  (() => {
+    if (location.pathname.includes("/sitespec-design-preview/")) return;
+    try {
+      const theme = localStorage.getItem("sitespec-theme");
+      if (theme === "default" || theme === "dark") document.documentElement.dataset.siteTheme = theme;
+    } catch {}
+  })();
+</script>
 <Header site={site} brand={brand} page={page} navigation={navigation} />
 <main id="main-content">
   <slot />
@@ -11,9 +20,9 @@ const { site, brand, page, navigation } = Astro.props;
 
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; }
-  html { font-family: var(--font-family-body); }
+  html { font-family: var(--font-family-body); font-weight: var(--font-weight-body); }
   body { margin: 0; background: var(--color-surface-default); color: var(--color-text-default); }
-  h1, h2, h3, h4, h5, h6 { font-family: var(--font-family-heading); }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-family-heading); font-weight: var(--font-weight-heading); }
   a { color: inherit; }
   img { max-width: 100%; height: auto; }
 </style>

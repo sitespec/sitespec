@@ -1,0 +1,36 @@
+specVersion: "0.7"
+ui:
+  id: checkbox
+  role: form
+
+description: Native checkbox control with label, supporting copy, checked, validation, and disabled states.
+
+variants:
+  - default
+
+states:
+  - default
+  - hover
+  - active
+  - focus-visible
+  - checked
+  - invalid
+  - disabled
+
+props:
+  type: object
+  additionalProperties: false
+  required: [label, name]
+  properties:
+    id: { type: string, minLength: 1 }
+    label: { type: string, minLength: 1, maxLength: 200 }
+    name: { type: string, minLength: 1, maxLength: 120 }
+    value: { type: string, maxLength: 200 }
+    description: { type: string, maxLength: 500 }
+    error: { type: string, maxLength: 500 }
+    checked: { type: boolean }
+    required: { type: boolean }
+    disabled: { type: boolean }
+
+runtime:
+  javascript: false

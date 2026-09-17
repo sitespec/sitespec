@@ -1,0 +1,27 @@
+specVersion: "0.7"
+page:
+  id: contact
+  route: /contact
+  archetype: detail
+
+seo:
+  title: Contact
+  description: Contact page demonstrating a real SiteSpec form composition built from exported form UI primitives.
+
+sections:
+  - id: intro
+    use: hero
+    variant: centered
+    props:
+      eyebrow: Form example
+      title: A contact page built from Design System primitives
+      text: This page composes native form controls through SiteSpec UI contracts, semantic tokens, interactive states, responsive layout, and light/dark themes.
+
+  - id: contact-form
+    use: contact-form
+    theme: muted
+    props:
+      title: Tell us what you are building
+      description: Use the form to inspect the real primitives together in a page context, including keyboard focus, validation semantics, responsive layout, and theme behavior.
+      submitLabel: Send example request
+      note: This is a static reference form. Submitting uses GET and reloads the current page with query parameters; no data is stored or sent to a backend.

@@ -38,7 +38,7 @@ export function agentProtocol(): Record<string, unknown> {
     composition: {
       pageLayer: "pages/*.yaml may use registered sections or reusable section:<id> presets only.",
       sectionLayer: "components/* are page-level sections.",
-      uiLayer: "ui/* are internal Design System primitives used by sections/shell; Page Spec cannot use them directly.",
+      uiLayer: "ui/* are internal Design System primitives used by sections/shell; Page Spec cannot use them directly. Interactive primitives model variants and states as separate axes.",
       designSystem: "design-system.yaml declares the portable v0.4+ Design System contract: UI and section libraries, shell packs, layout convention, themes, token sources, and extension policy.",
       reusableSections: "Store reusable section configuration under sections/*.yaml and reference it with { id, $ref: 'section:<id>' }.",
       dynamicRoutes: "Use /path/[param] with page.paths in specVersion 0.2+, or bind the route to content.entry in specVersion 0.3.",
@@ -217,6 +217,7 @@ export async function inspectProject(root: string, query?: string): Promise<Reco
     description: primitive.manifest.description,
     files: { contract: primitive.file, implementation: primitive.implementation },
     variants: primitive.variants,
+    states: primitive.states,
     props: primitive.manifest.props,
     runtime: { javascript: primitive.manifest.runtime?.javascript === true },
     usage: {

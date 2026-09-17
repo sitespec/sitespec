@@ -1,0 +1,84 @@
+---
+interface Props {
+  id?: string;
+  label: string;
+  name: string;
+  type?: "text" | "email" | "password" | "search" | "tel" | "url";
+  value?: string;
+  placeholder?: string;
+  description?: string;
+  error?: string;
+  autocomplete?: string;
+  required?: boolean;
+  readonly?: boolean;
+  disabled?: boolean;
+  variant?: "default";
+}
+const {
+  id,
+  label,
+  name,
+  type = "text",
+  value,
+  placeholder,
+  description,
+  error,
+  autocomplete,
+  required = false,
+  readonly: readOnly = false,
+  disabled = false,
+  variant = "default"
+} = Astro.props;
+const controlId = id ?? `field-${name.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+const descriptionId = description ? `${controlId}-description` : undefined;
+const errorId = error ? `${controlId}-error` : undefined;
+const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+const invalid = Boolean(error);
+---
+<div class="text-field" data-ui="text-field" data-variant={variant} data-invalid={invalid ? "true" : undefined}>
+  <label for={controlId}>{label}{required ? <span aria-hidden="true"> *</span> : null}</label>
+  <input
+    class="control"
+    id={controlId}
+    name={name}
+    type={type}
+    value={value}
+    placeholder={placeholder}
+    autocomplete={autocomplete}
+    required={required}
+    readonly={readOnly}
+    disabled={disabled}
+    aria-invalid={invalid ? "true" : undefined}
+    aria-describedby={describedBy}
+  />
+  {description ? <p class="description" id={descriptionId}>{description}</p> : null}
+  {error ? <p class="error" id={errorId}>{error}</p> : null}
+</div>
+
+<style>
+  .text-field { display: grid; gap: var(--space-stack-sm); color: var(--color-field-text-default); }
+  label { color: var(--color-field-label); font-weight: var(--font-weight-label); }
+  .control {
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--space-control-y) var(--space-control-x);
+    border: 1px solid var(--color-field-border-default);
+    border-radius: var(--radius-control);
+    background: var(--color-field-background-default);
+    color: var(--color-field-text-default);
+    font: inherit;
+  }
+  .control::placeholder { color: var(--color-field-text-placeholder); }
+  .text-field:is(:hover, [data-sitespec-state="hover"]) .control:not(:disabled) { border-color: var(--color-field-border-hover); background: var(--color-field-background-hover); }
+  .control:focus-visible,
+  .text-field[data-sitespec-state="focus-visible"] .control { border-color: var(--color-field-border-focus); outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--space-focus-offset); }
+  .text-field[data-invalid="true"] .control,
+  .text-field[data-sitespec-state="invalid"] .control { border-color: var(--color-field-border-invalid); }
+  .control:read-only,
+  .text-field[data-sitespec-state="readonly"] .control { cursor: default; }
+  .control:disabled,
+  .text-field[data-sitespec-state="disabled"] .control { border-color: var(--color-field-border-disabled); background: var(--color-field-background-disabled); color: var(--color-field-text-disabled); cursor: not-allowed; }
+  .description, .error { margin: 0; font-size: var(--font-size-small); }
+  .description { color: var(--color-field-description); }
+  .error { color: var(--color-field-error); }
+</style>

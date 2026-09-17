@@ -1041,9 +1041,13 @@ async function validateAstroDesignFile(
         }
       }
 
+      const rawColorKeyword = value.toLowerCase();
+      const allowedColorKeywords = property === "fill" || property === "stroke"
+        ? ["inherit", "initial", "unset", "revert", "currentcolor", "transparent", "none"]
+        : ["inherit", "initial", "unset", "revert", "currentcolor", "transparent"];
       const rawColorProperty = COLOR_PROPERTY.test(property)
         && !value.includes("var(")
-        && !["inherit", "initial", "unset", "revert", "currentcolor", "transparent"].includes(value.toLowerCase());
+        && !allowedColorKeywords.includes(rawColorKeyword);
       const backgroundKeyword = value.toLowerCase();
       const rawBackground = property === "background"
         && !value.includes("var(")
@@ -1099,6 +1103,26 @@ async function validateAstroDesignFile(
           property,
           value,
           "line-height must use a semantic typography token."
+        ));
+      }
+      if (property === "font-weight" && !isExactSemanticVar(value) && !["inherit", "initial", "unset", "revert"].includes(value.toLowerCase())) {
+        diagnostics.push(designDiagnostic(
+          "DESIGN_RAW_TYPOGRAPHY",
+          relFile,
+          line,
+          property,
+          value,
+          "font-weight must use a semantic typography token."
+        ));
+      }
+      if (property === "letter-spacing" && !isExactSemanticVar(value) && !["normal", "inherit", "initial", "unset", "revert"].includes(value.toLowerCase())) {
+        diagnostics.push(designDiagnostic(
+          "DESIGN_RAW_TYPOGRAPHY",
+          relFile,
+          line,
+          property,
+          value,
+          "letter-spacing must use a semantic typography token."
         ));
       }
 

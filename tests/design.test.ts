@@ -40,7 +40,10 @@ test("site spec design exposes semantic design vocabulary to agents", async () =
     assert.equal(design.rules.semanticTokensOnly, true);
     assert.equal(design.rules.rawColors, false);
     assert.ok(design.categories.color?.includes("color.text.default"));
+    assert.ok(design.categories.font?.includes("font.weight.action"));
+    assert.ok(design.categories.font?.includes("font.letterSpacing.display"));
     assert.ok(design.semantic.some(token => token.cssVariable === "--color-text-default" && token.alias === "primitive.color.neutral900"));
+    assert.ok(design.semantic.some(token => token.cssVariable === "--font-weight-action" && token.alias === "primitive.font.weight.bold"));
 
     const agent = result.agent as { design: { inspect: string; model: string } };
     assert.equal(agent.design.inspect, "npm run site -- spec design --json");
@@ -70,6 +73,57 @@ test("design lint rejects raw reusable color and spacing", async () => {
   }
 });
 
+
+test("design lint rejects raw font weight and letter spacing", async () => {
+  const { temp, root } = await starter("site-spec-design-raw-typography-");
+  try {
+    const button = join(root, "ui", "button", "index.astro");
+    const buttonSource = await readFile(button, "utf8");
+    await writeFile(
+      button,
+      buttonSource.replace("font-weight: var(--font-weight-action);", "font-weight: 700;"),
+      "utf8"
+    );
+
+    const hero = join(root, "components", "hero", "index.astro");
+    const heroSource = await readFile(hero, "utf8");
+    await writeFile(
+      hero,
+      heroSource.replace("letter-spacing: var(--font-letter-spacing-display);", "letter-spacing: -0.045em;"),
+      "utf8"
+    );
+
+    const result = await validateProject(root);
+    assert.ok(result.diagnostics.some(item => item.code === "DESIGN_RAW_TYPOGRAPHY" && item.file === "ui/button/index.astro" && item.actual === "font-weight: 700"));
+    assert.ok(result.diagnostics.some(item => item.code === "DESIGN_RAW_TYPOGRAPHY" && item.file === "components/hero/index.astro" && item.actual === "letter-spacing: -0.045em"));
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test("design lint allows non-color SVG paint keywords", async () => {
+  const { temp, root } = await starter("site-spec-design-svg-paint-");
+  try {
+    const file = join(root, "ui", "icon-button", "index.astro");
+    const source = await readFile(file, "utf8");
+    assert.match(source, /fill:\s*none;/);
+    assert.match(source, /stroke:\s*currentColor;/);
+
+    const result = await validateProject(root);
+    assert.equal(
+      result.diagnostics.some(item => item.code === "DESIGN_RAW_COLOR" && item.file === "ui/icon-button/index.astro"),
+      false,
+      JSON.stringify(result.diagnostics, null, 2)
+    );
+    assert.equal(
+      result.diagnostics.some(item => item.code === "DESIGN_RAW_TYPOGRAPHY" && item.file === "ui/icon-button/index.astro"),
+      false,
+      JSON.stringify(result.diagnostics, null, 2)
+    );
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
 
 test("design lint allows transparent and CSS-wide background keywords", async () => {
   const { temp, root } = await starter("site-spec-design-transparent-");

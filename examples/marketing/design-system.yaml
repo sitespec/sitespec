@@ -37,9 +37,17 @@ libraries:
   ui:
     - button
     - container
+    - icon-button
+    - text-field
+    - textarea-field
+    - select-field
+    - checkbox
+    - radio-group
+    - switch
   sections:
     - article
     - cta
+    - contact-form
     - feature-grid
     - hero
     - navigation-list
@@ -53,6 +61,8 @@ shells:
   items:
     default:
       entry: shell/default.astro
+      runtime:
+        javascript: true
       files:
         - shell/default.astro
         - shell/Header.astro

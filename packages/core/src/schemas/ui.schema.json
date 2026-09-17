@@ -15,8 +15,8 @@
         "0.3",
         "0.4",
         "0.5",
-      "0.6",
-      "0.7"
+        "0.6",
+        "0.7"
       ]
     },
     "ui": {
@@ -38,7 +38,8 @@
             "navigation",
             "feedback",
             "media",
-            "typography"
+            "typography",
+            "form"
           ]
         }
       }
@@ -53,6 +54,23 @@
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/id"
+      }
+    },
+    "states": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "default",
+          "hover",
+          "active",
+          "focus-visible",
+          "disabled",
+          "invalid",
+          "readonly",
+          "checked"
+        ]
       }
     },
     "props": {

@@ -441,7 +441,8 @@ async function validateDesignSystemProject(project: LoadedProject, diagnostics: 
   }
 
   for (const [shellId, shell] of Object.entries(contract.shells.items)) {
-    for (const path of new Set([shell.entry, ...shell.files])) if (!(await fileExists(join(project.root, path)))) diagnostics.push({
+    const shellPaths = [...new Set([shell.entry, ...shell.files])];
+    for (const path of shellPaths) if (!(await fileExists(join(project.root, path)))) diagnostics.push({
       code: "DESIGN_SYSTEM_FILE_MISSING",
       severity: "error",
       file: "design-system.yaml",
@@ -450,10 +451,11 @@ async function validateDesignSystemProject(project: LoadedProject, diagnostics: 
       expected: path
     });
 
-    if (await fileExists(join(project.root, shell.entry))) {
+    for (const path of shellPaths) {
+      if (!(await fileExists(join(project.root, path)))) continue;
       try {
-        const source = await readFile(join(project.root, shell.entry), "utf8");
-        if (!/<slot(?:\s|\/>|>)/i.test(source)) diagnostics.push({
+        const source = await readFile(join(project.root, path), "utf8");
+        if (path === shell.entry && !/<slot(?:\s|\/>|>)/i.test(source)) diagnostics.push({
           code: "DESIGN_SYSTEM_SHELL_SLOT_MISSING",
           severity: "error",
           file: shell.entry,
@@ -461,12 +463,22 @@ async function validateDesignSystemProject(project: LoadedProject, diagnostics: 
           message: `Shell pack "${shellId}" must render <slot />.`,
           expected: "<slot />"
         });
+        const hasScript = /<script(?:\s|>)/i.test(source);
+        const hasClientDirective = /\bclient:[a-z-]+\s*=/i.test(source);
+        if (shell.runtime?.javascript !== true && (hasScript || hasClientDirective)) diagnostics.push({
+          code: "DESIGN_SYSTEM_SHELL_JAVASCRIPT_FORBIDDEN",
+          severity: "error",
+          file: path,
+          path: `/shells/items/${shellId}/runtime/javascript`,
+          message: `Shell pack "${shellId}" ships client JavaScript but runtime.javascript is not true.`,
+          hint: "Remove the client JavaScript or declare shells.items.<id>.runtime.javascript: true in design-system.yaml."
+        });
       } catch (error) {
         diagnostics.push({
           code: "DESIGN_SYSTEM_SHELL_READ_FAILED",
           severity: "error",
-          file: shell.entry,
-          path: `/shells/items/${shellId}/entry`,
+          file: path,
+          path: `/shells/items/${shellId}`,
           message: error instanceof Error ? error.message : String(error)
         });
       }

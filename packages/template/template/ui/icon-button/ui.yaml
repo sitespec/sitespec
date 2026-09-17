@@ -1,0 +1,43 @@
+specVersion: "0.7"
+ui:
+  id: icon-button
+  role: action
+
+description: Compact icon-only button for shell controls such as theme and navigation toggles.
+
+variants:
+  - default
+  - ghost
+
+states:
+  - default
+  - hover
+  - active
+  - focus-visible
+  - disabled
+
+props:
+  type: object
+  additionalProperties: false
+  required:
+    - label
+    - icon
+  properties:
+    label:
+      type: string
+      minLength: 1
+      maxLength: 80
+    icon:
+      enum: [theme, menu]
+    controls:
+      type: string
+      minLength: 1
+    expanded:
+      type: boolean
+    pressed:
+      type: boolean
+    disabled:
+      type: boolean
+
+runtime:
+  javascript: false

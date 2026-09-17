@@ -114,7 +114,7 @@ export class MigrateUiError extends Error {
 }
 
 const ID_PATTERN = /^[a-z][a-z0-9-]*$/;
-const UI_ROLES = new Set<UiFamilyRole>(["layout", "action", "content", "navigation", "feedback", "media", "typography"]);
+const UI_ROLES = new Set<UiFamilyRole>(["layout", "action", "content", "navigation", "feedback", "media", "typography", "form"]);
 const OUTPUT_MARKER = ".sitespec-ui-contracts.json";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -311,7 +311,7 @@ export async function createUiReview(options: CreateUiReviewOptions): Promise<Cr
       proposalVersion: proposal.version
     },
     policy,
-    rule: "Reuse status and materialization eligibility are separate decisions. Conservative review auto-accepts only core families backed by direct semantic/native element evidence. Candidate surfaces and form-control role gaps stay pending until explicitly reviewed. Every accepted UI family must expose a canonical default variant; when the source proposal has no default, the strongest observed variant is renamed to default while its source id remains in review provenance.",
+    rule: "Reuse status and materialization eligibility are separate decisions. Conservative review auto-accepts only core families backed by direct semantic/native element evidence. Candidate visual surfaces stay pending until explicitly reviewed; native form-control families use the explicit form role and follow the same evidence policy as other direct semantic/native controls. Every accepted UI family must expose a canonical default variant; when the source proposal has no default, the strongest observed variant is renamed to default while its source id remains in review provenance.",
     decisions: { families: decisions },
     unresolved: proposal.unresolved,
     summary

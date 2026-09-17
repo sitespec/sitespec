@@ -19,6 +19,7 @@ It supports:
 - content-driven detail and taxonomy routes;
 - `entry:` and `query:` references resolved before component validation;
 - a first-class Design System contract with exported UI primitives, section libraries, shell packs, themes, layout conventions, semantic tokens, local fonts, and controlled site token extensions;
+- a live Design Lab that renders real tokens, UI `variant × state` matrices, form compositions, sections, themes, stress fixtures, and responsive page previews directly from the installed Design System;
 - a production media pipeline with responsive `srcset`, AVIF/WebP generation, intrinsic dimensions, crop/focal-point controls, and image validation;
 - canonical/hreflang, Open Graph/Twitter metadata, JSON-LD, generated social images, sitemap, robots, `llms.txt`, and RSS without project-level Astro configuration;
 - declarative Google Analytics 4 and HubSpot tracking integrations without hand-written script tags;
@@ -47,6 +48,7 @@ npm run preview
 
 npm run site -- spec --json
 npm run site -- spec design-system --json
+npm run site -- design dev
 npm run site -- spec content --json
 npm run site -- spec collection:posts --json
 npm run site -- spec entry:posts/hello-world --json
@@ -64,6 +66,9 @@ npm run site -- migrate foundation materialize .sitespec/migration/example.com/d
 npm run site -- migrate implementations infer .sitespec/migration/example.com/design
 npm run site -- migrate design-system materialize .sitespec/migration/example.com/design
 ```
+
+When `design dev` is run from this SiteSpec source repository, it automatically uses `examples/marketing` because the repository root itself is not a website. Pass `--root <path>` to inspect another SiteSpec project.
+
 
 A content-driven page can be as small as:
 

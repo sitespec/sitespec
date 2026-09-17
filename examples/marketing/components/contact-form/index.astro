@@ -1,0 +1,104 @@
+---
+import Container from "../../ui/container/index.astro";
+import TextField from "../../ui/text-field/index.astro";
+import TextareaField from "../../ui/textarea-field/index.astro";
+import SelectField from "../../ui/select-field/index.astro";
+import Checkbox from "../../ui/checkbox/index.astro";
+import RadioGroup from "../../ui/radio-group/index.astro";
+import Switch from "../../ui/switch/index.astro";
+import Button from "../../ui/button/index.astro";
+
+interface ContactFormProps {
+  title: string;
+  description?: string;
+  submitLabel: string;
+  note?: string;
+}
+interface Props { sectionId: string; variant: string; theme: string; props: ContactFormProps }
+const { sectionId, variant, theme, props } = Astro.props;
+const id = (suffix: string) => `${sectionId}-${suffix}`;
+const topicOptions = [
+  { label: "Design System", value: "design-system" },
+  { label: "Content and composition", value: "content" },
+  { label: "Migration", value: "migration" },
+  { label: "Other", value: "other" }
+];
+const replyOptions = [
+  { label: "Email", value: "email" },
+  { label: "No preference", value: "any" }
+];
+---
+<section id={sectionId} data-section={sectionId} data-component="contact-form" data-variant={variant} data-theme={theme}>
+  <Container>
+    <div class="layout">
+      <div class="copy">
+        <h2>{props.title}</h2>
+        {props.description ? <p>{props.description}</p> : null}
+        {props.note ? <p class="note">{props.note}</p> : null}
+      </div>
+
+      <form class="form" action="" method="get">
+        <div class="pair">
+          <TextField id={id("name")} label="Name" name="name" autocomplete="name" placeholder="Ada Lovelace" required={true} />
+          <TextField id={id("email")} label="Email" name="email" type="email" autocomplete="email" placeholder="ada@example.com" required={true} />
+        </div>
+
+        <SelectField id={id("topic")} label="What can we help with?" name="topic" value="design-system" options={topicOptions} required={true} />
+
+        <RadioGroup
+          id={id("reply")}
+          label="Preferred reply"
+          name="reply"
+          value="email"
+          options={replyOptions}
+          description="The static example does not actually send a reply."
+        />
+
+        <TextareaField
+          id={id("message")}
+          label="Message"
+          name="message"
+          rows={6}
+          placeholder="Tell us what you are building and what you want SiteSpec to handle."
+          required={true}
+        />
+
+        <Checkbox
+          id={id("consent")}
+          label="I agree to be contacted about this request"
+          name="consent"
+          value="yes"
+          required={true}
+        />
+
+        <Switch
+          id={id("updates")}
+          label="Send occasional SiteSpec updates"
+          name="updates"
+          description="Optional release notes and migration guidance."
+        />
+
+        <div class="actions">
+          <Button label={props.submitLabel} type="submit" variant="primary" />
+        </div>
+      </form>
+    </div>
+  </Container>
+</section>
+
+<style>
+  section { padding: var(--space-section) var(--space-page); background: var(--color-surface-default); color: var(--color-text-default); }
+  section[data-theme="muted"] { background: var(--color-surface-muted); }
+  .layout { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1fr); gap: var(--space-stack-2xl); align-items: start; }
+  .copy { max-width: 34rem; }
+  h2 { margin: 0; font-size: var(--font-size-heading); line-height: var(--font-line-height-heading); letter-spacing: var(--font-letter-spacing-heading); }
+  .copy p { margin: var(--space-stack-lg) 0 0; color: var(--color-text-muted); }
+  .copy .note { font-size: var(--font-size-small); }
+  .form { display: grid; gap: var(--space-stack-lg); padding: var(--space-stack-xl); border: 1px solid var(--color-border-default); border-radius: var(--radius-card); background: var(--color-surface-card); }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-stack-lg); }
+  .actions { display: flex; justify-content: flex-start; }
+  @media (max-width: 48rem) {
+    .layout, .pair { grid-template-columns: 1fr; }
+    .form { padding: var(--space-stack-lg); }
+  }
+</style>

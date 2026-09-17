@@ -46,6 +46,8 @@ npm run site -- add ui <id>
 
 Each primitive owns `ui/<id>/ui.yaml` plus `ui/<id>/index.astro`. UI primitive styles obey the same semantic-token rules as sections and shell.
 
+Interactive primitives declare `states` separately from `variants`. Use `default`, `hover`, `active`, `focus-visible`, and `disabled` only when those states are intentionally implemented. Pair each real pseudo-class/disabled selector with `[data-sitespec-state="<state>"]` so Design Lab can render the exact state deterministically; do not replace real browser selectors with the preview hook. Existing v0.7 action/navigation primitives without explicit states remain loadable but produce a completeness warning.
+
 ## Dynamic routes
 
 Site Spec v0.7 supports explicit static expansion of route templates. Define full path parameter sets in `page.paths`:

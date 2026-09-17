@@ -5,7 +5,8 @@ export type Archetype = "marketing" | "article" | "listing" | "detail" | "legal"
 export type PageState = "draft" | "published";
 export type ContentStatus = PageState;
 export type ComponentRole = "intro" | "content" | "proof" | "conversion" | "utility";
-export type UiRole = "layout" | "action" | "content" | "navigation" | "feedback" | "media" | "typography";
+export type UiRole = "layout" | "action" | "content" | "navigation" | "feedback" | "media" | "typography" | "form";
+export type UiState = "default" | "hover" | "active" | "focus-visible" | "disabled" | "invalid" | "readonly" | "checked";
 export type DiagnosticSeverity = "error" | "warning" | "info";
 
 export interface DiagnosticSuggestion {
@@ -265,6 +266,7 @@ export interface UiManifest {
   ui: { id: string; role: UiRole };
   description?: string;
   variants?: string[];
+  states?: UiState[];
   props: Record<string, unknown>;
   runtime?: { javascript?: boolean };
 }
@@ -283,6 +285,7 @@ export interface RegisteredUiPrimitive {
   id: string;
   role: UiRole;
   variants: string[];
+  states: UiState[];
   manifest: UiManifest;
   validateProps: ValidateFunction;
   file: string;
@@ -335,7 +338,7 @@ export interface DesignSystemManifest {
   };
   shells: {
     default: string;
-    items: Record<string, { entry: string; files: string[] }>;
+    items: Record<string, { entry: string; files: string[]; runtime?: { javascript?: boolean } }>;
   };
 }
 

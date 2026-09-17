@@ -2,7 +2,27 @@ import { basename, join, relative } from "node:path";
 import { compilePropsSchema, validateUiSchema } from "./ajv.js";
 import { schemaDiagnostics } from "./diagnostics.js";
 import { fileExists, listDirs, parseDataFile } from "./fs.js";
-import type { Diagnostic, LoadedUiPrimitive, RegisteredUiPrimitive, UiManifest } from "./types.js";
+import type { Diagnostic, LoadedUiPrimitive, RegisteredUiPrimitive, UiManifest, UiState } from "./types.js";
+
+const REQUIRED_INTERACTIVE_STATES: UiState[] = ["default", "hover", "active", "focus-visible"];
+
+function propsExposeDisabled(manifest: UiManifest): boolean {
+  const props = manifest.props;
+  if (!props || typeof props !== "object" || Array.isArray(props)) return false;
+  const properties = (props as Record<string, unknown>).properties;
+  if (!properties || typeof properties !== "object" || Array.isArray(properties)) return false;
+  return Object.prototype.hasOwnProperty.call(properties, "disabled");
+}
+
+function expectedStates(manifest: UiManifest): UiState[] {
+  const base = manifest.ui.role === "action" || manifest.ui.role === "navigation"
+    ? [...REQUIRED_INTERACTIVE_STATES]
+    : manifest.ui.role === "form"
+      ? ["default", "hover", "focus-visible"] as UiState[]
+      : ["default" as UiState];
+  if (propsExposeDisabled(manifest)) base.push("disabled");
+  return base;
+}
 
 export async function buildUiRegistry(root: string): Promise<{
   ui: LoadedUiPrimitive[];
@@ -56,6 +76,33 @@ export async function buildUiRegistry(root: string): Promise<{
       message: "UI primitive variants must contain \"default\"."
     });
 
+    const states = manifest.states ?? ["default"];
+    if (!states.includes("default")) diagnostics.push({
+      code: "UI_DEFAULT_STATE_MISSING",
+      severity: "error",
+      file: relFile,
+      message: "UI primitive states must contain \"default\"."
+    });
+
+    const expected = expectedStates(manifest);
+    const missingStates = expected.filter(state => !states.includes(state));
+    if (missingStates.length > 0) diagnostics.push({
+      code: "UI_INTERACTIVE_STATES_INCOMPLETE",
+      severity: "warning",
+      file: relFile,
+      message: `UI primitive "${manifest.ui.id}" does not declare all expected interaction states.`,
+      expected,
+      actual: states,
+      details: { missingStates },
+      suggestions: [{
+        action: "define-ui-states",
+        file: relFile,
+        field: "states",
+        value: expected,
+        message: "Declare only interaction states that are intentionally implemented; migration must not invent unobserved states."
+      }]
+    });
+
     const implementation = `ui/${manifest.ui.id}/index.astro`;
     if (!(await fileExists(join(root, implementation)))) diagnostics.push({
       code: "UI_IMPLEMENTATION_MISSING",
@@ -71,6 +118,7 @@ export async function buildUiRegistry(root: string): Promise<{
         id: manifest.ui.id,
         role: manifest.ui.role,
         variants,
+        states,
         manifest,
         validateProps,
         file: relFile,
