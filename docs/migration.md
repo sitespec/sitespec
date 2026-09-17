@@ -128,7 +128,7 @@ Observed media across selected viewports:
 - inline SVG occurrences;
 - selectors, rendered dimensions, viewport usage, and whether URL-backed media is external to the audited origin.
 
-This inventory is the input for later SiteSpec v0.7 media migration. It does not download or rewrite assets in v1.
+This inventory is the input for later the current `specVersion: "0.7"` media contract. It does not download or rewrite assets in v1.
 
 ### `sections.json`
 
@@ -458,7 +458,7 @@ Promotes repeated `header`/`footer` landmark clusters into shared shell evidence
 
 ### `media-roles.json`
 
-Groups observed media into migration role hints such as `logo`, `icon`, `product-shot`, `illustration`, `video`, or generic `content-image`, with examples and provenance. These roles help plan SiteSpec v0.7 media ownership; they do not download assets or decide that content/product media belongs to the portable Design System.
+Groups observed media into migration role hints such as `logo`, `icon`, `product-shot`, `illustration`, `video`, or generic `content-image`, with examples and provenance. These roles help plan current `specVersion: "0.7"` media ownership; they do not download assets or decide that content/product media belongs to the portable Design System.
 
 ### Machine-readable analysis
 

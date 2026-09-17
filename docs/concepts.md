@@ -125,9 +125,11 @@ UI primitives live under `ui/<id>/` and form the internal design-system layer.
 
 Components and the Site Shell can compose them, but Page Specs cannot use UI primitives directly. Page composition therefore stays at a stable semantic level rather than exposing every low-level visual primitive as public page API.
 
+Interactive primitives model `variants` and `states` as separate axes. The current state vocabulary includes `default`, `hover`, `active`, `focus-visible`, `disabled`, `invalid`, `readonly`, and `checked`. Form controls use the explicit `form` role; the bundled Design System provides text/textarea/select fields, checkbox, radio group, switch, and a submit-capable Button. Design Lab uses the same contracts to render deterministic state matrices.
+
 ## Design System
 
-SiteSpec v0.4 makes `design-system.yaml` a first-class contract. It identifies and versions the installed Design System and declares its token/font sources, themes, layout convention, exported UI primitives, exported section library and presets, and shell packs.
+`design-system.yaml` is the first-class Design System contract. It identifies and versions the installed Design System and declares its token/font sources, themes, layout convention, exported UI primitives, exported section library and presets, and shell packs.
 
 Design Systems use a copy/install model rather than a website runtime dependency. A portable pack can be created once and installed into many sites; after installation each site owns an executable copy in Git. See [Design Systems](design-systems.md).
 
@@ -143,7 +145,7 @@ Primitive tokens hold concrete values. Semantic tokens describe purpose: text co
 
 `shell/` contains the installed Design System shell packs around resolved page sections: document structure, header, footer, and other global layout concerns.
 
-The shell can consume site navigation, semantic assets, UI primitives, and design tokens while remaining separate from Page Spec composition.
+The shell can consume site navigation, semantic assets, UI primitives, and design tokens while remaining separate from Page Spec composition. If a selected shell pack ships executable client JavaScript (for example theme persistence or mobile navigation), the pack declares `runtime.javascript: true` in `design-system.yaml`; source and rendered-output validation enforce that opt-in.
 
 ## References
 
@@ -161,7 +163,7 @@ query:posts.items
 query:posts.pagination
 ```
 
-Core prop types use the current v0.7 URNs, for example:
+Core prop types use the current `specVersion: "0.7"` URNs, for example:
 
 ```text
 urn:site-spec:0.7:type:action

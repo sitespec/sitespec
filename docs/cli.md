@@ -232,11 +232,11 @@ Options mirror the normal development server:
 --json
 ```
 
-The Lab uses the same live validation and renderer as `sitespec dev`, but adds the reserved `/__sitespec/design/` route with token, UI, section, stress-test, theme, and page-preview views. Theme and Stress state are propagated into **Pages** previews through dedicated Design-Lab-only preview routes, so the iframe uses the selected `data-site-theme` and contract-valid stress props/navigation without modifying Page Specs. Generated Lab files live only under `.site/astro/`; normal production builds do not include this preview behavior.
+The Lab uses the same live validation and renderer as `sitespec dev`, but adds the reserved `/__sitespec/design/` route with token, UI, section, stress-test, theme, and page-preview views. Theme and Stress state are propagated into **Pages** previews through dedicated Design-Lab-only preview routes, so the iframe uses the selected `data-site-theme` and contract-valid stress props/navigation without modifying Page Specs. Generated Lab files live only under `.site/astro/`; normal production builds do not include this preview behavior. See [Design Lab](design-lab.md) for the full review workflow and state-preview contract.
 
 ## Design System commands
 
-Inspect the installed first-class Design System through the `site spec` surface requested by the current v0.7 agent contract:
+Inspect the installed first-class Design System through the `site spec` surface requested by the current `specVersion: "0.7"` agent contract:
 
 ```bash
 npm run site -- spec design-system --json
@@ -254,7 +254,7 @@ Copy the current Design System into an empty portable pack directory:
 npm run site -- design-system pack ../company-design-system
 ```
 
-Install a pack into a SiteSpec v0.7 project:
+Install a pack into a project using `specVersion: "0.7"`:
 
 ```bash
 npm run site -- design-system install ../company-design-system --replace

@@ -1,6 +1,6 @@
 # Getting started
 
-This guide creates a SiteSpec v0.7 website and walks through the normal edit → inspect → validate → build workflow.
+This guide uses SiteSpec 0.8.0 with the current `specVersion: "0.7"` document contract and walks through the normal edit → inspect → visually review → validate → build workflow.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ shell/*                  user-owned document/site shell
 public/*                 static assets
 ```
 
-The starter contains a small content-driven blog so the v0.7 content path is visible immediately.
+The starter contains a small content-driven blog so the current content contract is visible immediately.
 
 ## 4. Inspect the project contract
 
@@ -87,7 +87,26 @@ npm run site -- spec navigation:primary --json
 
 Inspection is intended for both people and agents. It exposes resolved pages, registered capabilities, content collections, relations, entries, canonical routes, and diagnostics without requiring source-file scraping.
 
-## 5. Edit content
+## 5. Review the Design System visually
+
+Run the Design Lab in a second terminal:
+
+```bash
+npm run site -- design dev
+```
+
+Open the reported `/__sitespec/design/` URL. The Lab renders the installed Design System rather than a separate component-demo implementation:
+
+- **Foundations** shows semantic and primitive design tokens, including typography weight and tracking;
+- **UI** shows exported primitives as `variant × state` matrices and includes the form composition benchmark;
+- **Sections** renders exported section variants/themes;
+- **Pages** renders published project pages at desktop, 768 px, and 375 px widths.
+
+Use the Theme and Stress controls to review dark/light semantics, interaction states, long content, and page composition without changing the Page Specs. Page navigation inside the preview preserves the selected theme/stress state.
+
+Read [Design Lab](design-lab.md) for the preview/state contract and [Design Systems](design-systems.md) for ownership and token rules.
+
+## 6. Edit content
 
 A collection lives under `content/<collection>/` and has a `collection.yaml` manifest.
 
@@ -129,7 +148,7 @@ SiteSpec validates the entry against the collection schema and exposes Markdown 
 
 Read [Content](content.md) for relations, queries, filtering, sorting, pagination, draft behavior, and canonical entry links.
 
-## 6. Edit a content-driven page
+## 7. Edit a content-driven page
 
 A detail page binds a dynamic route to a collection:
 
@@ -180,7 +199,7 @@ items: { $ref: "query:posts.items" }
 pagination: { $ref: "query:posts.pagination" }
 ```
 
-## 7. Edit page composition
+## 8. Edit page composition
 
 Pages select registered section components; they do not contain Astro markup.
 
@@ -208,7 +227,7 @@ sections:
 
 `use: hero` points to a registered component. `$ref: section:final-cta` reuses a configured section preset.
 
-## 8. Validate
+## 9. Validate
 
 ```bash
 npm run validate
@@ -222,7 +241,7 @@ npm run site -- validate --json
 
 Validation covers source schemas, content schemas and relations, references, component props, composition rules, assets, design usage, routes, and deterministic project constraints.
 
-## 9. Build and preview
+## 10. Build and preview
 
 ```bash
 npm run build
@@ -231,7 +250,7 @@ npm run preview
 
 The output in `dist/` is static and does not require a SiteSpec or CMS runtime.
 
-## 10. Add controlled building blocks
+## 11. Add controlled building blocks
 
 Create a public section component:
 
@@ -247,9 +266,9 @@ npm run site -- add ui badge
 
 SiteSpec creates the required contract files and refuses to overwrite an existing registered item.
 
-## 11. Explore the full example
+## 12. Explore the full example
 
-The repository includes `examples/marketing`, which exercises the broader Content API: posts, authors, categories, tags, relations, filters, sorting, pagination, draft state, and content-driven taxonomy routes.
+The repository includes `examples/marketing`, which exercises the broader Content API plus the 0.8.0 Design System workflow: light/dark preference persistence, responsive mobile navigation, the exported form primitives, and a real `/contact` page composed through a reusable `contact-form` section.
 
 From the repository root:
 
@@ -264,5 +283,7 @@ See [CLI reference](cli.md) for details about running workspace examples and the
 ## Next
 
 - [Core concepts](concepts.md)
+- [Design Systems](design-systems.md)
+- [Design Lab](design-lab.md)
 - [Content](content.md)
 - [CLI reference](cli.md)

@@ -1,6 +1,6 @@
 # Content
 
-SiteSpec v0.7 retains the typed content contract introduced in v0.3 and treats content as part of the resolved project contract. Collections and entries are loaded by `@sitespec/core`; schemas, relations, queries, pagination, routes, and references are resolved before the Astro renderer runs.
+Under the current `specVersion: "0.7"` contract, SiteSpec treats content as part of the resolved project contract. Collections and entries are loaded by `@sitespec/core`; schemas, relations, queries, pagination, routes, and references are resolved before the Astro renderer runs.
 
 That makes it possible to build blogs, documentation, case studies, catalogs, author pages, category pages, and similar sites from `spec` + content files without a runtime CMS.
 
@@ -475,7 +475,7 @@ Inspection exposes the loaded collection contract, entries, status, relations, s
 
 ## Full repository example
 
-`examples/marketing` is the executable v0.7 reference for the Content contract introduced in v0.3. It includes:
+`examples/marketing` is the executable reference for the current `specVersion: "0.7"` Content contract. It includes:
 
 - `posts`, `authors`, `categories`, and `tags`;
 - Markdown and YAML entries;

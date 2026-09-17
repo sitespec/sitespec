@@ -1,4 +1,4 @@
-# Google Analytics and HubSpot (v0.7)
+# Google Analytics and HubSpot (`specVersion: "0.7"`)
 
 SiteSpec 0.7 can connect a generated site to Google Analytics 4 and HubSpot without adding renderer-specific code to the Site Shell or section components.
 

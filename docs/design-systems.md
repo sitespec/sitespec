@@ -1,6 +1,6 @@
 # Design Systems
 
-SiteSpec v0.4 makes the Design System a first-class, versioned source contract rather than a collection of conventions spread across a project.
+SiteSpec treats the Design System as a first-class, versioned source contract rather than a collection of conventions spread across a project. SiteSpec 0.8.0 continues to use `specVersion: "0.7"` for this contract.
 
 A Design System owns the reusable visual language and implementation layer that can be shared between sites:
 
@@ -20,14 +20,14 @@ Page Specs and content remain site-owned. A Design System pack is copied into a 
 
 ## Contract
 
-Every v0.4+ project has `design-system.yaml`; the current format is v0.7.
+Every current project has `design-system.yaml`; the current document format is `specVersion: "0.7"`.
 
 ```yaml
 specVersion: "0.7"
 
 designSystem:
-  id: inappstory
-  name: InAppStory
+  id: acme-design
+  name: Acme Design
   version: 1.0.0
 
 tokens:
@@ -58,7 +58,16 @@ layout:
     sectionSpacing: space.section
 
 libraries:
-  ui: [button, container]
+  ui:
+    - button
+    - container
+    - icon-button
+    - text-field
+    - textarea-field
+    - select-field
+    - checkbox
+    - radio-group
+    - switch
   sections: [hero, feature-grid, cta]
   presets: [final-cta]
 
@@ -67,13 +76,15 @@ shells:
   items:
     marketing:
       entry: shell/marketing.astro
+      runtime:
+        javascript: true
       files:
         - shell/marketing.astro
         - shell/Header.astro
         - shell/Footer.astro
 ```
 
-The contract is validated against the current v0.7 Design System JSON Schema. Referenced UI primitives, sections, presets, shell files, theme files, and layout tokens must exist.
+The contract is validated against the current `specVersion: "0.7"` Design System JSON Schema. Referenced UI primitives, sections, presets, shell files, theme files, and layout tokens must exist.
 
 ## Inspect the Design System
 
@@ -137,7 +148,7 @@ states:
   - disabled
 ```
 
-`variants` describe intentional visual/API variants; `states` describe interaction states of each variant. They must not be flattened into names such as `primary-hover`. `action` and `navigation` primitives that omit expected interactive states remain compatible with existing v0.7 projects, but validation emits `UI_INTERACTIVE_STATES_INCOMPLETE` until the states are explicitly modeled. A declared state must be implemented by real production semantics (`:hover`, `:active`, `:focus-visible`, `:checked`, readonly/disabled attributes, or `aria-invalid`/native invalid semantics) and paired with the equivalent `[data-sitespec-state="<state>"]` selector. The latter is a deterministic Design Lab preview hook; it does not replace the real browser interaction selector.
+`variants` describe intentional visual/API variants; `states` describe interaction states of each variant. They must not be flattened into names such as `primary-hover`. `action` and `navigation` primitives that omit expected interactive states remain compatible with existing projects using `specVersion: "0.7"`, but validation emits `UI_INTERACTIVE_STATES_INCOMPLETE` until the states are explicitly modeled. A declared state must be implemented by real production semantics (`:hover`, `:active`, `:focus-visible`, `:checked`, readonly/disabled attributes, or `aria-invalid`/native invalid semantics) and paired with the equivalent `[data-sitespec-state="<state>"]` selector. The latter is a deterministic Design Lab preview hook; it does not replace the real browser interaction selector.
 
 Form controls use the explicit `form` UI role. The state vocabulary additionally includes `invalid`, `readonly`, and `checked`; form primitives declare only the states they actually support. The bundled Design System exports `text-field`, `textarea-field`, `select-field`, `checkbox`, `radio-group`, and `switch`. These primitives own label/control/help/error wiring so section implementations do not have to recreate accessibility relationships for every form.
 
@@ -147,7 +158,7 @@ Form presentation is tokenized through semantic `color.field.*`, `color.control.
 
 ## Layout convention
 
-v0.4 formalizes the layout boundary between the outer page/shell and inner content container.
+The layout contract formalizes the boundary between the outer page/shell and inner content container.
 
 The current convention is `outer-gutter-inner-container`:
 
@@ -215,35 +226,32 @@ designSystem:
 
 Every shell entry must render `<slot />`. The renderer imports the selected shell instead of assuming `shell/default.astro`.
 
+## Shell interaction and runtime
+
+The bundled starter shell includes a token-driven `icon-button` UI primitive, a light/dark preference toggle persisted in `localStorage`, and a mobile navigation menu with `aria-expanded`, `aria-controls`, Escape-to-close, and focus restoration. Design Lab page previews use forced theme routes, so persisted user preferences never override the Lab-selected theme; internal shell navigation remains inside the same `theme × stress` preview namespace.
+
+### Runtime declaration
+
+A shell pack that ships executable client JavaScript must declare `shells.items.<id>.runtime.javascript: true` in `design-system.yaml`. This opt-in covers the pack files listed by that shell and is enforced both at source-contract validation and rendered-output validation. Static shell packs can omit `runtime`.
+
 ## Design Lab
 
-Use the Design Lab while developing or reviewing the installed Design System:
+Run the built-in visual review environment with:
 
 ```bash
 npm run site -- design dev
 ```
 
-When run from a normal SiteSpec project, the current directory is the project root. When run from the SiteSpec source repository itself, the repository root is not a website, so the command automatically opens `examples/marketing` as the bundled executable Design System fixture. Pass `--root <path>` to select another project explicitly.
+Design Lab renders the installed Design System itself: foundations, exported UI primitives as `variant × state` matrices, form compositions, section variants/themes, contract-valid stress fixtures, and responsive previews of real published pages. Its preview routes live only in the generated `.site/astro` workspace; ordinary production routes remain free of Design Lab bootstrap behavior.
 
-`design lab` is an alias for the same command. The Lab is generated inside SiteSpec's existing Astro development runtime and does not add source files to the website. It renders the actual exported Design System implementation, not a parallel Storybook layer.
-
-The Design Lab built on the v0.7 Design System contract provides four review surfaces:
-
-- **Foundations** — semantic color, typography, spacing, size, radius, and other tokens;
-- **UI** — every exported UI primitive as a `variant × state` matrix, including declared hover/active/focus-visible/disabled/invalid/readonly/checked states, plus a real Form composition benchmark when the form foundation is installed;
-- **Sections** — every exported section across declared variant/theme combinations;
-- **Pages** — the project's published pages in desktop, 768 px, and 375 px frames.
-
-The global theme selector switches the real `data-site-theme` value everywhere, including the page iframe. **Stress** swaps generated contract-valid fixtures for longer copy and denser arrays, so wrapping and content-resilience problems become visible without changing Page Specs. In **Pages**, the preview uses a dedicated generated route for the selected page, theme, and stress state; section props are replaced only when SiteSpec can derive a valid stress fixture from `component.yaml`, navigation labels are expanded, and production rendering remains unchanged. Fixtures are derived from `ui.yaml` and `component.yaml`; if SiteSpec cannot generate a valid fixture for a contract, the Lab shows that UI/section case as unsupported or keeps the original page-section props instead of inventing invalid data.
-
-The Lab is intentionally the first layer of the design-system generator. Candidate generation, mutation, locking, and side-by-side candidate comparison should build on this preview runtime rather than introduce a second rendering model.
+See [Design Lab](design-lab.md) for the full workflow, state-preview contract, theme/stress behavior, page navigation rules, and recommended review loop.
 
 ## Pack and install workflow
 
 Create a portable source pack from a project that contains the Design System you want to reuse:
 
 ```bash
-npm run site -- design-system pack ../inappstory-design-system
+npm run site -- design-system pack ../acme-design-system
 ```
 
 The pack contains only Design System-owned source:
@@ -257,34 +265,12 @@ The pack contains only Design System-owned source:
 
 It does not copy `site.yaml`, Page Specs, content, or `design/extensions.json`. After copying, `pack` validates the standalone directory again, so a Design System cannot accidentally depend on site-owned token extensions that will not travel with it.
 
-Install that pack into another v0.7 site:
+Install that pack into another site using the current `specVersion: "0.7"` contract:
 
 ```bash
-npm run site -- design-system install ../inappstory-design-system --replace
+npm run site -- design-system install ../acme-design-system --replace
 ```
 
 `--replace` removes files owned by the currently installed Design System and preserves site-owned token extensions. Without `--replace`, collisions are rejected. `--force` is available only for an intentional overwrite of unmanaged colliding files.
 
 After installation the source is physically present in the target repository. Validation, agents, and the renderer need no network access and no runtime dependency on the original pack.
-
-## Reusing an InAppStory Design System
-
-A practical organization-level workflow is:
-
-1. Build and validate the InAppStory Design System once in a dedicated SiteSpec project.
-2. Set its stable identity and semantic version in `design-system.yaml`, for example `inappstory@1.4.0`.
-3. Export it with `design-system pack`.
-4. Install the copy into each SiteSpec v0.7 website.
-5. Keep per-site visual additions in `design/extensions.json` where the contract allows them.
-6. To adopt a newer InAppStory Design System, install the newer pack with `--replace`, validate the site, and commit the copied source change.
-
-The Design System is reusable, but every website remains independently buildable from its own Git repository.
-
-
-### Shell interaction reference
-
-The bundled starter shell includes a token-driven `icon-button` UI primitive, a light/dark preference toggle persisted in `localStorage`, and a mobile navigation menu with `aria-expanded`, `aria-controls`, Escape-to-close, and focus restoration. Design Lab page previews use forced theme routes, so persisted user preferences never override the Lab-selected theme; internal shell navigation remains inside the same `theme × stress` preview namespace.
-
-### Shell runtime
-
-A shell pack that ships executable client JavaScript must declare `shells.items.<id>.runtime.javascript: true` in `design-system.yaml`. This opt-in covers the pack files listed by that shell and is enforced both at source-contract validation and rendered-output validation. Static shell packs can omit `runtime`.

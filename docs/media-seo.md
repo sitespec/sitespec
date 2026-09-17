@@ -1,4 +1,4 @@
-# Media and SEO (v0.7)
+# Media and SEO (`specVersion: "0.7"`)
 
 SiteSpec 0.7 makes production media and search/social metadata part of the site contract. The generated Astro project is an implementation detail; projects should not need `astro.config.*`, image integrations, sitemap plugins, RSS plugins, or hand-written page head tags.
 
@@ -101,6 +101,6 @@ Generated social images are referenced by both Open Graph and Twitter tags and i
 
 ## Build guarantees
 
-Validation operates at both ends of the pipeline. Source validation catches invalid/missing media and SEO graph errors. Post-build validation reads generated HTML and checks canonical, description, hreflang, core Open Graph/Twitter metadata, JSON-LD, image alt text and, for v0.7, numeric image dimensions.
+Validation operates at both ends of the pipeline. Source validation catches invalid/missing media and SEO graph errors. Post-build validation reads generated HTML and checks canonical, description, hreflang, core Open Graph/Twitter metadata, JSON-LD, image alt text and numeric image dimensions required by the current contract.
 
 This keeps Astro configuration out of normal SiteSpec projects: Astro remains the renderer, while the production contract belongs to SiteSpec.

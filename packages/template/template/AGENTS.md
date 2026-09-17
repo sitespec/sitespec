@@ -46,7 +46,7 @@ npm run site -- add ui <id>
 
 Each primitive owns `ui/<id>/ui.yaml` plus `ui/<id>/index.astro`. UI primitive styles obey the same semantic-token rules as sections and shell.
 
-Interactive primitives declare `states` separately from `variants`. Use `default`, `hover`, `active`, `focus-visible`, and `disabled` only when those states are intentionally implemented. Pair each real pseudo-class/disabled selector with `[data-sitespec-state="<state>"]` so Design Lab can render the exact state deterministically; do not replace real browser selectors with the preview hook. Existing v0.7 action/navigation primitives without explicit states remain loadable but produce a completeness warning.
+Interactive primitives declare `states` separately from `variants`. The supported state vocabulary is `default`, `hover`, `active`, `focus-visible`, `disabled`, `invalid`, `readonly`, and `checked`; declare only the states the primitive intentionally implements. Form controls use `ui.role: form`. Pair each real pseudo-class/attribute/ARIA selector with `[data-sitespec-state="<state>"]` so Design Lab can render the exact state deterministically; do not replace real browser selectors with the preview hook. Existing `specVersion: "0.7"` action/navigation primitives without explicit states remain loadable but produce a completeness warning.
 
 ## Dynamic routes
 
